@@ -10,13 +10,13 @@ const COLORS: [u32; 16] = [
 ];
 
 const MAP: [[i32; 8]; 8] = [
-    [1, 2, 3, 4, 5, 6, 7, 8],
-    [1, 0, 0, 0, 0, 0, 0, 8],
-    [1, 0, 0, 0, 0, 0, 0, 8],
-    [1, 0, 0, 0, 0, 0, 0, 8],
-    [1, 0, 0, 0, 0, 0, 0, 8],
-    [1, 0, 0, 0, 0, 0, 0, 8],
-    [1, 0, 0, 0, 0, 0, 0, 8],
+    [1, 2, 3, 4, 5, 6, 7, 1],
+    [1, 0, 0, 0, 0, 0, 0, 2],
+    [1, 0, 0, 0, 0, 0, 0, 3],
+    [1, 0, 0, 0, 0, 0, 0, 4],
+    [1, 0, 0, 0, 0, 0, 3, 5],
+    [1, 0, 0, 0, 0, 0, 4, 6],
+    [1, 0, 0, 0, 0, 2, 5, 7],
     [1, 2, 3, 4, 5, 6, 7, 8],
 ];
 
@@ -30,7 +30,7 @@ impl Draw for Vec<u32> {
         if x < 0
             || y < 0
             || (x as usize) >= WIDTH
-            || (y as usize) > HEIGHT
+            || (y as usize) >= HEIGHT
             || c < 0
             || (c as usize) > COLORS.len()
         {
@@ -146,19 +146,24 @@ impl Map {
 
             let tx = 1.0 / alpha.tan();
             let ty = alpha.tan();
-            let sx = tx * ex;
-            let sy = ty * ey;
+            let sx = tx * ey;
+            let sy = ty * ex;
             let mut hx = x + 1.0;
             let mut hy = y + 1.0;
             let mut nx = player.x + sx;
             let mut ny = player.y + sy;
+            let mut hit_tile = 15;
+            let mut hit_dist = 0.0;
             'outer: loop {
                 // 'outer: for _ in 0..32 {
-                while ny < hy {
-                    let tile = self.lookup(hx, ny);
+                const E: f32 = 1e-3;
+                let equal = (hy - ny).abs() < E && (hx - nx).abs() < E;
+                while ny < hy || equal {
+                    hit_tile = self.lookup(hx, ny);
 
-                    if tile != 0 {
-                        screen.pointWorld(hx, ny, tile);
+                    if hit_tile != 0 {
+                        screen.pointWorld(hx, ny, hit_tile);
+                        hit_dist = ((hx - player.x).powf(2.0) + (ny - player.y).powf(2.0)).sqrt();
                         break 'outer;
                     }
 
@@ -167,65 +172,91 @@ impl Map {
                 }
 
                 while nx < hx {
-                    let tile = self.lookup(nx, hy);
-                    if tile != 0 {
-                        screen.pointWorld(nx, hy, tile);
+                    hit_tile = self.lookup(nx, hy);
+                    if hit_tile != 0 {
+                        screen.pointWorld(nx, hy, hit_tile);
+                        hit_dist = ((nx - player.x).powf(2.0) + (hy - player.y).powf(2.0)).sqrt();
                         break 'outer;
                     }
                     hy += 1.0;
                     nx += tx;
                 }
             }
+            let mid = 100;
+            let c = 100.0;
+            let offs = if hit_dist > 0.0 { c / hit_dist } else { c };
+            for row in (mid - offs as i32)..(mid + offs as i32) {
+                screen.point(column as i32, row, hit_tile);
+            }
+            // screen.point(column as i32, mid + (c / hit_dist) as i32, hit_tile);
+            // screen.point(column as i32, mid - (c / hit_dist) as i32, hit_tile);
         }
     }
 }
 
 #[test]
 fn test_raycast() {
-    let (xp, yp) = (1.16643822f32, 1.00872266f32);
-    let (x, y) = (xp.floor(), yp.floor());
-    // if self.lookup(x, y) != 0 {
-    //     return;
-    // }
+    let yrange = 0..1024;
+    for yi in yrange {
+        let xrange = 0..1024;
+        for xi in xrange {
+            let arange = 0..1024;
+            for ai in arange {
+                let (xp, yp) = (1.0 + (xi as f32 / 1024.0), 1.0 + (yi as f32 / 1024.0));
+                let (x, y) = (xp.floor(), yp.floor());
+                // if self.lookup(x, y) != 0 {
+                //     return;
+                // }
 
-    let (dx, dy) = (xp.fract(), yp.fract());
-    let (ex, ey) = (1.0 - dx, 1.0 - dy);
-    let alpha = 0.927944362;
+                let (dx, dy) = (xp.fract(), yp.fract());
+                let (ex, ey) = (1.0 - dx, 1.0 - dy);
+                let alpha = (ai as f32) / 1024.0;
 
-    if !(0.0..FRAC_PI_2).contains(&alpha) {
-        panic!();
-    }
+                if !(0.0..FRAC_PI_2).contains(&alpha) {
+                    panic!();
+                }
 
-    let tx = 1.0 / alpha.tan();
-    let ty = alpha.tan();
-    let sx = tx * ex;
-    let sy = ty * ey;
-    let mut hx = x + 1.0;
-    let mut hy = y + 1.0;
-    let mut nx = xp + sx;
-    let mut ny = yp + sy;
-    'outer: loop {
-        // 'outer: for _ in 0..32 {
-        while ny < hy {
-            let tile = if hx >= 7.0 || ny >= 7.0 { 1 } else { 0 };
+                let tx = 1.0 / alpha.tan();
+                let ty = alpha.tan();
+                let sx = tx * ey;
+                let sy = ty * ex;
+                let mut hx = x + 1.0;
+                let mut hy = y + 1.0;
+                let mut nx = xp + sx;
+                let mut ny = yp + sy;
+                let mut hit = false;
+                'outer:
+                // 'outer: loop {
+                for _ in 0..32 {
+                    const E: f32 = 1e-3;
+                    let equal = (hy - ny).abs() < E && (hx - nx).abs() < E;
+                    // 'outer: for _ in 0..32 {
+                    while ny < hy || equal {
+                        let tile = if hx >= 7.0 || ny >= 7.0 { 1 } else { 0 };
 
-            if tile != 0 {
-                // screen.pointWorld(hx, ny, tile);
-                break 'outer;
+                        if tile != 0 {
+                            // screen.pointWorld(hx, ny, tile);
+                            hit = true;
+                            break 'outer;
+                        }
+
+                        hx += 1.0;
+                        ny += ty;
+                    }
+
+                    while nx < hx {
+                        let tile = if nx >= 7.0 || hy >= 7.0 { 1 } else { 0 };
+                        if tile != 0 {
+                            // screen.pointWorld(nx, hy, tile);
+                            hit = true;
+                            break 'outer;
+                        }
+                        hy += 1.0;
+                        nx += tx;
+                    }
+                }
+                assert!(hit);
             }
-
-            hx += 1.0;
-            ny += ty;
-        }
-
-        while nx < hx {
-            let tile = if nx >= 7.0 || hy >= 7.0 { 1 } else { 0 };
-            if tile != 0 {
-                // screen.pointWorld(nx, hy, tile);
-                break 'outer;
-            }
-            hy += 1.0;
-            nx += tx;
         }
     }
 }
@@ -252,8 +283,8 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut player_vel = PlayerVel {
-        forward: 10.0,
-        rot: PI,
+        forward: 0.0,
+        rot: 0.0,
     };
     let mut player = Player::default();
     let map = Map::default();
@@ -266,7 +297,22 @@ fn main() {
         for i in 0..16 {
             buffer.point(10 + i, 10 + i, i);
         }
-
+        const FWD_SPEED: f32 = 10.0;
+        const ROT_SPEED: f32 = 5.0;
+        player_vel.forward = 0.0;
+        player_vel.rot = 0.0;
+        if window.is_key_down(Key::W) {
+            player_vel.forward += FWD_SPEED;
+        }
+        if window.is_key_down(Key::S) {
+            player_vel.forward -= FWD_SPEED;
+        }
+        if window.is_key_down(Key::D) {
+            player_vel.rot += ROT_SPEED;
+        }
+        if window.is_key_down(Key::A) {
+            player_vel.rot -= ROT_SPEED;
+        }
         player.apply_vel(&player_vel, DT);
         player.draw(&mut buffer);
 
