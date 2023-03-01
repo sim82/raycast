@@ -138,35 +138,75 @@ impl Map {
         let (dx, dy) = player.frac_pos();
         let (ex, ey) = (1.0 - dx, 1.0 - dy);
         for column in 0..WIDTH {
-            let alpha = player.rot + player.col_angle[column];
+            let alpha_full = player.rot + player.col_angle[column];
+            let alpha_full = if alpha_full < 0.0 {
+                alpha_full + 2.0 * PI
+            } else if alpha_full >= 2.0 * PI {
+                alpha_full - 2.0 * PI
+            } else {
+                alpha_full
+            };
 
-            // 1st quadrant
+            let alpha;
             let hstep_x; // = 1.0;
             let hstep_y; // = 1.0;
             let tx; // = 1.0 / alpha.tan();
             let ty; // = alpha.tan();
             let sx; // = tx * ey;
             let sy; // = ty * ex;
-
-            let comp_x: Box<dyn Fn(f32, f32) -> bool> = if (0.0..FRAC_PI_2).contains(&alpha) {
-                hstep_x = 1.0f32;
-                hstep_y = 1.0f32;
-                tx = 1.0 / alpha.tan();
-                ty = alpha.tan();
-                sx = tx * ey;
-                sy = ty * ex;
-                Box::new(|a: f32, b: f32| a < b)
-            } else if (FRAC_PI_2..PI).contains(&alpha) {
-                hstep_x = -1.0f32;
-                hstep_y = 1.0f32;
-                tx = -1.0 / (alpha - FRAC_PI_2).tan();
-                ty = (alpha - FRAC_PI_2).tan();
-                sx = tx * ey;
-                sy = ty * dx;
-                Box::new(|a: f32, b: f32| a > b)
-            } else {
-                continue;
-            };
+                    // let (comp_x: Box<dyn Fn(f32, f32) -> bool>, comp_y: Box<dyn Fn(f32, f32) -> bool>)
+            let (comp_x, comp_y): (Box<dyn Fn(f32, f32) -> bool>, Box<dyn Fn(f32, f32) -> bool>) =
+                if (0.0..FRAC_PI_2).contains(&alpha_full) {
+                    alpha = alpha_full;
+                    hstep_x = 1.0f32;
+                    hstep_y = 1.0f32;
+                    tx = 1.0 / alpha.tan();
+                    ty = alpha.tan();
+                    sx = tx * ey;
+                    sy = ty * ex;
+                    (
+                        Box::new(|a: f32, b: f32| a < b),
+                        Box::new(|a: f32, b: f32| a < b),
+                    )
+                } else if (FRAC_PI_2..PI).contains(&alpha_full) {
+                    alpha = alpha_full - FRAC_PI_2;
+                    hstep_x = -1.0f32;
+                    hstep_y = 1.0f32;
+                    tx = -alpha.tan();
+                    ty = 1.0 / alpha.tan();
+                    sx = tx * ey;
+                    sy = ty * dx;
+                    (
+                        Box::new(|a: f32, b: f32| a > b),
+                        Box::new(|a: f32, b: f32| a < b),
+                    )
+                } else if (PI..(PI + FRAC_PI_2)).contains(&alpha_full) {
+                    alpha = alpha_full - PI;
+                    hstep_x = -1.0f32;
+                    hstep_y = -1.0f32;
+                    tx = -1.0 / alpha.tan();
+                    ty = -alpha.tan();
+                    sx = tx * dy;
+                    sy = ty * dx;
+                    (
+                        Box::new(|a: f32, b: f32| a > b),
+                        Box::new(|a: f32, b: f32| a > b),
+                    )
+                } else if ((PI + FRAC_PI_2)..(2.0 * PI)).contains(&alpha_full) {
+                    alpha = alpha_full - (PI + FRAC_PI_2);
+                    hstep_x = 1.0f32;
+                    hstep_y = -1.0f32;
+                    tx = alpha.tan();
+                    ty = -1.0 / alpha.tan();
+                    sx = tx * dy;
+                    sy = ty * ex;
+                    (
+                        Box::new(|a: f32, b: f32| a < b),
+                        Box::new(|a: f32, b: f32| a > b),
+                    )
+                } else {
+                    continue;
+                };
 
             let mut hx = x + hstep_x;
             let mut hy = y + hstep_y;
@@ -178,7 +218,7 @@ impl Map {
                 // 'outer: for _ in 0..32 {
                 const E: f32 = 1e-3;
                 let equal = (hy - ny).abs() < E && (hx - nx).abs() < E;
-                while ny < hy || equal {
+                while comp_y(ny, hy) || equal {
                     hit_tile = self.lookup(hx, ny);
 
                     if hit_tile != 0 {
