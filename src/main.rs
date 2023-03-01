@@ -10,14 +10,14 @@ const COLORS: [u32; 16] = [
 ];
 
 const MAP: [[i32; 8]; 8] = [
-    [8, 2, 3, 4, 5, 6, 7, 1],
+    [7, 2, 3, 4, 5, 6, 7, 1],
     [7, 0, 0, 0, 0, 0, 0, 2],
     [6, 0, 0, 0, 0, 0, 0, 3],
     [5, 0, 0, 0, 0, 0, 0, 4],
     [4, 0, 0, 0, 0, 0, 3, 5],
     [3, 0, 0, 0, 0, 0, 4, 6],
     [2, 0, 0, 0, 0, 2, 5, 7],
-    [1, 2, 3, 4, 5, 6, 7, 8],
+    [1, 2, 3, 4, 5, 6, 7, 7],
 ];
 
 trait Draw {
@@ -257,6 +257,7 @@ impl Map {
                 while comp_x(nx, hx) {
                     hit_tile = self.lookup(nx + xcor, hy + ycor);
                     if hit_tile != 0 {
+                        hit_tile += 8;
                         screen.pointWorld(nx, hy, hit_tile);
                         //hit_dist = ((nx - player.x).powf(2.0) + (hy - player.y).powf(2.0)).sqrt();
                         dx = (nx - player.x) * hstep_x;
@@ -280,11 +281,12 @@ impl Map {
             //     hit_tile,
             // );
             let offs = if p > 0.0 { c / p } else { c };
-            // for row in (mid - offs as i32)..(mid + offs as i32) {
-            //     screen.point(column as i32, row, hit_tile);
-            // }
-            screen.point(column as i32, mid + offs as i32, hit_tile);
-            screen.point(column as i32, mid - offs as i32, hit_tile);
+
+            for row in (mid - offs as i32)..(mid + offs as i32) {
+                screen.point(column as i32, row, hit_tile);
+            }
+            screen.point(column as i32, mid + offs as i32, 0);
+            screen.point(column as i32, mid - offs as i32, 0);
         }
     }
 }
