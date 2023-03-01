@@ -63,8 +63,8 @@ impl Default for Player {
         let mut col_angle = [0.0; WIDTH];
         for i in 0..WIDTH / 2 {
             let f = (i as f32) / (WIDTH as f32 * 0.5);
-            col_angle[WIDTH / 2 + i] = f.tan() * 0.75;
-            col_angle[WIDTH / 2 - i - 1] = -f.tan() * 0.75;
+            col_angle[WIDTH / 2 + i] = f.atan();
+            col_angle[WIDTH / 2 - i - 1] = -f.atan();
         }
 
         Self {
@@ -148,58 +148,79 @@ impl Map {
             };
 
             let alpha;
-            let hstep_x; // = 1.0;
-            let hstep_y; // = 1.0;
-            let tx; // = 1.0 / alpha.tan();
-            let ty; // = alpha.tan();
-            let sx; // = tx * ey;
-            let sy; // = ty * ex;
-                    // let (comp_x: Box<dyn Fn(f32, f32) -> bool>, comp_y: Box<dyn Fn(f32, f32) -> bool>)
+            let hstep_x;
+            let hstep_y;
+            let tx;
+            let ty;
+            let sx;
+            let sy;
+            let mut hx;
+            let mut hy;
+            let quad_alpha;
+            let mut xcor = 0.0;
+            let mut ycor = 0.0;
             let (comp_x, comp_y): (Box<dyn Fn(f32, f32) -> bool>, Box<dyn Fn(f32, f32) -> bool>) =
                 if (0.0..FRAC_PI_2).contains(&alpha_full) {
-                    alpha = alpha_full;
+                    quad_alpha = 0.0;
+                    alpha = alpha_full - quad_alpha;
                     hstep_x = 1.0f32;
                     hstep_y = 1.0f32;
                     tx = 1.0 / alpha.tan();
                     ty = alpha.tan();
                     sx = tx * ey;
                     sy = ty * ex;
+                    hx = x + hstep_x;
+                    hy = y + hstep_y;
                     (
                         Box::new(|a: f32, b: f32| a < b),
                         Box::new(|a: f32, b: f32| a < b),
                     )
                 } else if (FRAC_PI_2..PI).contains(&alpha_full) {
-                    alpha = alpha_full - FRAC_PI_2;
+                    quad_alpha = FRAC_PI_2;
+                    alpha = alpha_full - quad_alpha;
                     hstep_x = -1.0f32;
                     hstep_y = 1.0f32;
                     tx = -alpha.tan();
                     ty = 1.0 / alpha.tan();
                     sx = tx * ey;
                     sy = ty * dx;
+                    hx = x;
+                    hy = y + hstep_y;
+                    xcor = -0.01;
+
                     (
                         Box::new(|a: f32, b: f32| a > b),
                         Box::new(|a: f32, b: f32| a < b),
                     )
                 } else if (PI..(PI + FRAC_PI_2)).contains(&alpha_full) {
-                    alpha = alpha_full - PI;
+                    quad_alpha = PI;
+                    alpha = alpha_full - quad_alpha;
                     hstep_x = -1.0f32;
                     hstep_y = -1.0f32;
                     tx = -1.0 / alpha.tan();
                     ty = -alpha.tan();
                     sx = tx * dy;
                     sy = ty * dx;
+                    hx = x;
+                    hy = y;
+                    xcor = -0.01;
+                    ycor = -0.01;
                     (
                         Box::new(|a: f32, b: f32| a > b),
                         Box::new(|a: f32, b: f32| a > b),
                     )
                 } else if ((PI + FRAC_PI_2)..(2.0 * PI)).contains(&alpha_full) {
-                    alpha = alpha_full - (PI + FRAC_PI_2);
+                    quad_alpha = PI + FRAC_PI_2;
+                    alpha = alpha_full - quad_alpha;
                     hstep_x = 1.0f32;
                     hstep_y = -1.0f32;
                     tx = alpha.tan();
                     ty = -1.0 / alpha.tan();
                     sx = tx * dy;
                     sy = ty * ex;
+                    hx = x + hstep_x;
+                    hy = y;
+                    ycor = -0.01;
                     (
                         Box::new(|a: f32, b: f32| a < b),
                         Box::new(|a: f32, b: f32| a > b),
@@ -208,22 +229,24 @@ impl Map {
                     continue;
                 };
 
-            let mut hx = x + hstep_x;
-            let mut hy = y + hstep_y;
             let mut nx = player.x + sx;
             let mut ny = player.y + sy;
-            let mut hit_tile = 15;
-            let mut hit_dist = 0.0;
+            let mut hit_tile;
+            // let mut hit_dist = 0.0;
+            let dx;
+            let dy;
             'outer: loop {
                 // 'outer: for _ in 0..32 {
                 const E: f32 = 1e-3;
                 let equal = (hy - ny).abs() < E && (hx - nx).abs() < E;
                 while comp_y(ny, hy) || equal {
-                    hit_tile = self.lookup(hx, ny);
+                    hit_tile = self.lookup(hx + xcor, ny + ycor);
 
                     if hit_tile != 0 {
                         screen.pointWorld(hx, ny, hit_tile);
-                        hit_dist = ((hx - player.x).powf(2.0) + (ny - player.y).powf(2.0)).sqrt();
+                        // hit_dist = ((hx - player.x).powf(2.0) + (ny - player.y).powf(2.0)).sqrt();
+                        dx = (hx - player.x) * hstep_x;
+                        dy = (ny - player.y) * hstep_y;
                         break 'outer;
                     }
 
@@ -232,10 +255,12 @@ impl Map {
                 }
 
                 while comp_x(nx, hx) {
-                    hit_tile = self.lookup(nx, hy);
+                    hit_tile = self.lookup(nx + xcor, hy + ycor);
                     if hit_tile != 0 {
                         screen.pointWorld(nx, hy, hit_tile);
-                        hit_dist = ((nx - player.x).powf(2.0) + (hy - player.y).powf(2.0)).sqrt();
+                        //hit_dist = ((nx - player.x).powf(2.0) + (hy - player.y).powf(2.0)).sqrt();
+                        dx = (nx - player.x) * hstep_x;
+                        dy = (hy - player.y) * hstep_y;
                         break 'outer;
                     }
                     hy += hstep_y;
@@ -244,7 +269,17 @@ impl Map {
             }
             let mid = 100;
             let c = 100.0;
-            let offs = if hit_dist > 0.0 { c / hit_dist } else { c };
+            let beta = player.rot - quad_alpha;
+            // let p = beta.cos() * dx + beta.sin() * dy;
+            // let p = 2.0 / p;
+            let p = (dx * dx + dy * dy).sqrt();
+            let p = p * (beta - alpha).cos();
+            // screen.pointWorld(
+            //     player.x + p * alpha.cos(),
+            //     player.y + p * alpha.sin(),
+            //     hit_tile,
+            // );
+            let offs = if p > 0.0 { c / p } else { c };
             // for row in (mid - offs as i32)..(mid + offs as i32) {
             //     screen.point(column as i32, row, hit_tile);
             // }
@@ -253,74 +288,6 @@ impl Map {
         }
     }
 }
-
-#[test]
-fn test_raycast() {
-    let yrange = 0..1024;
-    for yi in yrange {
-        let xrange = 0..1024;
-        for xi in xrange {
-            let arange = 0..1024;
-            for ai in arange {
-                let (xp, yp) = (1.0 + (xi as f32 / 1024.0), 1.0 + (yi as f32 / 1024.0));
-                let (x, y) = (xp.floor(), yp.floor());
-                // if self.lookup(x, y) != 0 {
-                //     return;
-                // }
-
-                let (dx, dy) = (xp.fract(), yp.fract());
-                let (ex, ey) = (1.0 - dx, 1.0 - dy);
-                let alpha = (ai as f32) / 1024.0;
-
-                if !(0.0..FRAC_PI_2).contains(&alpha) {
-                    panic!();
-                }
-
-                let tx = 1.0 / alpha.tan();
-                let ty = alpha.tan();
-                let sx = tx * ey;
-                let sy = ty * ex;
-                let mut hx = x + 1.0;
-                let mut hy = y + 1.0;
-                let mut nx = xp + sx;
-                let mut ny = yp + sy;
-                let mut hit = false;
-                'outer:
-                // 'outer: loop {
-                for _ in 0..32 {
-                    const E: f32 = 1e-3;
-                    let equal = (hy - ny).abs() < E && (hx - nx).abs() < E;
-                    // 'outer: for _ in 0..32 {
-                    while ny < hy || equal {
-                        let tile = if hx >= 7.0 || ny >= 7.0 { 1 } else { 0 };
-
-                        if tile != 0 {
-                            // screen.pointWorld(hx, ny, tile);
-                            hit = true;
-                            break 'outer;
-                        }
-
-                        hx += 1.0;
-                        ny += ty;
-                    }
-
-                    while nx < hx {
-                        let tile = if nx >= 7.0 || hy >= 7.0 { 1 } else { 0 };
-                        if tile != 0 {
-                            // screen.pointWorld(nx, hy, tile);
-                            hit = true;
-                            break 'outer;
-                        }
-                        hy += 1.0;
-                        nx += tx;
-                    }
-                }
-                assert!(hit);
-            }
-        }
-    }
-}
-
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
