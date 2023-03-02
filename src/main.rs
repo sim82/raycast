@@ -1,4 +1,7 @@
-use std::f32::consts::{FRAC_PI_2, PI};
+use std::{
+    f32::consts::{FRAC_PI_2, PI},
+    time::Instant,
+};
 
 use minifb::{Key, Window, WindowOptions};
 
@@ -44,6 +47,42 @@ impl Draw for Vec<u32> {
         let scale = 16.0;
         self.point((x * scale) as i32, (y * scale) as i32, c);
     }
+}
+
+struct Fp16 {
+    v: i32,
+}
+
+const FP16_F: f32 = 256.0 * 256.0;
+
+impl From<f32> for Fp16 {
+    fn from(f: f32) -> Self {
+        Self {
+            v: (f * FP16_F) as i32,
+        }
+    }
+}
+
+impl Fp16 {
+    pub fn get_int(&self) -> i32 {
+        self.v >> 16
+    }
+    pub fn get_fract(&self) -> u32 {
+        (self.v as u32) & 0xFFFF
+    }
+}
+
+#[test]
+fn test_fp16() {
+    let v1: Fp16 = 123.456.into();
+
+    assert_eq!(v1.get_int(), 123);
+    assert_eq!(v1.get_fract(), (0.456 * FP16_F) as u32);
+
+    let v2: Fp16 = (-123.456).into();
+
+    assert_eq!(v2.get_int(), -124);
+    assert_eq!(v2.get_fract(), ((1.0 - 0.456) * FP16_F) as u32 + 1);
 }
 
 struct Player {
@@ -345,7 +384,9 @@ fn main() {
         player.apply_vel(&player_vel, DT);
         player.draw(&mut buffer);
 
+        let start = Instant::now();
         map.sweep_raycast(&mut buffer, &player);
+        println!("time: {}ns", start.elapsed().as_nanos());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();

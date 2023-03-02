@@ -399,6 +399,7 @@ dependencies = [
 name = "raycast"
 version = "0.1.0"
 dependencies = [
+ "lazy_static",
  "minifb",
 ]
 

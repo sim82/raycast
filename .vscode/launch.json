@@ -40,6 +40,24 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'fp'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=fp",
+                    "--package=raycast"
+                ],
+                "filter": {
+                    "name": "fp",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }
