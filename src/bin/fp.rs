@@ -25,7 +25,7 @@ const MAP: [[i32; 8]; 8] = [
 ];
 
 const FP16_ZERO: Fp16 = Fp16 { v: 0 };
-const FP16_ONE: Fp16 = Fp16 { v: 1 << 16 };
+const FP16_ONE: Fp16 = Fp16 { v: 1 << FP16_SCALE };
 const FP16_TAU: Fp16 = Fp16 {
     v: (std::f32::consts::TAU * FP16_F) as i32,
 };
@@ -51,7 +51,8 @@ struct Fp16 {
     v: i32,
 }
 
-const FP16_F: f32 = 256.0 * 256.0;
+const FP16_SCALE: i32 = 16;
+const FP16_F: f32 = (1 << FP16_SCALE) as f32;
 
 impl From<f32> for Fp16 {
     fn from(f: f32) -> Self {
@@ -63,16 +64,19 @@ impl From<f32> for Fp16 {
 
 impl From<i32> for Fp16 {
     fn from(f: i32) -> Self {
-        Self { v: f << 16 }
+        Self { v: f << FP16_SCALE }
     }
 }
 
+// const TAN_CLAMP: f32 = 16.0;
+const TAN_CLAMP: f32 = 1024.0;
+
 impl Fp16 {
     pub fn get_int(&self) -> i32 {
-        self.v >> 16
+        self.v >> FP16_SCALE
     }
     pub fn get_fract(&self) -> u32 {
-        (self.v as u32) & 0xFFFF
+        (self.v as u32) & 0xFFFF // TODO: mask from SCALE
     }
 
     pub fn fract(&self) -> Fp16 {
@@ -89,12 +93,12 @@ impl Fp16 {
     pub fn tan(&self) -> Fp16 {
         ((self.v as f32) / FP16_F)
             .tan()
-            .clamp(-1024.0, 1024.0)
+            .clamp(-TAN_CLAMP, TAN_CLAMP)
             .into()
     }
     pub fn cot(&self) -> Fp16 {
         (1.0 / ((self.v as f32) / FP16_F).tan())
-            .clamp(-1024.0, 1024.0)
+            .clamp(-TAN_CLAMP, TAN_CLAMP)
             .into()
     }
 }
@@ -139,7 +143,8 @@ impl Mul<Fp16> for Fp16 {
     fn mul(self, rhs: Fp16) -> Self::Output {
         // assert!(self.v.abs() <= 0xFFFF || rhs.v.abs() <= 0xFFFF);
         // let sign =
-        let v = (((self.v as i64) * (rhs.v as i64)) >> 16) as i32;
+        let v = (((self.v as i64) * (rhs.v as i64)) >> FP16_SCALE) as i32;
+        // let v = ((self.v >> 2) * (rhs.v >> 2)) >> 12;
         Self { v }
     }
 }
@@ -394,7 +399,11 @@ impl Map {
             const C: i32 = 100;
             let beta = player.rot;
             let p = beta.cos() * dx + beta.sin() * dy;
-            let offs = if p > FP16_ZERO { (C << 16) / p.v } else { C };
+            let offs = if p > FP16_ZERO {
+                (C << FP16_SCALE) / p.v
+            } else {
+                C
+            };
 
             for row in (MID - offs)..(MID + offs) {
                 screen.point(column as i32, row, hit_tile);
