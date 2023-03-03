@@ -130,7 +130,7 @@ impl From<i32> for Fp16 {
 }
 
 // const TAN_CLAMP: f32 = 16.0;
-const TAN_CLAMP: f32 = 64.0;
+const TAN_CLAMP: f32 = 128.0;
 
 impl Fp16 {
     pub fn get_int(&self) -> i32 {
@@ -595,7 +595,9 @@ fn main() {
         player.draw(&mut buffer);
 
         let start = Instant::now();
+        // for _ in 0..1000 {
         map.sweep_raycast(&mut buffer, &player, 0..WIDTH);
+        // }
         println!("time: {}us", start.elapsed().as_micros());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
