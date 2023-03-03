@@ -78,11 +78,14 @@ impl Fp16 {
         ((self.v as f32) / FP16_F).cos().into()
     }
     pub fn tan(&self) -> Fp16 {
-        ((self.v as f32) / FP16_F).tan().clamp(-1.0, 1.0).into()
+        ((self.v as f32) / FP16_F)
+            .tan()
+            .clamp(-1024.0, 1024.0)
+            .into()
     }
     pub fn cot(&self) -> Fp16 {
         (1.0 / ((self.v as f32) / FP16_F).tan())
-            .clamp(-1.0, 1.0)
+            .clamp(-1024.0, 1024.0)
             .into()
     }
 }
@@ -299,79 +302,80 @@ impl Map {
             let mut hx;
             let mut hy;
             let quad_alpha;
-            let mut xcor = 0.0;
-            let mut ycor = 0.0;
-            let (comp_x, comp_y): (Box<dyn Fn(i32, i32) -> bool>, Box<dyn Fn(i32, i32) -> bool>) =
-                if (FP16_ZERO..FP16_FRAC_PI_2).contains(&alpha_full) {
-                    quad_alpha = FP16_ZERO;
-                    alpha = alpha_full - quad_alpha;
-                    hstep_x = 1;
-                    hstep_y = 1;
-                    tx = alpha.cot();
-                    ty = alpha.tan();
-                    sx = tx * ey;
-                    sy = ty * ex;
-                    hx = x + hstep_x;
-                    hy = y + hstep_y;
-                    (
-                        Box::new(|a: i32, b: i32| a < b),
-                        Box::new(|a: i32, b: i32| a < b),
-                    )
-                }
-                //  else if (FP16_FRAC_PI_2..FP16_PI).contains(&alpha_full) {
-                //     quad_alpha = FP16_FRAC_PI_2;
-                //     alpha = alpha_full - quad_alpha;
-                //     hstep_x = -1;
-                //     hstep_y = 1;
-                //     tx = -alpha.tan();
-                //     ty = alpha.cot();
-                //     sx = tx * ey;
-                //     sy = ty * dx;
-                //     hx = x;
-                //     hy = y + hstep_y;
-                //     xcor = -0.01;
 
-                //     (
-                //         Box::new(|a: i32, b: i32| a > b),
-                //         Box::new(|a: i32, b: i32| a < b),
-                //     )
-                // } else if (FP16_PI..(FP16_PI + FP16_FRAC_PI_2)).contains(&alpha_full) {
-                //     quad_alpha = FP16_PI;
-                //     alpha = alpha_full - quad_alpha;
-                //     hstep_x = 1;
-                //     hstep_y = 1;
-                //     tx = -alpha.cot();
-                //     ty = -alpha.tan();
-                //     sx = tx * dy;
-                //     sy = ty * dx;
-                //     hx = x;
-                //     hy = y;
-                //     xcor = -0.01;
-                //     ycor = -0.01;
-                //     (
-                //         Box::new(|a: i32, b: i32| a > b),
-                //         Box::new(|a: i32, b: i32| a > b),
-                //     )
-                // } else if ((FP16_PI + FP16_FRAC_PI_2)..(FP16_TAU)).contains(&alpha_full) {
-                //     quad_alpha = FP16_PI + FP16_FRAC_PI_2;
-                //     alpha = alpha_full - quad_alpha;
-                //     hstep_x = 1;
-                //     hstep_y = -1;
-                //     tx = alpha.tan();
-                //     ty = -alpha.cot();
-                //     sx = tx * dy;
-                //     sy = ty * ex;
-                //     hx = x + hstep_x;
-                //     hy = y;
-                //     ycor = -0.01;
-                //     (
-                //         Box::new(|a: i32, b: i32| a < b),
-                //         Box::new(|a: i32, b: i32| a > b),
-                //     )
-                // }
-                else {
-                    continue;
-                };
+            let (comp_x, comp_y): (
+                Box<dyn Fn(Fp16, Fp16) -> bool>,
+                Box<dyn Fn(Fp16, Fp16) -> bool>,
+            ) = if (FP16_ZERO..FP16_FRAC_PI_2).contains(&alpha_full) {
+                quad_alpha = FP16_ZERO;
+                alpha = alpha_full - quad_alpha;
+                hstep_x = 1;
+                hstep_y = 1;
+
+                tx = alpha.cot();
+                ty = alpha.tan();
+                sx = tx * ey;
+                sy = ty * ex;
+                hx = x + hstep_x;
+                hy = y + hstep_y;
+                (
+                    Box::new(|a: Fp16, b: Fp16| a <= b),
+                    Box::new(|a: Fp16, b: Fp16| a <= b),
+                )
+            } else if (FP16_FRAC_PI_2..FP16_PI).contains(&alpha_full) {
+                quad_alpha = FP16_FRAC_PI_2;
+                alpha = alpha_full - quad_alpha;
+                hstep_x = -1;
+                hstep_y = 1;
+                tx = -alpha.tan();
+                ty = alpha.cot();
+                sx = tx * ey;
+                sy = ty * dx;
+                hx = x;
+                hy = y + hstep_y;
+
+                (
+                    Box::new(|a: Fp16, b: Fp16| a >= b),
+                    Box::new(|a: Fp16, b: Fp16| a <= b),
+                )
+            }
+            //  else if (FP16_PI..(FP16_PI + FP16_FRAC_PI_2)).contains(&alpha_full) {
+            //     quad_alpha = FP16_PI;
+            //     alpha = alpha_full - quad_alpha;
+            //     hstep_x = 1;
+            //     hstep_y = 1;
+            //     tx = -alpha.cot();
+            //     ty = -alpha.tan();
+            //     sx = tx * dy;
+            //     sy = ty * dx;
+            //     hx = x;
+            //     hy = y;
+            //     xcor = -0.01;
+            //     ycor = -0.01;
+            //     (
+            //         Box::new(|a: i32, b: i32| a > b),
+            //         Box::new(|a: i32, b: i32| a > b),
+            //     )
+            // } else if ((FP16_PI + FP16_FRAC_PI_2)..(FP16_TAU)).contains(&alpha_full) {
+            //     quad_alpha = FP16_PI + FP16_FRAC_PI_2;
+            //     alpha = alpha_full - quad_alpha;
+            //     hstep_x = 1;
+            //     hstep_y = -1;
+            //     tx = alpha.tan();
+            //     ty = -alpha.cot();
+            //     sx = tx * dy;
+            //     sy = ty * ex;
+            //     hx = x + hstep_x;
+            //     hy = y;
+            //     ycor = -0.01;
+            //     (
+            //         Box::new(|a: i32, b: i32| a < b),
+            //         Box::new(|a: i32, b: i32| a > b),
+            //     )
+            // }
+            else {
+                continue;
+            };
 
             let mut nx = player.x + sx;
             let mut ny = player.y + sy;
@@ -379,11 +383,12 @@ impl Map {
             // let mut hit_dist = 0.0;
             let dx;
             let dy;
+            let mut loop_count = 0;
             'outer: loop {
-                // 'outer: for _ in 0..32 {
-                const E: f32 = 1e-3;
+                // 'outer: for i in 0.. {
+                // const E: f32 = 1e-3;
                 // let equal = (hy - ny).abs() < E && (hx - nx).abs() < E;
-                while comp_y(ny.get_int(), hy) {
+                while comp_y(ny, hy.into()) {
                     hit_tile = self.lookup(hx, ny.get_int());
 
                     if hit_tile != 0 {
@@ -398,7 +403,7 @@ impl Map {
                     ny += ty;
                 }
 
-                while comp_x(nx.get_int(), hx) {
+                while comp_x(nx, hx.into()) {
                     hit_tile = self.lookup(nx.get_int(), hy);
                     if hit_tile != 0 {
                         hit_tile += 8;
@@ -410,6 +415,10 @@ impl Map {
                     }
                     hy += hstep_y;
                     nx += tx;
+                }
+                loop_count += 1;
+                if loop_count > 32 {
+                    panic!();
                 }
             }
             let mid = 100;
@@ -424,13 +433,13 @@ impl Map {
             //     player.y + p * alpha.sin(),
             //     hit_tile,
             // );
-            let offs = if p > FP16_ZERO { c / p.get_int() } else { c };
+            let offs = if p > FP16_ZERO { (c << 16) / p.v } else { c };
 
-            for row in (mid - offs as i32)..(mid + offs as i32) {
+            for row in (mid - offs)..(mid + offs) {
                 screen.point(column as i32, row, hit_tile);
             }
-            screen.point(column as i32, mid + offs as i32, 0);
-            screen.point(column as i32, mid - offs as i32, 0);
+            screen.point(column as i32, mid + offs, 0);
+            screen.point(column as i32, mid - offs, 0);
         }
     }
 }
