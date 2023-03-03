@@ -4,6 +4,7 @@ use std::{
     time::Instant,
 };
 
+use image::{ImageBuffer, Rgb};
 use lazy_static::lazy_static;
 use minifb::{Key, Window, WindowOptions};
 
@@ -250,6 +251,7 @@ lazy_static! {
 trait Draw {
     fn point(&mut self, x: i32, y: i32, c: i32);
     fn pointWorld(&mut self, x: Fp16, y: Fp16, c: i32);
+    fn point_rgb(&mut self, x: i32, y: i32, c: Rgb<u8>);
 }
 
 impl Draw for Vec<u32> {
@@ -265,6 +267,15 @@ impl Draw for Vec<u32> {
         }
 
         self[(x as usize) + (y as usize) * WIDTH] = COLORS[c as usize];
+    }
+
+    fn point_rgb(&mut self, x: i32, y: i32, c: Rgb<u8>) {
+        if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT {
+            return;
+        }
+
+        self[(x as usize) + (y as usize) * WIDTH] =
+            (c.0[0] as u32) << 16 | (c.0[1] as u32) << 8 | (c.0[2] as u32);
     }
 
     fn pointWorld(&mut self, x: Fp16, y: Fp16, c: i32) {
@@ -358,7 +369,13 @@ impl Map {
         }
         self.map[y as usize][x as usize]
     }
-    pub fn sweep_raycast(&self, screen: &mut Vec<u32>, player: &Player, columns: Range<usize>) {
+    pub fn sweep_raycast(
+        &self,
+        screen: &mut Vec<u32>,
+        player: &Player,
+        columns: Range<usize>,
+        tex: &ImageBuffer<Rgb<u8>, Vec<u8>>,
+    ) {
         let (x, y) = player.int_pos();
         if self.lookup(x, y) != 0 {
             return;
@@ -470,7 +487,7 @@ impl Map {
             //         panic!("{:?} col: {}", player, column);
             //     }
             // }
-
+            let tex_u;
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                     // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
@@ -480,6 +497,7 @@ impl Map {
                         screen.pointWorld(hx.into(), ny, hit_tile);
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
+                        tex_u = ny.get_fract() >> 10;
                         break 'outer;
                     }
 
@@ -491,10 +509,11 @@ impl Map {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                     hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
                     if hit_tile != 0 {
-                        hit_tile += 8;
+                        // hit_tile += 8;
                         screen.pointWorld(nx, hy.into(), hit_tile);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
+                        tex_u = nx.get_fract() >> 10;
                         break 'outer;
                     }
                     hy += hstep_y;
@@ -517,8 +536,25 @@ impl Map {
                 C
             };
 
-            for row in (MID - offs)..(MID + offs) {
-                screen.point(column as i32, row, hit_tile);
+            let line_range = (MID - offs)..(MID + offs);
+            let step = 64.0 / line_range.len() as f32;
+            let mut tex_v = (line_range.start as f32 - (HEIGHT / 2) as f32
+                + line_range.len() as f32 / 2.0)
+                * step;
+            for row in line_range {
+                tex_v += step;
+
+                let color = if (tex_v as u32) % 2 == 0 {
+                    hit_tile + 8
+                } else {
+                    hit_tile
+                };
+                // screen.point(column as i32, row, color);
+                screen.point_rgb(
+                    column as i32,
+                    row,
+                    *tex.get_pixel(tex_u as u32 % 64, tex_v as u32 % 64),
+                );
             }
             screen.point(column as i32, MID + offs, 0);
             screen.point(column as i32, MID - offs, 0);
@@ -526,22 +562,25 @@ impl Map {
     }
 }
 
-#[test]
-fn raycast_test() {
-    let map = Map::default();
-    let mut screen = vec![0; WIDTH * HEIGHT];
-    let player = Player {
-        x: Fp16 { v: 230481 },
-        y: Fp16 { v: 189538 },
-        rot: Fp16 { v: 276186 },
-    };
-    let col = 86;
-    map.sweep_raycast(&mut screen, &player, col..(col + 1));
-}
+// #[test]
+// fn raycast_test() {
+//     let map = Map::default();
+//     let mut screen = vec![0; WIDTH * HEIGHT];
+//     let player = Player {
+//         x: Fp16 { v: 230481 },
+//         y: Fp16 { v: 189538 },
+//         rot: Fp16 { v: 276186 },
+//     };
+//     let col = 86;
+//     map.sweep_raycast(&mut screen, &player, col..(col + 1));
+// }
 
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
+    let tex = image::open("brick52_1.png").unwrap();
+
+    let tex = tex.as_rgb8().unwrap();
     let mut window = Window::new(
         "Test - ESC to exit",
         WIDTH,
@@ -596,7 +635,7 @@ fn main() {
 
         let start = Instant::now();
         // for _ in 0..1000 {
-        map.sweep_raycast(&mut buffer, &player, 0..WIDTH);
+        map.sweep_raycast(&mut buffer, &player, 0..WIDTH, tex);
         // }
         println!("time: {}us", start.elapsed().as_micros());
 
