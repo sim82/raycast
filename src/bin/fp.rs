@@ -292,68 +292,52 @@ impl Map {
                 alpha_full
             };
 
-            let alpha;
             let hstep_x;
             let hstep_y;
             let tx;
             let ty;
-            let sx;
-            let sy;
-            let mut hx;
-            let mut hy;
-            let quad_alpha;
 
+            let mut nx;
+            let mut ny;
             if (FP16_ZERO..FP16_FRAC_PI_2).contains(&alpha_full) {
-                quad_alpha = FP16_ZERO;
-                alpha = alpha_full - quad_alpha;
+                let alpha = alpha_full - FP16_ZERO;
                 hstep_x = 1;
                 hstep_y = 1;
-
                 tx = alpha.cot();
                 ty = alpha.tan();
-                sx = tx * ey;
-                sy = ty * ex;
-                hx = x + hstep_x;
-                hy = y + hstep_y;
+                nx = player.x + (tx * ey);
+                ny = player.y + (ty * ex);
             } else if (FP16_FRAC_PI_2..FP16_PI).contains(&alpha_full) {
-                quad_alpha = FP16_FRAC_PI_2;
-                alpha = alpha_full - quad_alpha;
+                let alpha = alpha_full - FP16_FRAC_PI_2;
                 hstep_x = -1;
                 hstep_y = 1;
                 tx = -alpha.tan();
                 ty = alpha.cot();
-                sx = tx * ey;
-                sy = ty * dx;
-                hx = x;
-                hy = y + hstep_y;
+                nx = player.x + (tx * ey);
+                ny = player.y + (ty * dx); // - 1.into();
             } else if (FP16_PI..(FP16_PI + FP16_FRAC_PI_2)).contains(&alpha_full) {
-                quad_alpha = FP16_PI;
-                alpha = alpha_full - quad_alpha;
+                let alpha = alpha_full - FP16_PI;
                 hstep_x = -1;
                 hstep_y = -1;
                 tx = -alpha.cot();
                 ty = -alpha.tan();
-                sx = tx * dy;
-                sy = ty * dx;
-                hx = x;
-                hy = y;
+                nx = player.x + (tx * dy);
+                ny = player.y + (ty * dx);
             } else if ((FP16_PI + FP16_FRAC_PI_2)..(FP16_TAU)).contains(&alpha_full) {
-                quad_alpha = FP16_PI + FP16_FRAC_PI_2;
-                alpha = alpha_full - quad_alpha;
+                let alpha = alpha_full - (FP16_PI + FP16_FRAC_PI_2);
                 hstep_x = 1;
                 hstep_y = -1;
                 tx = alpha.tan();
                 ty = -alpha.cot();
-                sx = tx * dy;
-                sy = ty * ex;
-                hx = x + hstep_x;
-                hy = y;
+                nx = player.x + (tx * dy);
+                ny = player.y + (ty * ex);
             } else {
                 continue;
             };
 
-            let mut nx = player.x + sx;
-            let mut ny = player.y + sy;
+            let mut hx = x + hstep_x.max(0);
+            let mut hy = y + hstep_y.max(0);
+
             let mut hit_tile;
             // let mut hit_dist = 0.0;
             let dx;
@@ -361,7 +345,7 @@ impl Map {
             let mut loop_count = 0;
             'outer: loop {
                 while (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
-                    hit_tile = self.lookup(hx, ny.get_int());
+                    hit_tile = self.lookup(hx + hstep_x.min(0), ny.get_int());
 
                     if hit_tile != 0 {
                         screen.pointWorld(hx.into(), ny, hit_tile);
@@ -375,7 +359,7 @@ impl Map {
                 }
 
                 while (hstep_x > 0 && nx <= hx.into()) || (hstep_x < 0 && nx >= hx.into()) {
-                    hit_tile = self.lookup(nx.get_int(), hy);
+                    hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
                     if hit_tile != 0 {
                         hit_tile += 8;
                         screen.pointWorld(nx, hy.into(), hit_tile);
@@ -397,9 +381,9 @@ impl Map {
             let p = beta.cos() * dx + beta.sin() * dy;
             let offs = if p > FP16_ZERO { (C << 16) / p.v } else { C };
 
-            // for row in (MID - offs)..(MID + offs) {
-            //     screen.point(column as i32, row, hit_tile);
-            // }
+            for row in (MID - offs)..(MID + offs) {
+                screen.point(column as i32, row, hit_tile);
+            }
             screen.point(column as i32, MID + offs, 0);
             screen.point(column as i32, MID - offs, 0);
         }
@@ -460,9 +444,9 @@ fn main() {
 
         player.draw(&mut buffer);
 
-        // let start = Instant::now();
+        let start = Instant::now();
         map.sweep_raycast(&mut buffer, &player);
-        // println!("time: {}ns", start.elapsed().as_nanos());
+        println!("time: {}us", start.elapsed().as_micros());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
