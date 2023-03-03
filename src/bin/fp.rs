@@ -37,6 +37,15 @@ const FP16_FRAC_PI_2: Fp16 = Fp16 {
     v: (std::f32::consts::FRAC_PI_2 * FP16_F) as i32,
 };
 
+const FP16_PI_FRAC_PI_2: Fp16 = Fp16 {
+    v: ((std::f32::consts::PI + std::f32::consts::FRAC_PI_2) * FP16_F) as i32,
+};
+
+const QUADRANT_1: std::ops::Range<Fp16> = FP16_ZERO..FP16_FRAC_PI_2;
+const QUADRANT_2: std::ops::Range<Fp16> = FP16_FRAC_PI_2..FP16_PI;
+const QUADRANT_3: std::ops::Range<Fp16> = FP16_PI..(FP16_PI_FRAC_PI_2);
+const QUADRANT_4: std::ops::Range<Fp16> = (FP16_PI_FRAC_PI_2)..(FP16_TAU);
+
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 struct Fp16 {
     v: i32,
@@ -299,32 +308,33 @@ impl Map {
 
             let mut nx;
             let mut ny;
-            if (FP16_ZERO..FP16_FRAC_PI_2).contains(&alpha_full) {
-                let alpha = alpha_full - FP16_ZERO;
+
+            if QUADRANT_1.contains(&alpha_full) {
+                let alpha = alpha_full - QUADRANT_1.start;
                 hstep_x = 1;
                 hstep_y = 1;
                 tx = alpha.cot();
                 ty = alpha.tan();
                 nx = player.x + (tx * ey);
                 ny = player.y + (ty * ex);
-            } else if (FP16_FRAC_PI_2..FP16_PI).contains(&alpha_full) {
-                let alpha = alpha_full - FP16_FRAC_PI_2;
+            } else if QUADRANT_2.contains(&alpha_full) {
+                let alpha = alpha_full - QUADRANT_2.start;
                 hstep_x = -1;
                 hstep_y = 1;
                 tx = -alpha.tan();
                 ty = alpha.cot();
                 nx = player.x + (tx * ey);
                 ny = player.y + (ty * dx); // - 1.into();
-            } else if (FP16_PI..(FP16_PI + FP16_FRAC_PI_2)).contains(&alpha_full) {
-                let alpha = alpha_full - FP16_PI;
+            } else if QUADRANT_3.contains(&alpha_full) {
+                let alpha = alpha_full - QUADRANT_3.start;
                 hstep_x = -1;
                 hstep_y = -1;
                 tx = -alpha.cot();
                 ty = -alpha.tan();
                 nx = player.x + (tx * dy);
                 ny = player.y + (ty * dx);
-            } else if ((FP16_PI + FP16_FRAC_PI_2)..(FP16_TAU)).contains(&alpha_full) {
-                let alpha = alpha_full - (FP16_PI + FP16_FRAC_PI_2);
+            } else if QUADRANT_4.contains(&alpha_full) {
+                let alpha = alpha_full - QUADRANT_4.start;
                 hstep_x = 1;
                 hstep_y = -1;
                 tx = alpha.tan();
@@ -335,6 +345,9 @@ impl Map {
                 continue;
             };
 
+            // TODO: can't we just shift hx/nx (or hy/ny) both by -1 to get rid of lookup correction?
+            // hx/hy is the x/y boundary of the next block we enter. Depending on the hstep direction this is either the left or right (upper or lower)
+            // boundary.
             let mut hx = x + hstep_x.max(0);
             let mut hy = y + hstep_y.max(0);
 
@@ -345,6 +358,7 @@ impl Map {
             let mut loop_count = 0;
             'outer: loop {
                 while (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
+                    // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                     hit_tile = self.lookup(hx + hstep_x.min(0), ny.get_int());
 
                     if hit_tile != 0 {
@@ -359,6 +373,7 @@ impl Map {
                 }
 
                 while (hstep_x > 0 && nx <= hx.into()) || (hstep_x < 0 && nx >= hx.into()) {
+                    // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                     hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
                     if hit_tile != 0 {
                         hit_tile += 8;
