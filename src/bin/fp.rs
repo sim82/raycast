@@ -86,25 +86,23 @@ const MAP: [&[u8]; MAP_SIZE] = [
 
 const FP16_ZERO: Fp16 = Fp16 { v: 0 };
 const FP16_ONE: Fp16 = Fp16 { v: 1 << FP16_SCALE };
-const FP16_TAU: Fp16 = Fp16 {
-    v: (std::f32::consts::TAU * FP16_F) as i32,
-};
-const FP16_PI: Fp16 = Fp16 {
-    v: (std::f32::consts::PI * FP16_F) as i32,
-};
 
-const FP16_FRAC_PI_2: Fp16 = Fp16 {
-    v: (std::f32::consts::FRAC_PI_2 * FP16_F) as i32,
-};
+const FA_SCALE: i32 = 10;
+const FA_SCALEF: f32 = 10.0;
 
-const FP16_PI_FRAC_PI_2: Fp16 = Fp16 {
-    v: ((std::f32::consts::PI + std::f32::consts::FRAC_PI_2) * FP16_F) as i32,
-};
+const PIS_IN_180: f32 = 57.2957795130823208767981548141051703_f32; // .to_degrees() method is not constexpr
+const FA_TAU: i32 = (std::f32::consts::TAU * PIS_IN_180 * FA_SCALEF) as i32;
+const FA_PI: i32 = (std::f32::consts::PI * PIS_IN_180 * FA_SCALEF) as i32;
 
-const QUADRANT_1: std::ops::Range<Fp16> = FP16_ZERO..FP16_FRAC_PI_2;
-const QUADRANT_2: std::ops::Range<Fp16> = FP16_FRAC_PI_2..FP16_PI;
-const QUADRANT_3: std::ops::Range<Fp16> = FP16_PI..(FP16_PI_FRAC_PI_2);
-const QUADRANT_4: std::ops::Range<Fp16> = (FP16_PI_FRAC_PI_2)..(FP16_TAU);
+const FA_FRAC_PI_2: i32 = (std::f32::consts::FRAC_PI_2 * PIS_IN_180 * FA_SCALEF) as i32;
+
+const FA_PI_FRAC_PI_2: i32 =
+    ((std::f32::consts::PI + std::f32::consts::FRAC_PI_2) * PIS_IN_180 * FA_SCALEF) as i32;
+
+const QUADRANT_1: std::ops::Range<i32> = 0..FA_FRAC_PI_2;
+const QUADRANT_2: std::ops::Range<i32> = FA_FRAC_PI_2..FA_PI;
+const QUADRANT_3: std::ops::Range<i32> = FA_PI..FA_PI_FRAC_PI_2;
+const QUADRANT_4: std::ops::Range<i32> = (FA_PI_FRAC_PI_2)..(FA_TAU);
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 struct Fp16 {
@@ -236,12 +234,12 @@ fn test_fp16() {
 }
 
 lazy_static! {
-    static ref COL_ANGLE: [Fp16; WIDTH] = {
-        let mut col_angle = [Fp16::default(); WIDTH];
+    static ref COL_ANGLE: [i32; WIDTH] = {
+        let mut col_angle = [0; WIDTH];
         for i in 0..WIDTH / 2 {
             let f = (i as f32) / (WIDTH as f32 * 0.5);
-            col_angle[WIDTH / 2 + i] = f.atan().into();
-            col_angle[WIDTH / 2 - i - 1] = (-f.atan()).into();
+            col_angle[WIDTH / 2 + i] = (f.atan().to_degrees() * FA_SCALEF) as i32;
+            col_angle[WIDTH / 2 - i - 1] = ((-f.atan()).to_degrees() * FA_SCALEF) as i32;
         }
         col_angle
     };
@@ -293,7 +291,7 @@ impl Draw for Vec<u32> {
 struct Player {
     x: Fp16,
     y: Fp16,
-    rot: Fp16,
+    rot: i32,
 }
 
 #[derive(Debug)]
@@ -307,9 +305,31 @@ impl Default for Player {
         Self {
             x: 1.1.into(),
             y: 1.1.into(),
-            rot: 0.0.into(),
+            rot: 0,
         }
     }
+}
+
+fn fa_sin(v: i32) -> Fp16 {
+    (v as f32 / FA_SCALEF).to_radians().sin().into()
+}
+
+fn fa_cos(v: i32) -> Fp16 {
+    (v as f32 / FA_SCALEF).to_radians().cos().into()
+}
+
+fn fa_tan(v: i32) -> Fp16 {
+    (v as f32 / FA_SCALEF)
+        .to_radians()
+        .tan()
+        .clamp(-TAN_CLAMP, TAN_CLAMP)
+        .into()
+}
+
+fn fa_cot(v: i32) -> Fp16 {
+    (1.0 / (v as f32 / FA_SCALEF).to_radians().tan())
+        .clamp(-TAN_CLAMP, TAN_CLAMP)
+        .into()
 }
 
 impl Player {
@@ -321,17 +341,17 @@ impl Player {
     }
 
     pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16) {
-        self.rot += dt * player_vel.rot;
-        while self.rot < FP16_ZERO {
-            self.rot += FP16_TAU;
+        self.rot += (dt * player_vel.rot).get_int();
+        while self.rot < 0 {
+            self.rot += FA_TAU;
         }
 
-        while self.rot >= FP16_TAU {
-            self.rot -= FP16_TAU;
+        while self.rot >= FA_TAU {
+            self.rot -= FA_TAU;
         }
-        println!("cos sin {:?} {:?}", self.rot.cos(), self.rot.sin());
-        let dx = self.rot.cos() * player_vel.forward * dt;
-        let dy = self.rot.sin() * player_vel.forward * dt;
+        println!("cos sin {:?} {:?}", fa_cos(self.rot), fa_sin(self.rot));
+        let dx = fa_cos(self.rot) * player_vel.forward * dt;
+        let dy = fa_sin(self.rot) * player_vel.forward * dt;
         self.x += dx;
         self.y += dy;
     }
@@ -341,8 +361,8 @@ impl Player {
 
         for angle in COL_ANGLE.chunks(10) {
             let angle = angle[0];
-            let dx = (self.rot + angle).cos() * 2;
-            let dy = (self.rot + angle).sin() * 2;
+            let dx = fa_cos(self.rot + angle) * 2;
+            let dy = fa_sin(self.rot + angle) * 2;
             buffer.point_world(self.x + dx, self.y + dy, 2);
         }
     }
@@ -387,10 +407,10 @@ impl Map {
         let (ex, ey) = (FP16_ONE - dx, FP16_ONE - dy);
         for column in columns {
             let alpha_full = player.rot + COL_ANGLE[column];
-            let alpha_full = if alpha_full < FP16_ZERO {
-                alpha_full + FP16_TAU
-            } else if alpha_full >= FP16_TAU {
-                alpha_full - FP16_TAU
+            let alpha_full = if alpha_full < 0 {
+                alpha_full + FA_TAU
+            } else if alpha_full >= FA_TAU {
+                alpha_full - FA_TAU
             } else {
                 alpha_full
             };
@@ -407,24 +427,24 @@ impl Map {
                 let alpha = alpha_full - QUADRANT_1.start;
                 hstep_x = 1;
                 hstep_y = 1;
-                tx = alpha.cot();
-                ty = alpha.tan();
+                tx = fa_cot(alpha);
+                ty = fa_tan(alpha);
                 nx = player.x + (tx * ey);
                 ny = player.y + (ty * ex);
             } else if QUADRANT_2.contains(&alpha_full) {
                 let alpha = alpha_full - QUADRANT_2.start;
                 hstep_x = -1;
                 hstep_y = 1;
-                tx = -alpha.tan();
-                ty = alpha.cot();
+                tx = -fa_tan(alpha);
+                ty = fa_cot(alpha);
                 nx = player.x + (tx * ey);
                 ny = player.y + (ty * dx); // - 1.into();
             } else if QUADRANT_3.contains(&alpha_full) {
                 let alpha = alpha_full - QUADRANT_3.start;
                 hstep_x = -1;
                 hstep_y = -1;
-                tx = -alpha.cot();
-                ty = -alpha.tan();
+                tx = -fa_cot(alpha);
+                ty = -fa_tan(alpha);
                 // let m1 = (tx * dy).as_f32();
                 // let m2 = (-alpha.cot()).as_f32() * dy.as_f32();
                 nx = player.x + (tx * dy);
@@ -435,8 +455,8 @@ impl Map {
                 let alpha = alpha_full - QUADRANT_4.start;
                 hstep_x = 1;
                 hstep_y = -1;
-                tx = alpha.tan();
-                ty = -alpha.cot();
+                tx = fa_tan(alpha);
+                ty = -fa_cot(alpha);
                 nx = player.x + (tx * dy);
                 ny = player.y + (ty * ex);
             } else {
@@ -532,7 +552,7 @@ impl Map {
             const MID: i32 = (HEIGHT / 2) as i32;
             const C: i32 = MID;
             let beta = player.rot;
-            let p = beta.cos() * dx + beta.sin() * dy;
+            let p = fa_cos(beta) * dx + fa_sin(beta) * dy;
             let offs = if p > FP16_ZERO {
                 (C << FP16_SCALE) / p.v
             } else {
@@ -614,7 +634,7 @@ fn raycast_test() {
     let player = Player {
         x: Fp16 { v: 72090 },
         y: Fp16 { v: 72090 },
-        rot: Fp16 { v: 0 },
+        rot: 0,
     };
     let col = 10;
     map.sweep_raycast(&mut screen, &player, col..(col + 1), &resources);
@@ -640,18 +660,13 @@ fn main() {
 
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
     let fwd_speed: i32 = 10;
-    let rot_speed: i32 = 5;
+    let rot_speed: i32 = 10 * 360;
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut player_vel = PlayerVel { forward: 0, rot: 0 };
-    // let mut player = Player::default();
+    let mut player = Player::default();
 
-    let mut player = Player {
-        x: Fp16 { v: 115458 },
-        y: Fp16 { v: 68466 },
-        rot: Fp16 { v: 406314 },
-    };
     let map = Map::default();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
