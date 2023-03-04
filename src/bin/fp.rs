@@ -87,10 +87,9 @@ const MAP: [&[u8]; MAP_SIZE] = [
 const FP16_ZERO: Fp16 = Fp16 { v: 0 };
 const FP16_ONE: Fp16 = Fp16 { v: 1 << FP16_SCALE };
 
-const FA_SCALE: i32 = 10;
 const FA_SCALEF: f32 = 10.0;
 
-const PIS_IN_180: f32 = 57.2957795130823208767981548141051703_f32; // .to_degrees() method is not constexpr
+const PIS_IN_180: f32 = 57.295_78_f32; // .to_degrees() method is not constexpr
 const FA_TAU: i32 = (std::f32::consts::TAU * PIS_IN_180 * FA_SCALEF) as i32;
 const FA_PI: i32 = (std::f32::consts::PI * PIS_IN_180 * FA_SCALEF) as i32;
 
@@ -310,9 +309,9 @@ impl Draw for Vec<u32> {
     }
 
     fn point_rgb(&mut self, x: i32, y: i32, c: u32) {
-        if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT {
-            return;
-        }
+        // if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT {
+        //     return;
+        // }
 
         self[(x as usize) + (y as usize) * WIDTH] = c;
     }
@@ -466,12 +465,8 @@ impl Map {
                 hstep_y = -1;
                 tx = -fa_cot(alpha);
                 ty = -fa_tan(alpha);
-                // let m1 = (tx * dy).as_f32();
-                // let m2 = (-alpha.cot()).as_f32() * dy.as_f32();
                 nx = player.x + (tx * dy);
                 ny = player.y + (ty * dx);
-                // let nxf = nx.as_f32();
-                // let nyf = ny.as_f32();
             } else if QUADRANT_4.contains(&alpha_full) {
                 let alpha = alpha_full - QUADRANT_4.start;
                 hstep_x = 1;
@@ -494,43 +489,6 @@ impl Map {
             // let mut hit_dist = 0.0;
             let dx;
             let dy;
-            // let mut loop_count = 0;
-            // 'outer: loop {
-            //     while (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
-            //         // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-            //         hit_tile = self.lookup(hx + hstep_x.min(0), ny.get_int());
-
-            //         if hit_tile != 0 {
-            //             screen.pointWorld(hx.into(), ny, hit_tile);
-            //             dx = Fp16::from(hx) - player.x;
-            //             dy = ny - player.y;
-            //             break 'outer;
-            //         }
-
-            //         hx += hstep_x;
-            //         ny += ty;
-            //     }
-
-            //     while (hstep_x > 0 && nx <= hx.into()) || (hstep_x < 0 && nx >= hx.into()) {
-            //         // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-            //         hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
-            //         if hit_tile != 0 {
-            //             hit_tile += 8;
-            //             screen.pointWorld(nx, hy.into(), hit_tile);
-            //             dx = nx - player.x;
-            //             dy = Fp16::from(hy) - player.y;
-            //             break 'outer;
-            //         }
-            //         hy += hstep_y;
-            //         nx += tx;
-            //     }
-            //     loop_count += 1;
-            //     if loop_count > 32 {
-            //         println!("x: {} {}", nx.as_f32(), hx);
-            //         println!("y: {} {}", ny.as_f32(), hy);
-            //         panic!("{:?} col: {}", player, column);
-            //     }
-            // }
             let tex_u;
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
@@ -541,15 +499,17 @@ impl Map {
                         screen.point_world(hx.into(), ny, hit_tile);
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
-                        tex_u = (ny.get_fract() >> 10) as i32;
+                        tex_u = if hstep_x > 0 {
+                            (ny.get_fract() >> 10) as i32
+                        } else {
+                            63 - (ny.get_fract() >> 10) as i32
+                        };
                         break 'outer;
                     }
 
                     hx += hstep_x;
                     ny += ty;
-                }
-                // while (hstep_x > 0 && nx <= hx.into()) || (hstep_x < 0 && nx >= hx.into()) {
-                else {
+                } else {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                     hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
                     if hit_tile != 0 {
@@ -557,18 +517,17 @@ impl Map {
                         screen.point_world(nx, hy.into(), hit_tile);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
-                        tex_u = (nx.get_fract() >> 10) as i32;
+                        tex_u = if hstep_y < 0 {
+                            (nx.get_fract() >> 10) as i32
+                        } else {
+                            63 - (nx.get_fract() >> 10) as i32
+                        };
+
                         break 'outer;
                     }
                     hy += hstep_y;
                     nx += tx;
                 }
-                // loop_count += 1;
-                // if loop_count > 64 {
-                //     println!("x: {} {}", nx.as_f32(), hx);
-                //     println!("y: {} {}", ny.as_f32(), hy);
-                //     panic!("{:?} col: {}", player, column);
-                // }
             }
             const MID: i32 = (HEIGHT / 2) as i32;
             const C: i32 = MID;
@@ -582,64 +541,45 @@ impl Map {
 
             let line_range = (MID - offs)..(MID + offs);
 
-            if false {
-                let step = 64.0 / line_range.len() as f32;
-                let mut tex_v = (line_range.start as f32 - (HEIGHT / 2) as f32
-                    + line_range.len() as f32 / 2.0)
-                    * step;
-                let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
-                for row in line_range {
-                    tex_v += step;
-                    let tex_v = (tex_v - 0.5) as usize;
-                    // let color = if ((tex_v >> 2) ^ (tex_u >> 2)) % 2 == 0 {
-                    //     hit_tile + 8
-                    // } else {
-                    //     hit_tile
-                    // };
-                    // screen.point(column as i32, row, color);
-                    screen.point_rgb(column as i32, row, tex_col[tex_v % 64]);
-                }
+            const TEXEL_SCALE: i32 = 1; // NOTE: this currently influences the performance of the bresenham loop
+            let (tex_clip, line_range_clamped) = if line_range.start < 0 {
+                const HALF_HEIGHT: i32 = (HEIGHT / 2) as i32;
+                const HALF_TEX: i32 = 32 << TEXEL_SCALE;
+                let h = HALF_HEIGHT - line_range.start; // overall (half) height of drawn column (partially offscreen)
+                let x = (HALF_TEX * HALF_HEIGHT) / h; // (half) number of texture pixels inside visible range (derived via HALF_HEIGHT / h == x / HALF_TEX)
+                let tex_clip = HALF_TEX - x;
+                (tex_clip, 0..(HEIGHT as i32))
             } else {
-                const TEXEL_SCALE: i32 = 1; // NOTE: this currently influences the performance of the bresenham loop
-                let (tex_clip, line_range_clamped) = if line_range.start < 0 {
-                    const HALF_HEIGHT: i32 = (HEIGHT / 2) as i32;
-                    const HALF_TEX: i32 = 32 << TEXEL_SCALE;
-                    let h = HALF_HEIGHT - line_range.start; // overall (half) height of drawn column (partially offscreen)
-                    let x = (HALF_TEX * HALF_HEIGHT) / h; // (half) number of texture pixels inside visible range (derived via HALF_HEIGHT / h == x / HALF_TEX)
-                    let tex_clip = HALF_TEX - x;
-                    (tex_clip, 0..(HEIGHT as i32))
-                } else {
-                    (0, line_range)
-                };
-                // do not include 'endpoints' in bresenham. -1 on d_screen and d_tex to account for this.
-                let d_screen = line_range_clamped.end - line_range_clamped.start - 1;
-                let d_tex = (64 << TEXEL_SCALE) - 2 * tex_clip - 1;
-                let mut d = 2 * d_tex - d_screen;
-                let mut row_tex = 0;
-                let tex_col = resources.get_texture(hit_tile)[(tex_u) as usize];
+                (0, line_range)
+            };
+            // do not include 'endpoints' in bresenham. -1 on d_screen and d_tex to account for this.
+            let d_screen = line_range_clamped.end - line_range_clamped.start - 1;
+            let d_tex = (64 << TEXEL_SCALE) - 2 * tex_clip - 1;
+            let mut d = 2 * d_tex - d_screen;
+            let mut row_tex = 0;
+            let tex_col = resources.get_texture(hit_tile)[(tex_u) as usize];
 
-                for row_screen in line_range_clamped {
-                    if true {
-                        let tex_v = (row_tex + tex_clip) >> TEXEL_SCALE;
-                        let color = if ((tex_v >> 1) ^ (tex_u >> 1)) % 2 == 0 {
-                            hit_tile + 8
-                        } else {
-                            hit_tile
-                        };
-                        screen.point(column as i32, row_screen, color);
+            for row_screen in line_range_clamped {
+                if !true {
+                    let tex_v = (row_tex + tex_clip) >> TEXEL_SCALE;
+                    let color = if ((tex_v >> 1) ^ (tex_u >> 1)) % 2 == 0 {
+                        hit_tile + 8
                     } else {
-                        screen.point_rgb(
-                            column as i32,
-                            row_screen,
-                            tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
-                        );
-                    }
-                    while d > 0 {
-                        row_tex += 1;
-                        d -= 2 * d_screen;
-                    }
-                    d += 2 * d_tex
+                        hit_tile
+                    };
+                    screen.point(column as i32, row_screen, color);
+                } else {
+                    screen.point_rgb(
+                        column as i32,
+                        row_screen,
+                        tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
+                    );
                 }
+                while d > 0 {
+                    row_tex += 1;
+                    d -= 2 * d_screen;
+                }
+                d += 2 * d_tex
             }
             // screen.point(column as i32, MID + offs, 0);
             // screen.point(column as i32, MID - offs, 0);
