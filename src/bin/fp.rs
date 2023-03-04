@@ -1,6 +1,8 @@
 use std::{
-    f32::consts::{FRAC_PI_2, PI},
+    fs::File,
+    io::{BufRead, BufReader},
     ops::{Add, AddAssign, Mul, Neg, Range, Sub, SubAssign},
+    path::Path,
     time::Instant,
 };
 
@@ -19,17 +21,17 @@ const MAP_SIZE: usize = 64;
 
 #[rustfmt::skip]
 const MAP: [[i32; MAP_SIZE]; MAP_SIZE] = [
-    [7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1],
-    [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
-    [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-    [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
-    [4, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 5, 4, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 5],
-    [3, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 6],
-    [2, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 7],
-    [1, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 7],
-    [7, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 1],
-    [7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
-    [6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1, 7, 2, 3, 4, 5, 6, 7, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+    [1, 0, 0, 0, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
+    [1, 0, 0, 0, 5, 5, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 5, 4, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 5],
+    [1, 0, 0, 0, 5, 5, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 6],
+    [1, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 0, 0, 0, 0, 0, 0, 2, 5, 7],
+    [1, 0, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 0, 0, 2, 0, 0, 0, 6, 7, 7],
+    [1, 0, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 0, 0, 2, 0, 0, 5, 6, 7, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
     [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4],
     [4, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 3, 5],
     [3, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 4, 6],
@@ -164,9 +166,9 @@ impl Fp16 {
             .into()
     }
 
-    pub fn as_f32(&self) -> f32 {
-        self.v as f32 / FP16_F
-    }
+    // pub fn as_f32(&self) -> f32 {
+    //     self.v as f32 / FP16_F
+    // }
 }
 
 impl Add<Fp16> for Fp16 {
@@ -248,9 +250,51 @@ lazy_static! {
     };
 }
 
+struct Resources {
+    textures: Vec<ImageBuffer<Rgb<u8>, Vec<u8>>>,
+    fallback_texture: ImageBuffer<Rgb<u8>, Vec<u8>>,
+}
+impl Default for Resources {
+    fn default() -> Self {
+        let mut fallback_texture = ImageBuffer::new(64, 64);
+        fallback_texture.fill(0x80);
+        Self {
+            textures: Default::default(),
+            fallback_texture,
+        }
+    }
+}
+
+impl Resources {
+    pub fn get_texture(&self, id: i32) -> &ImageBuffer<Rgb<u8>, Vec<u8>> {
+        if id >= 1 && (id as usize) <= self.textures.len() {
+            &self.textures[(id - 1) as usize]
+        } else {
+            &self.fallback_texture
+        }
+    }
+
+    fn load_textures<P: AsRef<Path>>(list: P) -> Resources {
+        let textures = if let Ok(f) = File::open(list) {
+            BufReader::new(f)
+                .lines()
+                .filter_map(|line| line.ok())
+                .filter_map(|name| image::open(name).map(|tex| tex.into_rgb8()).ok())
+                .collect()
+        } else {
+            Vec::new()
+        };
+
+        Resources {
+            textures,
+            ..Default::default()
+        }
+    }
+}
+
 trait Draw {
     fn point(&mut self, x: i32, y: i32, c: i32);
-    fn pointWorld(&mut self, x: Fp16, y: Fp16, c: i32);
+    fn point_world(&mut self, x: Fp16, y: Fp16, c: i32);
     fn point_rgb(&mut self, x: i32, y: i32, c: Rgb<u8>);
 }
 
@@ -278,7 +322,7 @@ impl Draw for Vec<u32> {
             (c.0[0] as u32) << 16 | (c.0[1] as u32) << 8 | (c.0[2] as u32);
     }
 
-    fn pointWorld(&mut self, x: Fp16, y: Fp16, c: i32) {
+    fn point_world(&mut self, x: Fp16, y: Fp16, c: i32) {
         let scale = 4;
         let xp = (x * scale).get_int();
         let yp = (y * scale).get_int();
@@ -306,8 +350,6 @@ struct PlayerVel {
 
 impl Default for Player {
     fn default() -> Self {
-        let mut col_angle = [Fp16::default(); WIDTH];
-
         Self {
             x: 1.1.into(),
             y: 1.1.into(),
@@ -341,13 +383,13 @@ impl Player {
     }
 
     pub(crate) fn draw(&self, buffer: &mut Vec<u32>) {
-        buffer.pointWorld(self.x, self.y, 0);
+        buffer.point_world(self.x, self.y, 0);
 
         for angle in COL_ANGLE.chunks(10) {
             let angle = angle[0];
             let dx = (self.rot + angle).cos() * 2;
             let dy = (self.rot + angle).sin() * 2;
-            buffer.pointWorld(self.x + dx, self.y + dy, 2);
+            buffer.point_world(self.x + dx, self.y + dy, 2);
         }
     }
 }
@@ -374,7 +416,7 @@ impl Map {
         screen: &mut Vec<u32>,
         player: &Player,
         columns: Range<usize>,
-        tex: &ImageBuffer<Rgb<u8>, Vec<u8>>,
+        resources: &Resources,
     ) {
         let (x, y) = player.int_pos();
         if self.lookup(x, y) != 0 {
@@ -450,7 +492,7 @@ impl Map {
             // let mut hit_dist = 0.0;
             let dx;
             let dy;
-            let mut loop_count = 0;
+            // let mut loop_count = 0;
             // 'outer: loop {
             //     while (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
             //         // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
@@ -494,7 +536,7 @@ impl Map {
                     hit_tile = self.lookup(hx + hstep_x.min(0), ny.get_int());
 
                     if hit_tile != 0 {
-                        screen.pointWorld(hx.into(), ny, hit_tile);
+                        screen.point_world(hx.into(), ny, hit_tile);
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
                         tex_u = ny.get_fract() >> 10;
@@ -510,7 +552,7 @@ impl Map {
                     hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
                     if hit_tile != 0 {
                         // hit_tile += 8;
-                        screen.pointWorld(nx, hy.into(), hit_tile);
+                        screen.point_world(nx, hy.into(), hit_tile);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
                         tex_u = nx.get_fract() >> 10;
@@ -541,23 +583,20 @@ impl Map {
             let mut tex_v = (line_range.start as f32 - (HEIGHT / 2) as f32
                 + line_range.len() as f32 / 2.0)
                 * step;
+            let tex = resources.get_texture(hit_tile);
             for row in line_range {
                 tex_v += step;
-
-                let color = if (tex_v as u32) % 2 == 0 {
-                    hit_tile + 8
-                } else {
-                    hit_tile
-                };
+                let tex_v = (tex_v - 0.5) as u32;
+                // let color = if ((tex_v >> 2) ^ (tex_u >> 2)) % 2 == 0 {
+                //     hit_tile + 8
+                // } else {
+                //     hit_tile
+                // };
                 // screen.point(column as i32, row, color);
-                screen.point_rgb(
-                    column as i32,
-                    row,
-                    *tex.get_pixel(tex_u as u32 % 64, tex_v as u32 % 64),
-                );
+                screen.point_rgb(column as i32, row, *tex.get_pixel(tex_u % 64, tex_v % 64));
             }
-            screen.point(column as i32, MID + offs, 0);
-            screen.point(column as i32, MID - offs, 0);
+            // screen.point(column as i32, MID + offs, 0);
+            // screen.point(column as i32, MID - offs, 0);
         }
     }
 }
@@ -578,9 +617,8 @@ impl Map {
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
-    let tex = image::open("brick52_1.png").unwrap();
+    let resources = Resources::load_textures("textures.txt");
 
-    let tex = tex.as_rgb8().unwrap();
     let mut window = Window::new(
         "Test - ESC to exit",
         WIDTH,
@@ -635,7 +673,7 @@ fn main() {
 
         let start = Instant::now();
         // for _ in 0..1000 {
-        map.sweep_raycast(&mut buffer, &player, 0..WIDTH, tex);
+        map.sweep_raycast(&mut buffer, &player, 0..WIDTH, &resources);
         // }
         println!("time: {}us", start.elapsed().as_micros());
 
