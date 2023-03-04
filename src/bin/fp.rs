@@ -540,21 +540,38 @@ impl Map {
             };
 
             let line_range = (MID - offs)..(MID + offs);
-            let step = 64.0 / line_range.len() as f32;
-            let mut tex_v = (line_range.start as f32 - (HEIGHT / 2) as f32
-                + line_range.len() as f32 / 2.0)
-                * step;
-            let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
-            for row in line_range {
-                tex_v += step;
-                let tex_v = (tex_v - 0.5) as usize;
-                // let color = if ((tex_v >> 2) ^ (tex_u >> 2)) % 2 == 0 {
-                //     hit_tile + 8
-                // } else {
-                //     hit_tile
-                // };
-                // screen.point(column as i32, row, color);
-                screen.point_rgb(column as i32, row, tex_col[tex_v % 64]);
+
+            if false {
+                let step = 64.0 / line_range.len() as f32;
+                let mut tex_v = (line_range.start as f32 - (HEIGHT / 2) as f32
+                    + line_range.len() as f32 / 2.0)
+                    * step;
+                let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
+                for row in line_range {
+                    tex_v += step;
+                    let tex_v = (tex_v - 0.5) as usize;
+                    // let color = if ((tex_v >> 2) ^ (tex_u >> 2)) % 2 == 0 {
+                    //     hit_tile + 8
+                    // } else {
+                    //     hit_tile
+                    // };
+                    // screen.point(column as i32, row, color);
+                    screen.point_rgb(column as i32, row, tex_col[tex_v % 64]);
+                }
+            } else {
+                let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
+                let d_screen = line_range.len() as i32;
+                let d_tex = 64;
+                let mut d = 2 * d_tex - d_screen;
+                let mut row_tex = 0;
+                for row_screen in line_range {
+                    screen.point_rgb(column as i32, row_screen, tex_col[row_tex % 64]);
+                    while d > 0 {
+                        row_tex += 1;
+                        d -= 2 * d_screen;
+                    }
+                    d += 2 * d_tex
+                }
             }
             // screen.point(column as i32, MID + offs, 0);
             // screen.point(column as i32, MID - offs, 0);
@@ -562,18 +579,19 @@ impl Map {
     }
 }
 
-// #[test]
-// fn raycast_test() {
-//     let map = Map::default();
-//     let mut screen = vec![0; WIDTH * HEIGHT];
-//     let player = Player {
-//         x: Fp16 { v: 230481 },
-//         y: Fp16 { v: 189538 },
-//         rot: Fp16 { v: 276186 },
-//     };
-//     let col = 86;
-//     map.sweep_raycast(&mut screen, &player, col..(col + 1));
-// }
+#[test]
+fn raycast_test() {
+    let map = Map::default();
+    let resources = Resources::default();
+    let mut screen = vec![0; WIDTH * HEIGHT];
+    let player = Player {
+        x: Fp16 { v: 230481 },
+        y: Fp16 { v: 189538 },
+        rot: Fp16 { v: 276186 },
+    };
+    let col = 86;
+    map.sweep_raycast(&mut screen, &player, col..(col + 1), &resources);
+}
 
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
