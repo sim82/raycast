@@ -743,6 +743,8 @@ fn main() {
 
     let map = Map::default();
 
+    let mut frame = 0;
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
         for i in buffer.iter_mut() {
             *i = 0x40404040; // write something more funny here!
@@ -783,14 +785,18 @@ fn main() {
 
         player.draw(&mut buffer);
 
-        let start = Instant::now();
         // for _ in 0..1000 {
         map.sweep_raycast(&mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
-        draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, 2.0.into());
+        let start = Instant::now();
+
+        let sprite_z = 5.0 + 4.0 * (frame as f32).to_radians().sin();
+
+        draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
         // }
         println!("time: {}us", start.elapsed().as_micros());
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+        frame += 1;
     }
 }
