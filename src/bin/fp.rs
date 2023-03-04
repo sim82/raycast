@@ -500,7 +500,7 @@ impl Map {
                         screen.point_world(hx.into(), ny, hit_tile);
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
-                        tex_u = ny.get_fract() >> 10;
+                        tex_u = (ny.get_fract() >> 10) as i32;
                         break 'outer;
                     }
 
@@ -516,7 +516,7 @@ impl Map {
                         screen.point_world(nx, hy.into(), hit_tile);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
-                        tex_u = nx.get_fract() >> 10;
+                        tex_u = (nx.get_fract() >> 10) as i32;
                         break 'outer;
                     }
                     hy += hstep_y;
@@ -559,13 +559,37 @@ impl Map {
                     screen.point_rgb(column as i32, row, tex_col[tex_v % 64]);
                 }
             } else {
-                let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
-                let d_screen = line_range.len() as i32;
-                let d_tex = 64;
+                let (tex_clip, line_range_clamped) = if line_range.start < 0 {
+                    let h = 100 - line_range.start; // overall (half) height of drawn column (partially offscreen)
+                    let x = (32 * 100) / h; // (half) number of texture pixels inside visible range
+                    let tex_clip = 32 - x;
+                    (tex_clip, 0..(HEIGHT as i32))
+                } else {
+                    (0, line_range)
+                };
+                // do not include 'endpoints' in bresenham. -1 on d_screen and d_tex to account for this.
+                let d_screen = line_range_clamped.end - line_range_clamped.start - 1;
+                let d_tex = 64 - 2 * tex_clip - 1;
                 let mut d = 2 * d_tex - d_screen;
                 let mut row_tex = 0;
-                for row_screen in line_range {
-                    screen.point_rgb(column as i32, row_screen, tex_col[row_tex % 64]);
+                let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
+
+                for row_screen in line_range_clamped {
+                    if !true {
+                        let tex_v = (row_tex + tex_clip) % 64;
+                        let color = if ((tex_v >> 1) ^ (tex_u >> 1)) % 2 == 0 {
+                            hit_tile + 8
+                        } else {
+                            hit_tile
+                        };
+                        screen.point(column as i32, row_screen, color);
+                    } else {
+                        screen.point_rgb(
+                            column as i32,
+                            row_screen,
+                            tex_col[(row_tex + tex_clip) as usize],
+                        );
+                    }
                     while d > 0 {
                         row_tex += 1;
                         d -= 2 * d_screen;
@@ -585,11 +609,11 @@ fn raycast_test() {
     let resources = Resources::default();
     let mut screen = vec![0; WIDTH * HEIGHT];
     let player = Player {
-        x: Fp16 { v: 230481 },
-        y: Fp16 { v: 189538 },
-        rot: Fp16 { v: 276186 },
+        x: Fp16 { v: 72090 },
+        y: Fp16 { v: 72090 },
+        rot: Fp16 { v: 0 },
     };
-    let col = 86;
+    let col = 10;
     map.sweep_raycast(&mut screen, &player, col..(col + 1), &resources);
 }
 
@@ -646,7 +670,8 @@ fn main() {
         }
 
         player.apply_vel(&player_vel, dt);
-        println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
+        // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
+        println!("player: {:?}", player);
 
         player.draw(&mut buffer);
 
