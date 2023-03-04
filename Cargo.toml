@@ -10,8 +10,16 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 
 minifb = { version = "0.24", default-features = false, features = ["x11"] }
 lazy_static = "1.4"
-[profile.dev]
-opt-level = 1
+
+# [profile.dev]
+# opt-level = 1
+
+[profile.release]
+opt-level = 3     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations
+#panic = "abort"     # Abort on panic
+# strip = true   
 
 # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]
