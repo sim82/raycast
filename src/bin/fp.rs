@@ -458,6 +458,7 @@ impl Map {
     pub fn sweep_raycast(
         &self,
         screen: &mut Vec<u32>,
+        zbuffer: &mut [Fp16; WIDTH],
         player: &Player,
         columns: Range<usize>,
         resources: &Resources,
@@ -581,7 +582,7 @@ impl Map {
             } else {
                 C
             };
-
+            zbuffer[column] = p;
             let line_range = (MID - offs)..(MID + offs);
 
             // TODO: pre-compute LUTs for the non clipped cases?
@@ -636,17 +637,86 @@ fn raycast_test() {
     let map = Map::default();
     let resources = Resources::default();
     let mut screen = vec![0; WIDTH * HEIGHT];
+    let mut zbuffer = [Fp16::default(); WIDTH];
     let player = Player {
         x: Fp16 { v: 72090 },
         y: Fp16 { v: 72090 },
         rot: 0,
     };
     let col = 10;
-    map.sweep_raycast(&mut screen, &player, col..(col + 1), &resources);
+    map.sweep_raycast(
+        &mut screen,
+        &mut zbuffer,
+        &player,
+        col..(col + 1),
+        &resources,
+    );
+}
+
+fn draw_sprite(
+    screen: &mut Vec<u32>,
+    zbuffer: &[Fp16],
+    resources: &Resources,
+    id: i32,
+    x_mid: i32,
+    z: Fp16,
+) {
+    const C: i32 = MID;
+    let offs = if z > FP16_ZERO {
+        (C << FP16_SCALE) / z.v
+    } else {
+        C
+    };
+    let line_range = (MID - offs)..(MID + offs);
+
+    let tex = resources.get_texture(id);
+
+    let dx_screen = (line_range.end - line_range.start) - 1;
+    let dx_tex = 64 - 1;
+    let mut dx = 2 * dx_tex - dx_screen;
+    let mut tex_u = 0;
+    const MID: i32 = HEIGHT as i32 / 2;
+
+    for column in (x_mid - offs)..(x_mid + offs) {
+        let draw_column = zbuffer[column as usize] > z;
+
+        // let dy_screen = size - 1;
+        let dy_screen = (line_range.end - line_range.start) - 1;
+        let dy_tex = 64 - 1;
+        let mut dy = 2 * dy_tex - dy_screen;
+        let mut tex_v = 0;
+
+        let tex_col = tex[tex_u as usize];
+        for row in (MID - offs)..(MID + offs) {
+            if draw_column
+                && column >= 0
+                && column < WIDTH as i32
+                && row >= 0
+                && row < HEIGHT as i32
+            {
+                let c = tex_col[tex_v as usize];
+                if c != 0 {
+                    screen.point_rgb(column, row, c);
+                }
+            }
+
+            while dy > 0 {
+                tex_v += 1;
+                dy -= 2 * dy_screen;
+            }
+            dy += 2 * dy_tex;
+        }
+        while dx > 0 {
+            tex_u += 1;
+            dx -= 2 * dx_screen;
+        }
+        dx += 2 * dx_tex;
+    }
 }
 
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
+    let mut zbuffer = [Fp16::default(); WIDTH];
 
     let resources = Resources::load_textures("textures.txt");
 
@@ -664,8 +734,7 @@ fn main() {
     });
 
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
-    let fwd_speed: i32 = 10;
-    let rot_speed: i32 = 10 * 360;
+
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
@@ -685,6 +754,13 @@ fn main() {
 
         player_vel.forward = 0;
         player_vel.rot = 0;
+
+        let (fwd_speed, rot_speed) = if window.is_key_down(Key::LeftShift) {
+            (1, 360)
+        } else {
+            (10, 10 * 360)
+        };
+
         if window.is_key_down(Key::W) {
             player_vel.forward += fwd_speed;
         }
@@ -709,7 +785,8 @@ fn main() {
 
         let start = Instant::now();
         // for _ in 0..1000 {
-        map.sweep_raycast(&mut buffer, &player, 0..WIDTH, &resources);
+        map.sweep_raycast(&mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
+        draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, 2.0.into());
         // }
         println!("time: {}us", start.elapsed().as_micros());
 

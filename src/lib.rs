@@ -9,7 +9,7 @@ use image::{ImageBuffer, Rgb};
 const TEX_SIZE: usize = 64;
 
 // column first order
-type Texture = [[u32; TEX_SIZE]; TEX_SIZE];
+pub type Texture = [[u32; TEX_SIZE]; TEX_SIZE];
 
 pub struct Resources {
     textures: Vec<Texture>,
