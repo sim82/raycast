@@ -104,6 +104,87 @@ const QUADRANT_2: std::ops::Range<i32> = FA_FRAC_PI_2..FA_PI;
 const QUADRANT_3: std::ops::Range<i32> = FA_PI..FA_PI_FRAC_PI_2;
 const QUADRANT_4: std::ops::Range<i32> = (FA_PI_FRAC_PI_2)..(FA_TAU);
 
+// const TAN_CLAMP: f32 = 16.0;
+const TAN_CLAMP: f32 = 128.0;
+const FA_STEPS: usize = 3600;
+
+lazy_static! {
+    static ref COL_ANGLE: [i32; WIDTH] = {
+        let mut col_angle = [0; WIDTH];
+        for i in 0..WIDTH / 2 {
+            let f = (i as f32) / (WIDTH as f32 * 0.5);
+            col_angle[WIDTH / 2 + i] = (f.atan().to_degrees() * FA_SCALEF) as i32;
+            col_angle[WIDTH / 2 - i - 1] = ((-f.atan()).to_degrees() * FA_SCALEF) as i32;
+        }
+        col_angle
+    };
+    static ref SIN_TABLE: [Fp16; FA_STEPS] = {
+        let mut t = [Fp16::default(); FA_STEPS];
+        #[allow(clippy::needless_range_loop)]
+        for v in 0..FA_STEPS {
+            t[v] = (v as f32 / FA_SCALEF).to_radians().sin().into();
+        }
+        t
+    };
+    static ref COS_TABLE: [Fp16; FA_STEPS] = {
+        let mut t = [Fp16::default(); FA_STEPS];
+        #[allow(clippy::needless_range_loop)]
+        for v in 0..FA_STEPS {
+            t[v] = (v as f32 / FA_SCALEF).to_radians().cos().into();
+        }
+        t
+    };
+    static ref TAN_TABLE: [Fp16; FA_STEPS] = {
+        let mut t = [Fp16::default(); FA_STEPS];
+        #[allow(clippy::needless_range_loop)]
+        for v in 0..FA_STEPS {
+            t[v] = (v as f32 / FA_SCALEF)
+                .to_radians()
+                .tan()
+                .clamp(-TAN_CLAMP, TAN_CLAMP)
+                .into();
+        }
+        t
+    };
+    static ref COT_TABLE: [Fp16; FA_STEPS] = {
+        let mut t = [Fp16::default(); FA_STEPS];
+        #[allow(clippy::needless_range_loop)]
+        for v in 0..FA_STEPS {
+            t[v] = (1.0 / (v as f32 / FA_SCALEF).to_radians().tan())
+                .clamp(-TAN_CLAMP, TAN_CLAMP)
+                .into()
+        }
+        t
+    };
+}
+
+fn fa_sin(v: i32) -> Fp16 {
+    SIN_TABLE[v as usize]
+}
+
+fn fa_cos(v: i32) -> Fp16 {
+    COS_TABLE[v as usize]
+}
+
+fn fa_tan(v: i32) -> Fp16 {
+    TAN_TABLE[v as usize]
+}
+
+fn fa_cot(v: i32) -> Fp16 {
+    COT_TABLE[v as usize]
+}
+
+fn fa_fix_angle(mut v: i32) -> i32 {
+    while v < 0 {
+        v += FA_TAU;
+    }
+
+    while v >= FA_TAU {
+        v -= FA_TAU;
+    }
+    v
+}
+
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 struct Fp16 {
     v: i32,
@@ -127,9 +208,6 @@ impl From<i32> for Fp16 {
     }
 }
 
-// const TAN_CLAMP: f32 = 16.0;
-const TAN_CLAMP: f32 = 128.0;
-
 impl Fp16 {
     pub fn get_int(&self) -> i32 {
         self.v >> FP16_SCALE
@@ -141,29 +219,6 @@ impl Fp16 {
     pub fn fract(&self) -> Fp16 {
         Self { v: self.v & 0xFFFF }
     }
-
-    pub fn sin(&self) -> Fp16 {
-        ((self.v as f32) / FP16_F).sin().into()
-    }
-
-    pub fn cos(&self) -> Fp16 {
-        ((self.v as f32) / FP16_F).cos().into()
-    }
-    pub fn tan(&self) -> Fp16 {
-        ((self.v as f32) / FP16_F)
-            .tan()
-            .clamp(-TAN_CLAMP, TAN_CLAMP)
-            .into()
-    }
-    pub fn cot(&self) -> Fp16 {
-        (1.0 / ((self.v as f32) / FP16_F).tan())
-            .clamp(-TAN_CLAMP, TAN_CLAMP)
-            .into()
-    }
-
-    // pub fn as_f32(&self) -> f32 {
-    //     self.v as f32 / FP16_F
-    // }
 }
 
 impl Add<Fp16> for Fp16 {
@@ -233,18 +288,6 @@ fn test_fp16() {
     assert_eq!(v2.get_fract(), ((1.0 - 0.456) * FP16_F) as u32 + 1);
 }
 
-lazy_static! {
-    static ref COL_ANGLE: [i32; WIDTH] = {
-        let mut col_angle = [0; WIDTH];
-        for i in 0..WIDTH / 2 {
-            let f = (i as f32) / (WIDTH as f32 * 0.5);
-            col_angle[WIDTH / 2 + i] = (f.atan().to_degrees() * FA_SCALEF) as i32;
-            col_angle[WIDTH / 2 - i - 1] = ((-f.atan()).to_degrees() * FA_SCALEF) as i32;
-        }
-        col_angle
-    };
-}
-
 trait Draw {
     fn point(&mut self, x: i32, y: i32, c: i32);
     fn point_world(&mut self, x: Fp16, y: Fp16, c: i32);
@@ -310,28 +353,6 @@ impl Default for Player {
     }
 }
 
-fn fa_sin(v: i32) -> Fp16 {
-    (v as f32 / FA_SCALEF).to_radians().sin().into()
-}
-
-fn fa_cos(v: i32) -> Fp16 {
-    (v as f32 / FA_SCALEF).to_radians().cos().into()
-}
-
-fn fa_tan(v: i32) -> Fp16 {
-    (v as f32 / FA_SCALEF)
-        .to_radians()
-        .tan()
-        .clamp(-TAN_CLAMP, TAN_CLAMP)
-        .into()
-}
-
-fn fa_cot(v: i32) -> Fp16 {
-    (1.0 / (v as f32 / FA_SCALEF).to_radians().tan())
-        .clamp(-TAN_CLAMP, TAN_CLAMP)
-        .into()
-}
-
 impl Player {
     pub fn int_pos(&self) -> (i32, i32) {
         (self.x.get_int(), self.y.get_int())
@@ -361,8 +382,8 @@ impl Player {
 
         for angle in COL_ANGLE.chunks(10) {
             let angle = angle[0];
-            let dx = fa_cos(self.rot + angle) * 2;
-            let dy = fa_sin(self.rot + angle) * 2;
+            let dx = fa_cos(fa_fix_angle(self.rot + angle)) * 2;
+            let dy = fa_sin(fa_fix_angle(self.rot + angle)) * 2;
             buffer.point_world(self.x + dx, self.y + dy, 2);
         }
     }
