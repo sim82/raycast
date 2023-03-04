@@ -584,6 +584,7 @@ impl Map {
 
             let line_range = (MID - offs)..(MID + offs);
 
+            // TODO: pre-compute LUTs for the non clipped cases?
             const TEXEL_SCALE: i32 = 1; // NOTE: this currently influences the performance of the bresenham loop
             let (tex_clip, line_range_clamped) = if line_range.start < 0 {
                 const HALF_HEIGHT: i32 = (HEIGHT / 2) as i32;
@@ -600,7 +601,7 @@ impl Map {
             let d_tex = (64 << TEXEL_SCALE) - 2 * tex_clip - 1;
             let mut d = 2 * d_tex - d_screen;
             let mut row_tex = 0;
-            let tex_col = resources.get_texture(hit_tile)[(tex_u) as usize];
+            let tex_col = &resources.get_texture(hit_tile)[(tex_u) as usize];
 
             for row_screen in line_range_clamped {
                 if !true {
