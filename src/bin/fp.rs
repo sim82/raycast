@@ -678,33 +678,28 @@ fn draw_sprite(
     const MID: i32 = HEIGHT as i32 / 2;
 
     for column in (x_mid - offs)..(x_mid + offs) {
-        let draw_column = zbuffer[column as usize] > z;
+        if zbuffer[column as usize] > z {
+            // let dy_screen = size - 1;
+            let dy_screen = (line_range.end - line_range.start) - 1;
+            let dy_tex = 64 - 1;
+            let mut dy = 2 * dy_tex - dy_screen;
+            let mut tex_v = 0;
 
-        // let dy_screen = size - 1;
-        let dy_screen = (line_range.end - line_range.start) - 1;
-        let dy_tex = 64 - 1;
-        let mut dy = 2 * dy_tex - dy_screen;
-        let mut tex_v = 0;
-
-        let tex_col = tex[tex_u as usize];
-        for row in (MID - offs)..(MID + offs) {
-            if draw_column
-                && column >= 0
-                && column < WIDTH as i32
-                && row >= 0
-                && row < HEIGHT as i32
-            {
-                let c = tex_col[tex_v as usize];
-                if c != 0 {
-                    screen.point_rgb(column, row, c);
+            let tex_col = tex[tex_u as usize];
+            for row in (MID - offs)..(MID + offs) {
+                if column >= 0 && column < WIDTH as i32 && row >= 0 && row < HEIGHT as i32 {
+                    let c = tex_col[tex_v as usize];
+                    if c != 0 {
+                        screen.point_rgb(column, row, c);
+                    }
                 }
-            }
 
-            while dy > 0 {
-                tex_v += 1;
-                dy -= 2 * dy_screen;
+                while dy > 0 {
+                    tex_v += 1;
+                    dy -= 2 * dy_screen;
+                }
+                dy += 2 * dy_tex;
             }
-            dy += 2 * dy_tex;
         }
         while dx > 0 {
             tex_u += 1;
