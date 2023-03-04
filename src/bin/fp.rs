@@ -529,8 +529,8 @@ impl Map {
                 //     panic!("{:?} col: {}", player, column);
                 // }
             }
-            const MID: i32 = 100;
-            const C: i32 = 100;
+            const MID: i32 = (HEIGHT / 2) as i32;
+            const C: i32 = MID;
             let beta = player.rot;
             let p = beta.cos() * dx + beta.sin() * dy;
             let offs = if p > FP16_ZERO {
@@ -559,24 +559,27 @@ impl Map {
                     screen.point_rgb(column as i32, row, tex_col[tex_v % 64]);
                 }
             } else {
+                const TEXEL_SCALE: i32 = 1; // NOTE: this currently influences the performance of the bresenham loop
                 let (tex_clip, line_range_clamped) = if line_range.start < 0 {
-                    let h = 100 - line_range.start; // overall (half) height of drawn column (partially offscreen)
-                    let x = (32 * 100) / h; // (half) number of texture pixels inside visible range
-                    let tex_clip = 32 - x;
+                    const HALF_HEIGHT: i32 = (HEIGHT / 2) as i32;
+                    const HALF_TEX: i32 = 32 << TEXEL_SCALE;
+                    let h = HALF_HEIGHT - line_range.start; // overall (half) height of drawn column (partially offscreen)
+                    let x = (HALF_TEX * HALF_HEIGHT) / h; // (half) number of texture pixels inside visible range (derived via HALF_HEIGHT / h == x / HALF_TEX)
+                    let tex_clip = HALF_TEX - x;
                     (tex_clip, 0..(HEIGHT as i32))
                 } else {
                     (0, line_range)
                 };
                 // do not include 'endpoints' in bresenham. -1 on d_screen and d_tex to account for this.
                 let d_screen = line_range_clamped.end - line_range_clamped.start - 1;
-                let d_tex = 64 - 2 * tex_clip - 1;
+                let d_tex = (64 << TEXEL_SCALE) - 2 * tex_clip - 1;
                 let mut d = 2 * d_tex - d_screen;
                 let mut row_tex = 0;
-                let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
+                let tex_col = resources.get_texture(hit_tile)[(tex_u) as usize];
 
                 for row_screen in line_range_clamped {
-                    if !true {
-                        let tex_v = (row_tex + tex_clip) % 64;
+                    if true {
+                        let tex_v = (row_tex + tex_clip) >> TEXEL_SCALE;
                         let color = if ((tex_v >> 1) ^ (tex_u >> 1)) % 2 == 0 {
                             hit_tile + 8
                         } else {
@@ -587,7 +590,7 @@ impl Map {
                         screen.point_rgb(
                             column as i32,
                             row_screen,
-                            tex_col[(row_tex + tex_clip) as usize],
+                            tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
                         );
                     }
                     while d > 0 {
@@ -642,7 +645,13 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut player_vel = PlayerVel { forward: 0, rot: 0 };
-    let mut player = Player::default();
+    // let mut player = Player::default();
+
+    let mut player = Player {
+        x: Fp16 { v: 115458 },
+        y: Fp16 { v: 68466 },
+        rot: Fp16 { v: 406314 },
+    };
     let map = Map::default();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
