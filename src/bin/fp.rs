@@ -1,14 +1,11 @@
 use std::{
-    fs::File,
-    io::{BufRead, BufReader},
     ops::{Add, AddAssign, Mul, Neg, Range, Sub, SubAssign},
-    path::Path,
     time::Instant,
 };
 
-use image::{ImageBuffer, Rgb};
 use lazy_static::lazy_static;
 use minifb::{Key, Window, WindowOptions};
+use raycast::Resources;
 
 const WIDTH: usize = 320;
 const HEIGHT: usize = 200;
@@ -250,52 +247,10 @@ lazy_static! {
     };
 }
 
-struct Resources {
-    textures: Vec<ImageBuffer<Rgb<u8>, Vec<u8>>>,
-    fallback_texture: ImageBuffer<Rgb<u8>, Vec<u8>>,
-}
-impl Default for Resources {
-    fn default() -> Self {
-        let mut fallback_texture = ImageBuffer::new(64, 64);
-        fallback_texture.fill(0x80);
-        Self {
-            textures: Default::default(),
-            fallback_texture,
-        }
-    }
-}
-
-impl Resources {
-    pub fn get_texture(&self, id: i32) -> &ImageBuffer<Rgb<u8>, Vec<u8>> {
-        if id >= 1 && (id as usize) <= self.textures.len() {
-            &self.textures[(id - 1) as usize]
-        } else {
-            &self.fallback_texture
-        }
-    }
-
-    fn load_textures<P: AsRef<Path>>(list: P) -> Resources {
-        let textures = if let Ok(f) = File::open(list) {
-            BufReader::new(f)
-                .lines()
-                .filter_map(|line| line.ok())
-                .filter_map(|name| image::open(name).map(|tex| tex.into_rgb8()).ok())
-                .collect()
-        } else {
-            Vec::new()
-        };
-
-        Resources {
-            textures,
-            ..Default::default()
-        }
-    }
-}
-
 trait Draw {
     fn point(&mut self, x: i32, y: i32, c: i32);
     fn point_world(&mut self, x: Fp16, y: Fp16, c: i32);
-    fn point_rgb(&mut self, x: i32, y: i32, c: Rgb<u8>);
+    fn point_rgb(&mut self, x: i32, y: i32, c: u32);
 }
 
 impl Draw for Vec<u32> {
@@ -313,13 +268,12 @@ impl Draw for Vec<u32> {
         self[(x as usize) + (y as usize) * WIDTH] = COLORS[c as usize];
     }
 
-    fn point_rgb(&mut self, x: i32, y: i32, c: Rgb<u8>) {
+    fn point_rgb(&mut self, x: i32, y: i32, c: u32) {
         if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT {
             return;
         }
 
-        self[(x as usize) + (y as usize) * WIDTH] =
-            (c.0[0] as u32) << 16 | (c.0[1] as u32) << 8 | (c.0[2] as u32);
+        self[(x as usize) + (y as usize) * WIDTH] = c;
     }
 
     fn point_world(&mut self, x: Fp16, y: Fp16, c: i32) {
@@ -590,17 +544,17 @@ impl Map {
             let mut tex_v = (line_range.start as f32 - (HEIGHT / 2) as f32
                 + line_range.len() as f32 / 2.0)
                 * step;
-            let tex = resources.get_texture(hit_tile);
+            let tex_col = resources.get_texture(hit_tile)[(tex_u % 64) as usize];
             for row in line_range {
                 tex_v += step;
-                let tex_v = (tex_v - 0.5) as u32;
+                let tex_v = (tex_v - 0.5) as usize;
                 // let color = if ((tex_v >> 2) ^ (tex_u >> 2)) % 2 == 0 {
                 //     hit_tile + 8
                 // } else {
                 //     hit_tile
                 // };
                 // screen.point(column as i32, row, color);
-                screen.point_rgb(column as i32, row, *tex.get_pixel(tex_u % 64, tex_v % 64));
+                screen.point_rgb(column as i32, row, tex_col[tex_v % 64]);
             }
             // screen.point(column as i32, MID + offs, 0);
             // screen.point(column as i32, MID - offs, 0);
@@ -651,7 +605,7 @@ fn main() {
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
         for i in buffer.iter_mut() {
-            *i = 0; // write something more funny here!
+            *i = 0x40404040; // write something more funny here!
         }
 
         for i in 0..16 {
