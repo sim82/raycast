@@ -317,7 +317,7 @@ impl Draw for Vec<u32> {
     }
 
     fn point_world(&mut self, x: Fp16, y: Fp16, c: i32) {
-        let scale = 4;
+        let scale = 3;
         let xp = (x * scale).get_int();
         let yp = (y * scale).get_int();
         // let xp = x.get_int();
@@ -345,8 +345,8 @@ struct PlayerVel {
 impl Default for Player {
     fn default() -> Self {
         Self {
-            x: 1.1.into(),
-            y: 1.1.into(),
+            x: 2.1.into(),
+            y: 2.1.into(),
             rot: 0,
         }
     }
@@ -360,7 +360,7 @@ impl Player {
         (self.x.fract(), self.y.fract())
     }
 
-    pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16) {
+    pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16, map: &Map) {
         self.rot += (dt * player_vel.rot).get_int();
         while self.rot < 0 {
             self.rot += FA_TAU;
@@ -372,8 +372,51 @@ impl Player {
         println!("cos sin {:?} {:?}", fa_cos(self.rot), fa_sin(self.rot));
         let dx = fa_cos(self.rot) * player_vel.forward * dt;
         let dy = fa_sin(self.rot) * player_vel.forward * dt;
-        self.x += dx;
-        self.y += dy;
+
+        let player_width: Fp16 = 0.4.into();
+
+        let tx = [
+            self.x + player_width,
+            self.x - player_width,
+            self.x - player_width,
+            self.x + player_width,
+        ];
+        let ty = [
+            self.y + player_width,
+            self.y + player_width,
+            self.y - player_width,
+            self.y - player_width,
+        ];
+
+        let tis = if QUADRANT_1.contains(&self.rot) {
+            [0, 1, 3]
+        } else if QUADRANT_2.contains(&self.rot) {
+            [1, 2, 0]
+        } else if QUADRANT_3.contains(&self.rot) {
+            [1, 2, 3]
+        } else if QUADRANT_4.contains(&self.rot) {
+            [0, 2, 3]
+        } else {
+            panic!()
+        };
+        let mut can_move_x = true;
+        let mut can_move_y = true;
+        for ti in tis {
+            let x = tx[ti] + dx;
+            let y = ty[ti] + dy;
+
+            if map.lookup(x.get_int(), y.get_int()) != 0 {
+                println!("collision {}", ti + 1);
+                can_move_x &= map.lookup(x.get_int(), ty[ti].get_int()) == 0;
+                can_move_y &= map.lookup(tx[ti].get_int(), y.get_int()) == 0;
+            }
+        }
+        if can_move_x {
+            self.x += dx;
+        }
+        if can_move_y {
+            self.y += dy;
+        }
     }
 
     pub(crate) fn draw(&self, buffer: &mut Vec<u32>) {
@@ -653,8 +696,11 @@ fn main() {
         if window.is_key_down(Key::A) {
             player_vel.rot -= rot_speed;
         }
+        if window.is_key_released(Key::F1) {
+            player = Player::default();
+        }
 
-        player.apply_vel(&player_vel, dt);
+        player.apply_vel(&player_vel, dt, &map);
         // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
         println!("player: {:?}", player);
 
