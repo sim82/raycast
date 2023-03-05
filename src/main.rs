@@ -1,5 +1,5 @@
 use std::{
-    ops::{Add, AddAssign, Mul, Neg, Range, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Mul, Neg, Range, Sub, SubAssign},
     time::Instant,
 };
 
@@ -16,76 +16,14 @@ const COLORS: [u32; 16] = [
 
 const MAP_SIZE: usize = 64;
 
-#[rustfmt::skip]
-const MAP: [&[u8]; MAP_SIZE] = [
-    b"1111111111345671723456717234567172345671723456717234567172345671",
-    b"1000000000000002700000000000000270000000000000027000000000000002",
-    b"1000000000000003600000000000000360000000000000036000000000000003",
-    b"1000550000000004500000000000000450000000000000045000000000000004",
-    b"1000553000000030000000300000003540000030000000300000003000000035",
-    b"1000554000000040000000400000004000000040000000400000004000000046",
-    b"1000025000000250000002500000025000000250000002500000025000000257",
-    b"1000067002000670020006700200067002000670020006700200067002000677",
-    b"1000567002005670020056700200567002005670020056700200567002005671",
-    b"1000000000000000000000000000000000000000000000000000000000000002",
-    b"1000000000000000000000000000000000000000000000000000000000000003",
-    b"5000000000000000000000000000000000000000000000000000000000000004",
-    b"4000003000000030000000300000003000000030000000300000003000000035",
-    b"3000004000000040000000400000004000000040000000400000004000000046",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"2000025000000257200002500000025000000250000002572000025000000257",
-    b"7000000000000002700000000000000000000000000000027000000000000002",
-    b"6000000000000000000000000000000000000000000000000000000000000003",
-    b"5000000000000000000000000000000000000000000000000000000000000004",
-    b"4000003000000030000000300000003000000030000000300000003000000035",
-    b"3000004000000040000000400000004000000040000000400000004000000046",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"1200067002000670020006700200067002000670020006700200067002000677",
-    b"7200567002005670020056700200567002005670020056700200567002005671",
-    b"7000000000000000000000000000000000000000000000000000000000000002",
-    b"6000000000000000000000000000000000000000000000000000000000000003",
-    b"5000000000000000000000000000000000000000000000000000000000000004",
-    b"4000003000000030000000300000003540000030000000300000003000000035",
-    b"3000004000000040000000400000004630000040000000400000004000000046",
-    b"2000025000000257200002500000025720000250000002572000025000000257",
-    b"5000000000000000000000000000000450000000000000000000000000000004",
-    b"4000003000000030000000300000003540000030000000300000003000000035",
-    b"7000000000000002700000000000000270000000000000027000000000000002",
-    b"6000000000000003600000000000000360000000000000036000000000000003",
-    b"5000000000000004500000000000000450000000000000045000000000000004",
-    b"4000003000000030000000300000003000000030000000300000003000000035",
-    b"3000004000000040000000400000004000000040000000400000004000000046",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"1200067002000670020006700200067002000670020006700200067002000677",
-    b"7200567002005670020056700200567002005670020056700200567002005671",
-    b"7000000000000000000000000000000000000000000000000000000000000002",
-    b"6000000000000000000000000000000000000000000000000000000000000003",
-    b"5000000000000000000000000000000000000000000000000000000000000004",
-    b"4000003000000030000000300000003000000030000000300000003000000035",
-    b"3000004000000040000000400000004000000040000000400000004000000046",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"2000025000000257200002500000025000000250000002572000025000000257",
-    b"7000000000000002700000000000000000000000000000027000000000000002",
-    b"6000000000000000000000000000000000000000000000000000000000000003",
-    b"5000000000000000000000000000000000000000000000000000000000000004",
-    b"4000003000000030000000300000003000000030000000300000003000000035",
-    b"3000004000000040000000400000004000000040000000400000004000000046",
-    b"2000025000000250000002500000025000000250000002500000025000000257",
-    b"1200067002000670020006700200067002000670020006700200067002000677",
-    b"7200567002005670020056700200567002005670020056700200567002005671",
-    b"7000000000000000000000000000000000000000000000000000000000000002",
-    b"6000000000000000000000000000000000000000000000000000000000000003",
-    b"5000000000000000000000000000000000000000000000000000000000000004",
-    b"4000003000000030000000300000003540000030000000300000003000000035",
-    b"3000004000000040000000400000004630000040000000400000004000000046",
-    b"2000025000000257200002500000025720000250000002572000025000000257",
-    b"1234567712345677123456771234567712345677123456771234567712345677",
-];
+const MAP: [&[u8]; MAP_SIZE] = include!("maps/map1.txt");
+// const MAP: [&[u8]; MAP_SIZE] = include!("maps/map_empty.txt");
 
 const FP16_ZERO: Fp16 = Fp16 { v: 0 };
 const FP16_ONE: Fp16 = Fp16 { v: 1 << FP16_SCALE };
+const FP16_HALF: Fp16 = Fp16 {
+    v: (1 << FP16_SCALE) / 2,
+};
 
 const FA_SCALEF: f32 = 10.0;
 
@@ -218,6 +156,9 @@ impl Fp16 {
     pub fn fract(&self) -> Fp16 {
         Self { v: self.v & 0xFFFF }
     }
+    pub fn as_f32(&self) -> f32 {
+        (self.v as f32) / FP16_F
+    }
 }
 
 impl Add<Fp16> for Fp16 {
@@ -262,6 +203,19 @@ impl Mul<Fp16> for Fp16 {
         // let sign =
         // let v = (((self.v as i64) * (rhs.v as i64)) >> FP16_SCALE) as i32;
         let v = ((self.v >> 4) * (rhs.v >> 4)) >> 8;
+        Self { v }
+    }
+}
+
+impl Div<Fp16> for Fp16 {
+    type Output = Fp16;
+
+    fn div(self, rhs: Fp16) -> Self::Output {
+        // FIXME: the scaling factors are completely empirical for the sprite size 1/z division
+        let a = self.v << 8;
+        let b = rhs.v;
+        let c = a / b;
+        let v = c << 8;
         Self { v }
     }
 }
@@ -388,6 +342,7 @@ impl Player {
             self.y - player_width,
         ];
 
+        // FIXME: using player.rot only works for forwars movement (can move into walls during backwards move)
         let tis = if QUADRANT_1.contains(&self.rot) {
             [0, 1, 3]
         } else if QUADRANT_2.contains(&self.rot) {
@@ -405,10 +360,10 @@ impl Player {
             let x = tx[ti] + dx;
             let y = ty[ti] + dy;
 
-            if map.lookup(x.get_int(), y.get_int()) != 0 {
+            if !map.can_walk(x.get_int(), y.get_int()) {
                 println!("collision {}", ti + 1);
-                can_move_x &= map.lookup(x.get_int(), ty[ti].get_int()) == 0;
-                can_move_y &= map.lookup(tx[ti].get_int(), y.get_int()) == 0;
+                can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
+                can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
             }
         }
         if can_move_x {
@@ -432,15 +387,20 @@ impl Player {
 }
 
 struct Map {
-    pub map: [[i32; MAP_SIZE]; MAP_SIZE],
+    pub map: [[(i32, bool); MAP_SIZE]; MAP_SIZE],
 }
 
 impl Default for Map {
     fn default() -> Self {
-        let mut map = [[0; MAP_SIZE]; MAP_SIZE];
+        let mut map = [[(0, true); MAP_SIZE]; MAP_SIZE];
         for (in_line, out_line) in MAP.iter().zip(map.iter_mut()) {
             for (c, out) in in_line.iter().zip(out_line.iter_mut()) {
-                *out = (*c - b'0').into();
+                // FIXME: crappy harcoded
+                if *c >= b'1' && *c <= b'7' {
+                    *out = ((*c - b'0').into(), false);
+                } else if *c == b'8' || *c == b':' {
+                    *out = (0, false);
+                }
             }
         }
 
@@ -449,12 +409,19 @@ impl Default for Map {
 }
 
 impl Map {
-    fn lookup(&self, x: i32, y: i32) -> i32 {
+    fn lookup_wall(&self, x: i32, y: i32) -> i32 {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return 1; // solid outer
         }
-        self.map[y as usize][x as usize]
+        self.map[y as usize][x as usize].0
     }
+    fn can_walk(&self, x: i32, y: i32) -> bool {
+        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
+            return false; // solid outer
+        }
+        self.map[y as usize][x as usize].1
+    }
+
     pub fn sweep_raycast(
         &self,
         screen: &mut Vec<u32>,
@@ -464,7 +431,7 @@ impl Map {
         resources: &Resources,
     ) {
         let (x, y) = player.int_pos();
-        if self.lookup(x, y) != 0 {
+        if self.lookup_wall(x, y) != 0 {
             return;
         }
         let (dx, dy) = player.frac_pos();
@@ -537,7 +504,7 @@ impl Map {
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                     // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                    hit_tile = self.lookup(hx + hstep_x.min(0), ny.get_int());
+                    hit_tile = self.lookup_wall(hx + hstep_x.min(0), ny.get_int());
 
                     if hit_tile != 0 {
                         screen.point_world(hx.into(), ny, hit_tile);
@@ -555,7 +522,7 @@ impl Map {
                     ny += ty;
                 } else {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                    hit_tile = self.lookup(nx.get_int(), hy + hstep_y.min(0));
+                    hit_tile = self.lookup_wall(nx.get_int(), hy + hstep_y.min(0));
                     if hit_tile != 0 {
                         // hit_tile += 8;
                         screen.point_world(nx, hy.into(), hit_tile);
@@ -661,7 +628,7 @@ fn draw_sprite(
     x_mid: i32,
     z: Fp16,
 ) {
-    const C: i32 = MID;
+    const C: i32 = MID + 10;
     let offs = if z > FP16_ZERO {
         (C << FP16_SCALE) / z.v
     } else {
@@ -713,12 +680,97 @@ fn draw_sprite(
     }
 }
 
+struct Sprite {
+    x: Fp16,
+    y: Fp16,
+    id: i32,
+}
+
+struct Sprites {
+    sprites: Vec<Sprite>,
+    screen_pos: Vec<(Fp16, i32, i32)>,
+}
+
+impl Default for Sprites {
+    fn default() -> Self {
+        let sprites = MAP
+            .iter()
+            .enumerate()
+            .flat_map(|(y, row)| {
+                row.iter().enumerate().filter_map(move |(x, c)| {
+                    if *c >= b'8' {
+                        Some(Sprite {
+                            x: FP16_HALF + (x as i32).into(),
+                            y: FP16_HALF + (y as i32).into(),
+                            id: (*c - b'0') as i32,
+                        })
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+
+        Self {
+            sprites,
+            screen_pos: Default::default(),
+        }
+    }
+}
+
+impl Sprites {
+    pub fn setup_screen_pos_for_player(&mut self, player: &Player) {
+        self.screen_pos.clear();
+        self.screen_pos.reserve(self.sprites.len());
+        // double dirX = -1.0, dirY = 0.0; //initial direction vector
+        // double planeX = 0.0, planeY = 0.66; //the 2d raycaster version of camera plane
+        // let inv_det: Fp16 = (1.0 / (0. - 0.66)).into();
+        let inv_sin = fa_sin(fa_fix_angle(-player.rot));
+        let inv_cos = fa_cos(fa_fix_angle(-player.rot));
+
+        for sprite in &self.sprites {
+            let x = sprite.x - player.x;
+            let y = sprite.y - player.y;
+
+            let tx = x * inv_cos - y * inv_sin;
+            let ty = y * inv_cos + x * inv_sin;
+
+            // println!(
+            //     "{} {}, {} {} -> {} {}, {} {}",
+            //     player.x.as_f32(),
+            //     player.y.as_f32(),
+            //     sprite.x.as_f32(),
+            //     sprite.y.as_f32(),
+            //     x.as_f32(),
+            //     y.as_f32(),
+            //     tx.as_f32(),
+            //     ty.as_f32(),
+            // );
+
+            if tx <= FP16_ZERO || tx.get_int() < 1 {
+                continue;
+            }
+
+            let z = tx;
+            // let screen_x = (WIDTH as i32 / 2) + (ty * (WIDTH as i32 / 2)).get_int();
+            let screen_x = ((FP16_ONE + (ty / z)) * (WIDTH as i32 / 2)).get_int();
+            self.screen_pos.push((z, screen_x, sprite.id));
+        }
+        self.screen_pos.sort_by_key(|(z, _, _)| -(*z));
+    }
+    pub fn draw(&self, screen: &mut Vec<u32>, zbuffer: &[Fp16], resources: &Resources) {
+        for (z, mid, id) in &self.screen_pos {
+            draw_sprite(screen, zbuffer, resources, *id, *mid, *z);
+        }
+    }
+}
+
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
 
     let resources = Resources::load_textures("textures.txt");
-
+    let mut sprites = Sprites::default();
     let mut window = Window::new(
         "Test - ESC to exit",
         WIDTH,
@@ -739,15 +791,30 @@ fn main() {
 
     let mut player_vel = PlayerVel { forward: 0, rot: 0 };
     let mut player = Player::default();
+    // let mut player = Player {
+    //     x: Fp16 { v: 1202215 },
+    //     y: Fp16 { v: 1997708 },
+    //     rot: 3244,
+    // };
 
     let map = Map::default();
 
     let mut frame = 0;
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        for i in buffer.iter_mut() {
-            *i = 0x40404040; // write something more funny here!
+        for (i, chunk) in buffer.chunks_mut(320 * 100).enumerate() {
+            if i == 0 {
+                chunk.fill(0x38383838);
+            } else {
+                chunk.fill(0x64646464);
+            }
         }
+
+        // for i in buffer.iter_mut() {
+        //     // *i = 0x40404040; // write something more funny here!
+
+        //     *i = 0x84848484; // write something more funny here!
+        // }
 
         for i in 0..16 {
             buffer.point(10 + i, 10 + i, i);
@@ -757,9 +824,9 @@ fn main() {
         player_vel.rot = 0;
 
         let (fwd_speed, rot_speed) = if window.is_key_down(Key::LeftShift) {
-            (1, 360)
+            (2, 360)
         } else {
-            (10, 10 * 360)
+            (7, 5 * 360)
         };
 
         if window.is_key_down(Key::W) {
@@ -790,7 +857,10 @@ fn main() {
 
         let sprite_z = 5.0 + 4.0 * (frame as f32).to_radians().sin();
 
-        draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
+        // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
+        sprites.setup_screen_pos_for_player(&player);
+        sprites.draw(&mut buffer, &zbuffer, &resources);
+
         // }
         println!("time: {}us", start.elapsed().as_micros());
 
