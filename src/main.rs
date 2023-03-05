@@ -293,6 +293,7 @@ struct Player {
 #[derive(Debug)]
 struct PlayerVel {
     forward: i32,
+    right: i32,
     rot: i32,
 }
 
@@ -324,8 +325,11 @@ impl Player {
             self.rot -= FA_TAU;
         }
         // println!("cos sin {:?} {:?}", fa_cos(self.rot), fa_sin(self.rot));
-        let dx = fa_cos(self.rot) * player_vel.forward * dt;
-        let dy = fa_sin(self.rot) * player_vel.forward * dt;
+        let sin = fa_sin(self.rot);
+        let cos = fa_cos(self.rot);
+        // right direction is forward + 90deg
+        let dx = (cos * player_vel.forward + sin * player_vel.right) * dt;
+        let dy = (sin * player_vel.forward - cos * player_vel.right) * dt;
 
         let player_width: Fp16 = 0.4.into();
 
@@ -781,7 +785,11 @@ fn main() {
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
-    let mut player_vel = PlayerVel { forward: 0, rot: 0 };
+    let mut player_vel = PlayerVel {
+        forward: 0,
+        right: 0,
+        rot: 0,
+    };
     let mut player = Player::default();
     // let mut player = Player {
     //     x: Fp16 { v: 1202215 },
@@ -813,12 +821,13 @@ fn main() {
         }
 
         player_vel.forward = 0;
+        player_vel.right = 0;
         player_vel.rot = 0;
 
         let (fwd_speed, rot_speed) = if window.is_key_down(Key::LeftShift) {
             (2, 360)
         } else {
-            (7, 5 * 360)
+            (7, 3 * 360)
         };
 
         if window.is_key_down(Key::W) {
@@ -826,6 +835,13 @@ fn main() {
         }
         if window.is_key_down(Key::S) {
             player_vel.forward -= fwd_speed;
+        }
+
+        if window.is_key_down(Key::Q) {
+            player_vel.right += fwd_speed;
+        }
+        if window.is_key_down(Key::E) {
+            player_vel.right -= fwd_speed;
         }
         if window.is_key_down(Key::D) {
             player_vel.rot += rot_speed;
@@ -848,7 +864,6 @@ fn main() {
         map.sweep_raycast(&mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
 
         let sprite_start = Instant::now();
-        let sprite_z = 5.0 + 4.0 * (frame as f32).to_radians().sin();
 
         // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
         sprites.setup_screen_pos_for_player(&player);
