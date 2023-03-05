@@ -323,7 +323,7 @@ impl Player {
         while self.rot >= FA_TAU {
             self.rot -= FA_TAU;
         }
-        println!("cos sin {:?} {:?}", fa_cos(self.rot), fa_sin(self.rot));
+        // println!("cos sin {:?} {:?}", fa_cos(self.rot), fa_sin(self.rot));
         let dx = fa_cos(self.rot) * player_vel.forward * dt;
         let dy = fa_sin(self.rot) * player_vel.forward * dt;
 
@@ -628,7 +628,8 @@ fn draw_sprite(
     x_mid: i32,
     z: Fp16,
 ) {
-    const C: i32 = MID + 10;
+    // FIXME: what is going on with the sprite scaling? at least pillars seem to be meant larger than walls at the same z distance
+    const C: i32 = MID + 28;
     let offs = if z > FP16_ZERO {
         (C << FP16_SCALE) / z.v
     } else {
@@ -850,11 +851,12 @@ fn main() {
         println!("player: {:?}", player);
 
         player.draw(&mut buffer);
+        let start = Instant::now();
 
         // for _ in 0..1000 {
         map.sweep_raycast(&mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
-        let start = Instant::now();
 
+        let sprite_start = Instant::now();
         let sprite_z = 5.0 + 4.0 * (frame as f32).to_radians().sin();
 
         // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
@@ -862,7 +864,11 @@ fn main() {
         sprites.draw(&mut buffer, &zbuffer, &resources);
 
         // }
-        println!("time: {}us", start.elapsed().as_micros());
+        println!(
+            "time: {}us\t({}us sprite)",
+            start.elapsed().as_micros(),
+            sprite_start.elapsed().as_micros()
+        );
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
