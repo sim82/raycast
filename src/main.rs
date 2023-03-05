@@ -346,18 +346,17 @@ impl Player {
             self.y - player_width,
         ];
 
-        // FIXME: using player.rot only works for forwars movement (can move into walls during backwards move)
-        let tis = if QUADRANT_1.contains(&self.rot) {
+        // select the three corners of the player box that need to be checked (depends on the quadrant of the actual movement)
+        let tis = if dx >= FP16_ZERO && dy >= FP16_ZERO {
             [0, 1, 3]
-        } else if QUADRANT_2.contains(&self.rot) {
+        } else if dx < FP16_ZERO && dy >= FP16_ZERO {
             [1, 2, 0]
-        } else if QUADRANT_3.contains(&self.rot) {
+        } else if dx < FP16_ZERO && dy < FP16_ZERO {
             [1, 2, 3]
-        } else if QUADRANT_4.contains(&self.rot) {
-            [0, 2, 3]
         } else {
-            panic!()
+            [0, 2, 3]
         };
+
         let mut can_move_x = true;
         let mut can_move_y = true;
         for ti in tis {
