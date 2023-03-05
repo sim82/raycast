@@ -672,6 +672,7 @@ fn draw_sprite(
     let tex = resources.get_texture(id);
 
     const MID: i32 = HEIGHT as i32 / 2;
+    let target_size = 2 * offs;
 
     let texcoord = {
         // pre-calc screen -> tex coords
@@ -681,8 +682,8 @@ fn draw_sprite(
         let d_tex = 64 - 1;
         let mut d = 2 * d_tex - d_screen;
         let mut tex = 0;
-        // only fill first (2 * offs, screen-space target size) entries of the texcoord array
-        for tx in texcoord.iter_mut().take(2 * offs as usize) {
+        // only fill first (2 * offs, screen-space target size) entries of the texcoord array, using bresenham-style interpolator
+        for tx in texcoord.iter_mut().take(target_size as usize) {
             *tx = tex;
 
             while d > 0 {
@@ -693,15 +694,19 @@ fn draw_sprite(
         }
         texcoord
     };
-    for column in (x_mid - offs)..(x_mid + offs) {
-        if zbuffer[column as usize] > z {
-            let tex_col = tex[texcoord[(column - (x_mid - offs)) as usize] as usize];
-            for row in (MID - offs)..(MID + offs) {
-                if column >= 0 && column < WIDTH as i32 && row >= 0 && row < HEIGHT as i32 {
-                    let c = tex_col[texcoord[(row - (MID - offs)) as usize] as usize];
-                    if c != 0 {
-                        screen.point_rgb(column, row, c);
-                    }
+    for x in 0..target_size {
+        let column = x + (x_mid - offs);
+        // TODO: clip to screen bounds
+        if column < 0 || column >= WIDTH as i32 || zbuffer[column as usize] <= z {
+            continue;
+        }
+        let tex_col = tex[texcoord[x as usize] as usize];
+        for y in 0..target_size {
+            let row = y + (MID - offs);
+            if row >= 0 && row < HEIGHT as i32 {
+                let c = tex_col[texcoord[y as usize] as usize];
+                if c != 0 {
+                    screen.point_rgb(column, row, c);
                 }
             }
         }
