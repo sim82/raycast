@@ -641,6 +641,7 @@ fn draw_sprite(
 
     const MID: i32 = HEIGHT as i32 / 2;
     let target_size = 2 * offs;
+    // TODO: re-think the whole thing... it kind of works without explicit clipping to screen bounds, but the redundant in-loop bounds checks are weird and inefficient
 
     let texcoord = {
         // pre-calc screen -> tex coords
@@ -662,15 +663,18 @@ fn draw_sprite(
         }
         texcoord
     };
-    for x in 0..target_size {
+    for x in 0..(target_size.min(WIDTH as i32)) {
         let column = x + (x_mid - offs);
         // TODO: clip to screen bounds
         if column < 0 || column >= WIDTH as i32 || zbuffer[column as usize] <= z {
             continue;
         }
         let tex_col = tex[texcoord[x as usize] as usize];
-        for y in 0..target_size {
+        for y in 0..(target_size.min(WIDTH as i32)) {
             let row = y + (MID - offs);
+            if row < 0 || row >= HEIGHT as i32 {
+                continue;
+            }
             if row >= 0 && row < HEIGHT as i32 {
                 let c = tex_col[texcoord[y as usize] as usize];
                 if c != 0 {
@@ -723,9 +727,6 @@ impl Sprites {
     pub fn setup_screen_pos_for_player(&mut self, player: &Player) {
         self.screen_pos.clear();
         self.screen_pos.reserve(self.sprites.len());
-        // double dirX = -1.0, dirY = 0.0; //initial direction vector
-        // double planeX = 0.0, planeY = 0.66; //the 2d raycaster version of camera plane
-        // let inv_det: Fp16 = (1.0 / (0. - 0.66)).into();
         let inv_sin = fa_sin(fa_fix_angle(-player.rot));
         let inv_cos = fa_cos(fa_fix_angle(-player.rot));
 
@@ -736,19 +737,9 @@ impl Sprites {
             let tx = x * inv_cos - y * inv_sin;
             let ty = y * inv_cos + x * inv_sin;
 
-            // println!(
-            //     "{} {}, {} {} -> {} {}, {} {}",
-            //     player.x.as_f32(),
-            //     player.y.as_f32(),
-            //     sprite.x.as_f32(),
-            //     sprite.y.as_f32(),
-            //     x.as_f32(),
-            //     y.as_f32(),
-            //     tx.as_f32(),
-            //     ty.as_f32(),
-            // );
-
-            if tx <= FP16_ZERO || tx.get_int() < 1 {
+            if tx <= FP16_HALF
+            /*|| tx.get_int() < 1 */
+            {
                 continue;
             }
 
