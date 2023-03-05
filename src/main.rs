@@ -671,41 +671,40 @@ fn draw_sprite(
 
     let tex = resources.get_texture(id);
 
-    let dx_screen = (line_range.end - line_range.start) - 1;
-    let dx_tex = 64 - 1;
-    let mut dx = 2 * dx_tex - dx_screen;
-    let mut tex_u = 0;
     const MID: i32 = HEIGHT as i32 / 2;
 
+    let texcoord = {
+        // pre-calc screen -> tex coords
+        let mut texcoord = [0u8; WIDTH];
+
+        let d_screen = (line_range.end - line_range.start) - 1;
+        let d_tex = 64 - 1;
+        let mut d = 2 * d_tex - d_screen;
+        let mut tex = 0;
+        // only fill first (2 * offs, screen-space target size) entries of the texcoord array
+        for tx in texcoord.iter_mut().take(2 * offs as usize) {
+            *tx = tex;
+
+            while d > 0 {
+                tex += 1;
+                d -= 2 * d_screen;
+            }
+            d += 2 * d_tex;
+        }
+        texcoord
+    };
     for column in (x_mid - offs)..(x_mid + offs) {
         if zbuffer[column as usize] > z {
-            // let dy_screen = size - 1;
-            let dy_screen = (line_range.end - line_range.start) - 1;
-            let dy_tex = 64 - 1;
-            let mut dy = 2 * dy_tex - dy_screen;
-            let mut tex_v = 0;
-
-            let tex_col = tex[tex_u as usize];
+            let tex_col = tex[texcoord[(column - (x_mid - offs)) as usize] as usize];
             for row in (MID - offs)..(MID + offs) {
                 if column >= 0 && column < WIDTH as i32 && row >= 0 && row < HEIGHT as i32 {
-                    let c = tex_col[tex_v as usize];
+                    let c = tex_col[texcoord[(row - (MID - offs)) as usize] as usize];
                     if c != 0 {
                         screen.point_rgb(column, row, c);
                     }
                 }
-
-                while dy > 0 {
-                    tex_v += 1;
-                    dy -= 2 * dy_screen;
-                }
-                dy += 2 * dy_tex;
             }
         }
-        while dx > 0 {
-            tex_u += 1;
-            dx -= 2 * dx_screen;
-        }
-        dx += 2 * dx_tex;
     }
 }
 
