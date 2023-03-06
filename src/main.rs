@@ -640,7 +640,7 @@ fn draw_sprite(
     };
     let line_range = (MID - offs)..(MID + offs);
 
-    let tex = resources.get_texture(id);
+    let tex = resources.get_sprite(id);
 
     const MID: i32 = HEIGHT as i32 / 2;
     let target_size = 2 * offs;
@@ -755,7 +755,7 @@ impl Sprites {
     }
     pub fn draw(&self, screen: &mut Vec<u32>, zbuffer: &[Fp16], resources: &Resources) {
         for (z, mid, id) in &self.screen_pos {
-            draw_sprite(screen, zbuffer, resources, *id, *mid, *z);
+            draw_sprite(screen, zbuffer, resources, *id - 7 + 60, *mid, *z);
         }
     }
 }

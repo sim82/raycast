@@ -17,12 +17,14 @@ pub type Texture = [[u32; TEX_SIZE]; TEX_SIZE];
 
 pub struct Resources {
     textures: Vec<Texture>,
+    sprites: Vec<Texture>,
     fallback_texture: Texture,
 }
 impl Default for Resources {
     fn default() -> Self {
         Self {
             textures: Default::default(),
+            sprites: Default::default(),
             fallback_texture: [[0x808080; TEX_SIZE]; TEX_SIZE],
         }
     }
@@ -32,6 +34,14 @@ impl Resources {
     pub fn get_texture(&self, id: i32) -> &Texture {
         if id >= 1 && (id as usize) <= self.textures.len() {
             &self.textures[(id - 1) as usize]
+        } else {
+            &self.fallback_texture
+        }
+    }
+
+    pub fn get_sprite(&self, id: i32) -> &Texture {
+        if id >= 1 && (id as usize) <= self.sprites.len() {
+            &self.sprites[(id - 1) as usize]
         } else {
             &self.fallback_texture
         }
@@ -75,15 +85,18 @@ impl Resources {
             ));
         }
 
+        let mut sprites = Vec::new();
+
         for i in 0..vs.num_sprites {
-            println!("sprite {}", i);
-            textures.push(sprite_chunk_to_texture(
+            // println!("sprite {}", i);
+            sprites.push(sprite_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Sprite(i as usize)),
             ));
         }
 
         Resources {
             textures,
+            sprites,
             ..Default::default()
         }
     }
@@ -104,10 +117,10 @@ fn sprite_chunk_to_texture(buf: &[u8]) -> Texture {
     let offsets = (first_col..=last_col)
         .map(|_| cursor.read_u16::<LittleEndian>().unwrap())
         .collect::<Vec<_>>();
-    let pixels = cursor.clone();
-    for col_offset in offsets {
+    let mut pixels = cursor.clone();
+    for (i, col_offset) in offsets.iter().enumerate() {
         println!("col start {}", col_offset);
-        cursor.seek(SeekFrom::Start(col_offset as u64)).unwrap();
+        cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
         loop {
             let end = cursor.read_u16::<LittleEndian>().unwrap();
             if end == 0 {
@@ -116,6 +129,13 @@ fn sprite_chunk_to_texture(buf: &[u8]) -> Texture {
             let _ = cursor.read_u16::<LittleEndian>().unwrap();
             let start = cursor.read_u16::<LittleEndian>().unwrap();
 
+            let start = start as usize / 2;
+            let end = end as usize / 2;
+
+            for row in start..end {
+                texture[first_col as usize + i][row] =
+                    palette::PALETTE[pixels.read_u8().unwrap() as usize];
+            }
             println!("post: {} {}", start, end);
         }
     }
