@@ -6,6 +6,8 @@ use std::{
 
 use image::{ImageBuffer, Rgb};
 
+pub mod wl6;
+
 const TEX_SIZE: usize = 64;
 
 // column first order

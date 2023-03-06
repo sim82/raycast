@@ -854,7 +854,7 @@ fn main() {
 
         player.apply_vel(&player_vel, dt, &map);
         // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
-        println!("player: {:?}", player);
+        // println!("player: {:?}", player);
 
         player.draw(&mut buffer);
         let start = Instant::now();
@@ -865,15 +865,17 @@ fn main() {
         let sprite_start = Instant::now();
 
         // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
+        // if frame % 4 == 0 {
         sprites.setup_screen_pos_for_player(&player);
+        // }
         sprites.draw(&mut buffer, &zbuffer, &resources);
 
         // }
-        println!(
-            "time: {}us\t({}us sprite)",
-            start.elapsed().as_micros(),
-            sprite_start.elapsed().as_micros()
-        );
+        // println!(
+        //     "time: {}us\t({}us sprite)",
+        //     start.elapsed().as_micros(),
+        //     sprite_start.elapsed().as_micros()
+        // );
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
