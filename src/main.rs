@@ -764,7 +764,8 @@ fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
 
-    let resources = Resources::load_textures("textures.txt");
+    // let resources = Resources::load_textures("textures.txt");
+    let resources = Resources::load_wl6("vswap.wl6");
     let mut sprites = Sprites::default();
     let mut window = Window::new(
         "Test - ESC to exit",
