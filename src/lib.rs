@@ -10,7 +10,7 @@ use wl6::VswapFile;
 
 pub mod wl6;
 
-const TEX_SIZE: usize = 64;
+const TEX_SIZE: usize = wl6::TEX_SIZE;
 
 // column first order
 pub type Texture = [[u32; TEX_SIZE]; TEX_SIZE];
@@ -80,7 +80,7 @@ impl Resources {
         let mut textures = Vec::new();
 
         for i in 0..vs.num_walls {
-            textures.push(wall_chunk_to_texture(
+            textures.push(wl6::wall_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Wall(i as usize)),
             ));
         }
@@ -89,7 +89,7 @@ impl Resources {
 
         for i in 0..vs.num_sprites {
             // println!("sprite {}", i);
-            sprites.push(sprite_chunk_to_texture(
+            sprites.push(wl6::sprite_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Sprite(i as usize)),
             ));
         }
@@ -100,58 +100,6 @@ impl Resources {
             ..Default::default()
         }
     }
-}
-
-fn sprite_chunk_to_texture(buf: &[u8]) -> Texture {
-    let mut cursor = Cursor::new(buf);
-    // UInt16LE 	FirstCol: Index of leftmost non-empty column
-    // UInt16LE 	LastCol: Index of rightmost non-empty column
-    // UInt16LE[n] 	Offsets relative to beginning of chunk to the first post of each column between FirstCol and LastCol (n = LastCol - FirstCol + 1)
-    // UInt8[?] 	Pixel pool: Palette indexes for all solid pixels of the sprite (size unknown when decoding)
-    // UInt16[?] 	Array of values describing all posts in the sprite (size unknown when decoding)
-
-    let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
-    let first_col = cursor.read_u16::<LittleEndian>().unwrap();
-    let last_col = cursor.read_u16::<LittleEndian>().unwrap();
-    // let n = (last_col - first_col) + 1;
-    let offsets = (first_col..=last_col)
-        .map(|_| cursor.read_u16::<LittleEndian>().unwrap())
-        .collect::<Vec<_>>();
-    let mut pixels = cursor.clone();
-    for (i, col_offset) in offsets.iter().enumerate() {
-        println!("col start {}", col_offset);
-        cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
-        loop {
-            let end = cursor.read_u16::<LittleEndian>().unwrap();
-            if end == 0 {
-                break;
-            }
-            let _ = cursor.read_u16::<LittleEndian>().unwrap();
-            let start = cursor.read_u16::<LittleEndian>().unwrap();
-
-            let start = start as usize / 2;
-            let end = end as usize / 2;
-
-            for row in start..end {
-                texture[first_col as usize + i][row] =
-                    palette::PALETTE[pixels.read_u8().unwrap() as usize];
-            }
-            println!("post: {} {}", start, end);
-        }
-    }
-    texture
-}
-
-fn wall_chunk_to_texture(buf: &[u8]) -> Texture {
-    let mut cursor = Cursor::new(buf);
-
-    let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
-    for col in &mut texture {
-        for c in col {
-            *c = palette::PALETTE[cursor.read_u8().unwrap() as usize];
-        }
-    }
-    texture
 }
 
 pub mod palette;

@@ -266,7 +266,9 @@ impl Draw for Vec<u32> {
         // if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT {
         //     return;
         // }
-
+        if c & 0xff000000 == 0 {
+            return;
+        }
         self[(x as usize) + (y as usize) * WIDTH] = c;
     }
 
@@ -692,6 +694,7 @@ struct Sprite {
     x: Fp16,
     y: Fp16,
     id: i32,
+    directional: bool,
 }
 
 struct Sprites {
@@ -706,11 +709,12 @@ impl Default for Sprites {
             .enumerate()
             .flat_map(|(y, row)| {
                 row.iter().enumerate().filter_map(move |(x, c)| {
-                    if *c >= b'8' {
+                    if *c == b'9' {
                         Some(Sprite {
                             x: FP16_HALF + (x as i32).into(),
                             y: FP16_HALF + (y as i32).into(),
-                            id: (*c - b'0') as i32,
+                            id: 51, //(*c - b'0') as i32,
+                            directional: true,
                         })
                     } else {
                         None
@@ -749,13 +753,35 @@ impl Sprites {
             let z = tx;
             // let screen_x = (WIDTH as i32 / 2) + (ty * (WIDTH as i32 / 2)).get_int();
             let screen_x = ((FP16_ONE + (ty / z)) * (WIDTH as i32 / 2)).get_int();
-            self.screen_pos.push((z, screen_x, sprite.id));
+
+            // calculate sprite orientation from player view angle
+            // 1. rotate sprite by inverse of camera rotation
+            // 2. turn by 'half an octant' to align steps to expected position
+            let mut viewangle = -player.rot + (FA_STEPS as i32) / 16;
+            // 3. approximate angle offset according to screen x position (who needs trigonometry whan you can fake it...)
+            // 4. turn by 180 deg to look along x axis
+            let cor = (160 - screen_x) * 2;
+            viewangle += cor + 1800;
+
+            while viewangle < 0 {
+                viewangle += FA_STEPS as i32;
+            }
+            while viewangle >= FA_STEPS as i32 {
+                viewangle -= FA_STEPS as i32;
+            }
+            viewangle /= FA_STEPS as i32 / 8;
+
+            // println!("viewangle: {viewangle}");
+            self.screen_pos.push((z, screen_x, sprite.id + viewangle));
         }
         self.screen_pos.sort_by_key(|(z, _, _)| -(*z));
     }
-    pub fn draw(&self, screen: &mut Vec<u32>, zbuffer: &[Fp16], resources: &Resources) {
+    pub fn draw(&self, screen: &mut Vec<u32>, zbuffer: &[Fp16], resources: &Resources, frame: i32) {
         for (z, mid, id) in &self.screen_pos {
-            draw_sprite(screen, zbuffer, resources, *id - 7 + 60, *mid, *z);
+            draw_sprite(
+                screen, zbuffer, resources, *id, /*+ ((frame / 30) % 8)*/
+                *mid, *z,
+            );
         }
     }
 }
@@ -869,7 +895,7 @@ fn main() {
         // if frame % 4 == 0 {
         sprites.setup_screen_pos_for_player(&player);
         // }
-        sprites.draw(&mut buffer, &zbuffer, &resources);
+        sprites.draw(&mut buffer, &zbuffer, &resources, frame);
 
         // }
         // println!(

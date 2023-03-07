@@ -1,9 +1,13 @@
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::{
     fs::File,
-    io::{Read, Seek},
+    io::{Cursor, Read, Seek, SeekFrom},
     path::Path,
 };
+
+use crate::palette;
+
+pub const TEX_SIZE: usize = 64;
 
 pub struct VswapFile {
     pub num_chunks: u16,
@@ -66,6 +70,58 @@ impl VswapFile {
 
         buf
     }
+}
+
+pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
+    let mut cursor = Cursor::new(buf);
+    // UInt16LE 	FirstCol: Index of leftmost non-empty column
+    // UInt16LE 	LastCol: Index of rightmost non-empty column
+    // UInt16LE[n] 	Offsets relative to beginning of chunk to the first post of each column between FirstCol and LastCol (n = LastCol - FirstCol + 1)
+    // UInt8[?] 	Pixel pool: Palette indexes for all solid pixels of the sprite (size unknown when decoding)
+    // UInt16[?] 	Array of values describing all posts in the sprite (size unknown when decoding)
+
+    let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
+    let first_col = cursor.read_u16::<LittleEndian>().unwrap();
+    let last_col = cursor.read_u16::<LittleEndian>().unwrap();
+    // let n = (last_col - first_col) + 1;
+    let offsets = (first_col..=last_col)
+        .map(|_| cursor.read_u16::<LittleEndian>().unwrap())
+        .collect::<Vec<_>>();
+    let mut pixels = cursor.clone();
+    for (i, col_offset) in offsets.iter().enumerate() {
+        // println!("col start {}", col_offset);
+        cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
+        loop {
+            let end = cursor.read_u16::<LittleEndian>().unwrap();
+            if end == 0 {
+                break;
+            }
+            let _ = cursor.read_u16::<LittleEndian>().unwrap();
+            let start = cursor.read_u16::<LittleEndian>().unwrap();
+
+            let start = start as usize / 2;
+            let end = end as usize / 2;
+
+            for row in start..end {
+                texture[first_col as usize + i][row] =
+                    0xff000000 | palette::PALETTE[pixels.read_u8().unwrap() as usize];
+            }
+            // println!("post: {} {}", start, end);
+        }
+    }
+    texture
+}
+
+pub fn wall_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
+    let mut cursor = Cursor::new(buf);
+
+    let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
+    for col in &mut texture {
+        for c in col {
+            *c = 0xff000000 | palette::PALETTE[cursor.read_u8().unwrap() as usize];
+        }
+    }
+    texture
 }
 
 // pub fn list_chunks(r: &mut dyn Read) -> (Vec<u32>, Vec<u16>) {
