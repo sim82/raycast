@@ -144,6 +144,75 @@ pub fn wall_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
 //     (offs, size)
 // }
 
+#[derive(Debug)]
+struct MapHeader {
+    plane0_offset: u32,
+    plane1_offset: u32,
+    plane2_offset: u32,
+    plane0_size: u16,
+    plane1_size: u16,
+    plane2_size: u16,
+    width: u16,
+    height: u16,
+    name: String,
+}
+
+struct MapsFile {
+    f: File,
+    pub header_offsets: Vec<u32>,
+    pub map_headers: Vec<MapHeader>,
+    rlwe_tag: u16,
+}
+
+impl MapsFile {
+    fn read_name(r: &mut impl Read) -> String {
+        let mut buf = [0u8; 16];
+
+        r.read_exact(&mut buf).unwrap();
+        let mut last_char = 16;
+        while last_char > 1 {
+            if buf[last_char - 1] != 0 {
+                break;
+            }
+            last_char -= 1;
+        }
+        String::from_utf8_lossy(&buf[..last_char]).to_string()
+    }
+    pub fn open<P: AsRef<Path>, Q: AsRef<Path>>(head: P, maps: Q) -> MapsFile {
+        let mut f = File::open(head).unwrap();
+        let rlwe_tag = f.read_u16::<LittleEndian>().unwrap();
+        let header_offsets = (0..100)
+            .map(|_| f.read_u32::<LittleEndian>().unwrap())
+            .collect::<Vec<_>>();
+        let mut f = File::open(maps).unwrap();
+        let mut map_headers = Vec::new();
+        for offs in &header_offsets {
+            if *offs == 0 {
+                continue;
+            }
+            f.seek(SeekFrom::Start(*offs as u64)).unwrap();
+            map_headers.push(MapHeader {
+                plane0_offset: f.read_u32::<LittleEndian>().unwrap(),
+                plane1_offset: f.read_u32::<LittleEndian>().unwrap(),
+                plane2_offset: f.read_u32::<LittleEndian>().unwrap(),
+                plane0_size: f.read_u16::<LittleEndian>().unwrap(),
+                plane1_size: f.read_u16::<LittleEndian>().unwrap(),
+                plane2_size: f.read_u16::<LittleEndian>().unwrap(),
+                width: f.read_u16::<LittleEndian>().unwrap(),
+                height: f.read_u16::<LittleEndian>().unwrap(),
+                name: Self::read_name(&mut f),
+            });
+        }
+
+        MapsFile {
+            f,
+            header_offsets,
+            map_headers,
+            rlwe_tag,
+        }
+    }
+}
+
 #[test]
 fn test_vswap() {
     let mut vs = VswapFile::open("vswap.wl6");
@@ -156,4 +225,11 @@ fn test_vswap() {
     //     let head = f.read_u16::<LittleEndian>().unwrap();
     //     println!("head: {size} {:x}", head);
     // }
+}
+
+#[test]
+fn test_maps() {
+    let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
+    println!("{:?}", maps.header_offsets);
+    println!("{:?}", maps.map_headers);
 }
