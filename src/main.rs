@@ -5,7 +5,7 @@ use std::{
 
 use lazy_static::lazy_static;
 use minifb::{Key, Window, WindowOptions};
-use raycast::Resources;
+use raycast::{wl6, Resources};
 
 const WIDTH: usize = 320;
 const HEIGHT: usize = 200;
@@ -302,8 +302,8 @@ struct PlayerVel {
 impl Default for Player {
     fn default() -> Self {
         Self {
-            x: 2.1.into(),
-            y: 2.1.into(),
+            x: 3.1.into(),
+            y: 3.1.into(),
             rot: 0,
         }
     }
@@ -361,16 +361,16 @@ impl Player {
 
         let mut can_move_x = true;
         let mut can_move_y = true;
-        for ti in tis {
-            let x = tx[ti] + dx;
-            let y = ty[ti] + dy;
+        // for ti in tis {
+        //     let x = tx[ti] + dx;
+        //     let y = ty[ti] + dy;
 
-            if !map.can_walk(x.get_int(), y.get_int()) {
-                println!("collision {}", ti + 1);
-                can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
-                can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
-            }
-        }
+        //     if !map.can_walk(x.get_int(), y.get_int()) {
+        //         println!("collision {}", ti + 1);
+        //         can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
+        //         can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
+        //     }
+        // }
         if can_move_x {
             self.x += dx;
         }
@@ -414,6 +414,22 @@ impl Default for Map {
 }
 
 impl Map {
+    fn from_map_plane(plane: &[u16]) -> Self {
+        assert_eq!(plane.len(), 64 * 64);
+        let mut plane_iter = plane.iter();
+        let mut map = [[(0, true); MAP_SIZE]; MAP_SIZE];
+        for line in &mut map {
+            for out in line.iter_mut() {
+                let c = plane_iter.next().unwrap();
+                if (0..64).contains(c) {
+                    *out = ((*c) as i32, false);
+                }
+            }
+        }
+
+        Self { map }
+    }
+
     fn lookup_wall(&self, x: i32, y: i32) -> i32 {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return 1; // solid outer
@@ -792,6 +808,10 @@ fn main() {
 
     // let resources = Resources::load_textures("textures.txt");
     let resources = Resources::load_wl6("vswap.wl6");
+    let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
+
+    let (plane0, _) = maps.get_map_planes(0);
+
     let mut sprites = Sprites::default();
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -823,7 +843,8 @@ fn main() {
     //     rot: 3244,
     // };
 
-    let map = Map::default();
+    // let map = Map::default();
+    let map = Map::from_map_plane(&plane0);
 
     let mut frame = 0;
 

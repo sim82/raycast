@@ -63,12 +63,7 @@ impl VswapFile {
         };
 
         let (offs, size) = self.chunks[chunk_index];
-        self.f.seek(std::io::SeekFrom::Start(offs as u64)).unwrap();
-
-        let mut buf = vec![0u8; size as usize];
-        self.f.read_exact(&mut buf[..]).unwrap();
-
-        buf
+        read_vec_from_pos_size(&mut self.f, offs, size)
     }
 }
 
@@ -145,7 +140,7 @@ pub fn wall_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
 // }
 
 #[derive(Debug)]
-struct MapHeader {
+pub struct MapHeader {
     plane0_offset: u32,
     plane1_offset: u32,
     plane2_offset: u32,
@@ -157,7 +152,7 @@ struct MapHeader {
     name: String,
 }
 
-struct MapsFile {
+pub struct MapsFile {
     f: File,
     pub header_offsets: Vec<u32>,
     pub map_headers: Vec<MapHeader>,
@@ -211,6 +206,146 @@ impl MapsFile {
             rlwe_tag,
         }
     }
+    pub fn get_map_id(&self, name: &str) -> i32 {
+        self.map_headers
+            .iter()
+            .enumerate()
+            .find_map(|(i, header)| {
+                if header.name == name {
+                    Some(i as i32)
+                } else {
+                    None
+                }
+            })
+            .unwrap()
+    }
+    pub fn get_map_plane_chunks(&mut self, id: i32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+        assert!(id >= 0 && (id as usize) < self.map_headers.len());
+        let header = &self.map_headers[id as usize];
+
+        (
+            read_vec_from_pos_size(&mut self.f, header.plane0_offset, header.plane0_size),
+            read_vec_from_pos_size(&mut self.f, header.plane1_offset, header.plane1_size),
+            read_vec_from_pos_size(&mut self.f, header.plane2_offset, header.plane2_size),
+        )
+    }
+
+    pub fn get_map_planes(&mut self, id: i32) -> (Vec<u16>, Vec<u16>) {
+        let (v0, v1, v2) = self.get_map_plane_chunks(id);
+
+        let d0 = map_decompress(&v0, self.rlwe_tag);
+        let d1 = map_decompress(&v1, self.rlwe_tag);
+        let d2 = map_decompress(&v2, self.rlwe_tag);
+        assert!(d0.len() == 8192);
+        assert!(d1.len() == 8192);
+        assert!(d2.len() == 8192);
+
+        (to_plane(&d0), to_plane(&d1))
+    }
+}
+
+fn to_plane(d1: &[u8]) -> Vec<u16> {
+    let mut res = Vec::new();
+    res.reserve(d1.len() / 2);
+    let mut c = Cursor::new(d1);
+    for _ in 0..(d1.len() / 2) {
+        res.push(c.read_u16::<LittleEndian>().unwrap());
+    }
+
+    res
+}
+
+fn read_vec_from_pos_size(f: &mut File, offset: u32, size: u16) -> Vec<u8> {
+    f.seek(SeekFrom::Start(offset as u64)).unwrap();
+    let mut buf = vec![0u8; size as usize];
+    f.read_exact(&mut buf).unwrap();
+    buf
+}
+
+fn carmack_decompress(input: &[u8]) -> Vec<u8> {
+    let input_len = input.len() as u64;
+    let mut output = Vec::new();
+    let mut input = Cursor::new(input);
+    let output_len = input.read_u16::<LittleEndian>().unwrap();
+    output.reserve(output_len as usize);
+    while input.position() < input_len {
+        let x = input.read_u8().unwrap();
+        let y = input.read_u8().unwrap();
+
+        if y == 0xa7 {
+            let z = input.read_u8().unwrap();
+
+            if x == 0 {
+                output.push(z);
+                output.push(y);
+                continue;
+            }
+
+            let copy_size = (x * 2) as usize;
+            let offset = (z as usize) * 2;
+            let start = output.len() - offset;
+            let end = start + copy_size;
+            let mut copy = output[start..end].to_vec();
+            output.append(&mut copy);
+        } else if y == 0xA8 {
+            if x == 0 {
+                let z = input.read_u8().unwrap();
+                output.push(z);
+                output.push(y);
+                continue;
+            }
+            let copy_size = (x as usize) * 2;
+            let offset = input.read_u16::<LittleEndian>().unwrap();
+            let start = (offset as usize) * 2;
+
+            let end = start + copy_size;
+            let mut copy = output[start..end].to_vec();
+            output.append(&mut copy);
+        } else {
+            output.push(x);
+            output.push(y);
+        }
+    }
+    assert_eq!(output_len as usize, output.len());
+    output
+}
+
+fn rlew_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
+    let input_len = input.len() as u64;
+    let mut output = Vec::new();
+    let mut input = Cursor::new(input);
+    // let output_len = input.read_u16::<LittleEndian>().unwrap() as usize;
+    let output_len = input.read_u16::<LittleEndian>().unwrap() as usize;
+    output.reserve(output_len as usize);
+    // assert_eq!(data_len as u64 + 2, input_len);
+    while input.position() < input_len
+    /*&& output.len() < output_len*/
+    {
+        let start_pos = input.position();
+        let w = input.read_u16::<LittleEndian>().unwrap();
+        if w == rlwe_tag {
+            let num = input.read_u16::<LittleEndian>().unwrap();
+            let d0 = input.read_u8().unwrap();
+            let d1 = input.read_u8().unwrap();
+            for _ in 0..num {
+                output.push(d0);
+                output.push(d1);
+            }
+        } else {
+            // it is easier to re-read it bytewise than to mess around with endianness here...
+            input.set_position(start_pos);
+            output.push(input.read_u8().unwrap());
+            output.push(input.read_u8().unwrap());
+        }
+    }
+    // println!("output_len: {}", output_len);
+    assert!(output.len() == output_len);
+    output
+}
+
+fn map_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
+    let d1 = carmack_decompress(input);
+    rlew_decompress(&d1, rlwe_tag)
 }
 
 #[test]
@@ -230,6 +365,35 @@ fn test_vswap() {
 #[test]
 fn test_maps() {
     let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
+
+    let (v0, v1, v2) = maps.get_map_plane_chunks(maps.get_map_id("Wolf1 Map2"));
+
     println!("{:?}", maps.header_offsets);
     println!("{:?}", maps.map_headers);
+
+    let x = carmack_decompress(&v0);
+    println!("size: {} -> {}", v0.len(), x.len());
+    println!("{:x?}", &x[0..8]);
+
+    let y = rlew_decompress(&x, maps.rlwe_tag);
+    println!("size: {} -> {}", x.len(), y.len());
+
+    std::fs::write("test.bin", y).unwrap();
+    // println!("x: {:#x?} -> {:#x?}", v2, x);
+}
+
+#[test]
+fn test_all_maps() {
+    let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
+
+    for id in 0..maps.map_headers.len() {
+        let (v0, v1, v2) = maps.get_map_plane_chunks(id as i32);
+
+        let d0 = map_decompress(&v0, maps.rlwe_tag);
+        let d1 = map_decompress(&v1, maps.rlwe_tag);
+        let d2 = map_decompress(&v2, maps.rlwe_tag);
+        assert!(d0.len() == 8192);
+        assert!(d1.len() == 8192);
+        assert!(d2.len() == 8192);
+    }
 }

@@ -10,8 +10,6 @@ image = { version = "0.24", default-features = false, features = ["png"] }
 minifb = { version = "0.24", default-features = false, features = ["x11"] }
 lazy_static = "1.4"
 byteorder = "1"
-# [profile.dev]
-# opt-level = 1
 
 [profile.release]
 opt-level = 3     # Optimize for size
