@@ -16,7 +16,7 @@ const COLORS: [u32; 16] = [
 
 const MAP_SIZE: usize = 64;
 
-const MAP: [&[u8]; MAP_SIZE] = include!("maps/map1.txt");
+const MAP: [&[u8]; MAP_SIZE] = include!("maps/map2.txt");
 // const MAP: [&[u8]; MAP_SIZE] = include!("maps/map_empty.txt");
 
 const FP16_ZERO: Fp16 = Fp16 { v: 0 };
@@ -49,7 +49,7 @@ lazy_static! {
     static ref COL_ANGLE: [i32; WIDTH] = {
         let mut col_angle = [0; WIDTH];
         for i in 0..WIDTH / 2 {
-            let f = (i as f32) / (WIDTH as f32 * 0.5);
+            let f = (i as f32) / (WIDTH as f32 * 0.50);
             col_angle[WIDTH / 2 + i] = (f.atan().to_degrees() * FA_SCALEF) as i32;
             col_angle[WIDTH / 2 - i - 1] = ((-f.atan()).to_degrees() * FA_SCALEF) as i32;
         }
@@ -361,16 +361,16 @@ impl Player {
 
         let mut can_move_x = true;
         let mut can_move_y = true;
-        // for ti in tis {
-        //     let x = tx[ti] + dx;
-        //     let y = ty[ti] + dy;
+        for ti in tis {
+            let x = tx[ti] + dx;
+            let y = ty[ti] + dy;
 
-        //     if !map.can_walk(x.get_int(), y.get_int()) {
-        //         println!("collision {}", ti + 1);
-        //         can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
-        //         can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
-        //     }
-        // }
+            if !map.can_walk(x.get_int(), y.get_int()) {
+                println!("collision {}", ti + 1);
+                can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
+                can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
+            }
+        }
         if can_move_x {
             self.x += dx;
         }
@@ -391,20 +391,27 @@ impl Player {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum MapTile {
+    Wall(i32),
+    Walkable(i32),
+}
+
 struct Map {
-    pub map: [[(i32, bool); MAP_SIZE]; MAP_SIZE],
+    pub map: [[MapTile; MAP_SIZE]; MAP_SIZE],
 }
 
 impl Default for Map {
     fn default() -> Self {
-        let mut map = [[(0, true); MAP_SIZE]; MAP_SIZE];
+        let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
         for (in_line, out_line) in MAP.iter().zip(map.iter_mut()) {
             for (c, out) in in_line.iter().zip(out_line.iter_mut()) {
                 // FIXME: crappy harcoded
-                if *c >= b'1' && *c <= b'7' {
-                    *out = ((*c - b'0').into(), false);
+                if *c >= b'1' && *c <= b'9' {
+                    let tile: i32 = (*c - b'0').into();
+                    *out = MapTile::Wall(tile - 1 + 10);
                 } else if *c == b'8' || *c == b':' {
-                    *out = (0, false);
+                    // *out = (0, false);
                 }
             }
         }
@@ -417,12 +424,12 @@ impl Map {
     fn from_map_plane(plane: &[u16]) -> Self {
         assert_eq!(plane.len(), 64 * 64);
         let mut plane_iter = plane.iter();
-        let mut map = [[(0, true); MAP_SIZE]; MAP_SIZE];
+        let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
         for line in &mut map {
             for out in line.iter_mut() {
-                let c = plane_iter.next().unwrap();
-                if (0..64).contains(c) {
-                    *out = ((*c) as i32, false);
+                let c = (*plane_iter.next().unwrap() - 1) * 2;
+                if (0..64).contains(&c) {
+                    *out = MapTile::Wall(c as i32);
                 }
             }
         }
@@ -430,17 +437,20 @@ impl Map {
         Self { map }
     }
 
-    fn lookup_wall(&self, x: i32, y: i32) -> i32 {
+    fn lookup_wall(&self, x: i32, y: i32) -> Option<i32> {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
-            return 1; // solid outer
+            return Some(1); // solid outer
         }
-        self.map[y as usize][x as usize].0
+        match self.map[y as usize][x as usize] {
+            MapTile::Wall(id) => Some(id),
+            MapTile::Walkable(_) => None,
+        }
     }
     fn can_walk(&self, x: i32, y: i32) -> bool {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return false; // solid outer
         }
-        self.map[y as usize][x as usize].1
+        matches!(self.map[y as usize][x as usize], MapTile::Walkable(_))
     }
 
     pub fn sweep_raycast(
@@ -452,7 +462,7 @@ impl Map {
         resources: &Resources,
     ) {
         let (x, y) = player.int_pos();
-        if self.lookup_wall(x, y) != 0 {
+        if !self.can_walk(x, y) {
             return;
         }
         let (dx, dy) = player.frac_pos();
@@ -525,10 +535,11 @@ impl Map {
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                     // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                    hit_tile = self.lookup_wall(hx + hstep_x.min(0), ny.get_int());
+                    let lookup_tile = self.lookup_wall(hx + hstep_x.min(0), ny.get_int());
 
-                    if hit_tile != 0 {
-                        screen.point_world(hx.into(), ny, hit_tile);
+                    if let Some(tile) = lookup_tile {
+                        screen.point_world(hx.into(), ny, (tile) % 16);
+                        hit_tile = tile + 1;
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
                         tex_u = if hstep_x > 0 {
@@ -543,10 +554,11 @@ impl Map {
                     ny += ty;
                 } else {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                    hit_tile = self.lookup_wall(nx.get_int(), hy + hstep_y.min(0));
-                    if hit_tile != 0 {
+                    let lookup_tile = self.lookup_wall(nx.get_int(), hy + hstep_y.min(0));
+                    if let Some(tile) = lookup_tile {
                         // hit_tile += 8;
-                        screen.point_world(nx, hy.into(), hit_tile);
+                        hit_tile = tile;
+                        screen.point_world(nx, hy.into(), (tile) % 16);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
                         tex_u = if hstep_y < 0 {
@@ -650,7 +662,7 @@ fn draw_sprite(
     z: Fp16,
 ) {
     // FIXME: what is going on with the sprite scaling? at least pillars seem to be meant larger than walls at the same z distance
-    const C: i32 = MID + 28;
+    const C: i32 = MID;
     let offs = if z > FP16_ZERO {
         (C << FP16_SCALE) / z.v
     } else {
@@ -747,6 +759,32 @@ impl Default for Sprites {
 }
 
 impl Sprites {
+    pub fn from_map_plane(plane: &[u16]) -> Sprites {
+        assert_eq!(plane.len(), 64 * 64);
+        let mut plane_iter = plane.iter();
+        let props_range = 23..=70;
+        let props_sprite_offset = 2;
+        let mut sprites = Vec::new();
+        for y in 0..64 {
+            for x in 0..64 {
+                let c = (*plane_iter.next().unwrap()) + 1;
+
+                if props_range.contains(&c) {
+                    sprites.push(Sprite {
+                        x: FP16_HALF + x.into(),
+                        y: FP16_HALF + y.into(),
+                        id: (c - 21) as i32,
+                        directional: false,
+                    })
+                }
+            }
+        }
+        Sprites {
+            sprites,
+            ..Default::default()
+        }
+    }
+
     pub fn setup_screen_pos_for_player(&mut self, player: &Player) {
         self.screen_pos.clear();
         self.screen_pos.reserve(self.sprites.len());
@@ -770,25 +808,29 @@ impl Sprites {
             // let screen_x = (WIDTH as i32 / 2) + (ty * (WIDTH as i32 / 2)).get_int();
             let screen_x = ((FP16_ONE + (ty / z)) * (WIDTH as i32 / 2)).get_int();
 
-            // calculate sprite orientation from player view angle
-            // 1. rotate sprite by inverse of camera rotation
-            // 2. turn by 'half an octant' to align steps to expected position
-            let mut viewangle = -player.rot + (FA_STEPS as i32) / 16;
-            // 3. approximate angle offset according to screen x position (who needs trigonometry whan you can fake it...)
-            // 4. turn by 180 deg to look along x axis
-            let cor = (160 - screen_x) * 2;
-            viewangle += cor + 1800;
+            let id = if sprite.directional {
+                // calculate sprite orientation from player view angle
+                // 1. rotate sprite by inverse of camera rotation
+                // 2. turn by 'half an octant' to align steps to expected position
+                let mut viewangle = -player.rot + (FA_STEPS as i32) / 16;
+                // 3. approximate angle offset according to screen x position (who needs trigonometry whan you can fake it...)
+                // 4. turn by 180 deg to look along x axis
+                let cor = (160 - screen_x) * 2;
+                viewangle += cor + 1800;
 
-            while viewangle < 0 {
-                viewangle += FA_STEPS as i32;
-            }
-            while viewangle >= FA_STEPS as i32 {
-                viewangle -= FA_STEPS as i32;
-            }
-            viewangle /= FA_STEPS as i32 / 8;
-
+                while viewangle < 0 {
+                    viewangle += FA_STEPS as i32;
+                }
+                while viewangle >= FA_STEPS as i32 {
+                    viewangle -= FA_STEPS as i32;
+                }
+                viewangle /= FA_STEPS as i32 / 8;
+                sprite.id + viewangle
+            } else {
+                sprite.id
+            };
             // println!("viewangle: {viewangle}");
-            self.screen_pos.push((z, screen_x, sprite.id + viewangle));
+            self.screen_pos.push((z, screen_x, id));
         }
         self.screen_pos.sort_by_key(|(z, _, _)| -(*z));
     }
@@ -810,9 +852,8 @@ fn main() {
     let resources = Resources::load_wl6("vswap.wl6");
     let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
-    let (plane0, _) = maps.get_map_planes(0);
+    let (plane0, plane1) = maps.get_map_planes(0);
 
-    let mut sprites = Sprites::default();
     let mut window = Window::new(
         "Test - ESC to exit",
         WIDTH,
@@ -836,15 +877,18 @@ fn main() {
         right: 0,
         rot: 0,
     };
-    let mut player = Player::default();
-    // let mut player = Player {
-    //     x: Fp16 { v: 1202215 },
-    //     y: Fp16 { v: 1997708 },
-    //     rot: 3244,
-    // };
+    let mut player = Player {
+        x: Fp16 { v: 1933113 },
+        y: Fp16 { v: 3793254 },
+        rot: 3476,
+    };
+    // let mut player = Player::default();
 
-    // let map = Map::default();
+    let mut sprites = Sprites::from_map_plane(&plane1);
+    // let mut sprites = Sprites::default();
+
     let map = Map::from_map_plane(&plane0);
+    // let map = Map::default();
 
     let mut frame = 0;
 
@@ -902,7 +946,7 @@ fn main() {
 
         player.apply_vel(&player_vel, dt, &map);
         // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
-        // println!("player: {:?}", player);
+        println!("player: {:?}", player);
 
         player.draw(&mut buffer);
         let start = Instant::now();

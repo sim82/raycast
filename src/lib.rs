@@ -32,8 +32,8 @@ impl Default for Resources {
 
 impl Resources {
     pub fn get_texture(&self, id: i32) -> &Texture {
-        if id >= 1 && (id as usize) <= self.textures.len() {
-            &self.textures[(id - 1) as usize]
+        if id >= 0 && (id as usize) <= self.textures.len() {
+            &self.textures[id as usize]
         } else {
             &self.fallback_texture
         }
@@ -84,7 +84,7 @@ impl Resources {
                 &vs.read_chunk(wl6::ChunkId::Wall(i as usize)),
             ));
         }
-
+        println!("textures: {}", textures.len());
         let mut sprites = Vec::new();
 
         for i in 0..vs.num_sprites {
