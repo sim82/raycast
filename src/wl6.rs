@@ -242,6 +242,9 @@ impl MapsFile {
 
         (to_plane(&d0), to_plane(&d1))
     }
+    pub fn get_map_name(&self, id: i32) -> &str {
+        self.map_headers[id as usize].name.as_str()
+    }
 }
 
 fn to_plane(d1: &[u8]) -> Vec<u16> {
