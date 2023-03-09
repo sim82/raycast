@@ -857,6 +857,57 @@ impl Sprites {
     }
 }
 
+enum ThingType {
+    PlayerStart(i32),
+}
+
+struct Thing {
+    thing_type: ThingType,
+    x: Fp16,
+    y: Fp16,
+}
+
+struct Things {
+    things: Vec<Thing>,
+}
+
+impl Things {
+    pub fn from_map_plane(plane: &[u16]) -> Self {
+        let mut plane_iter = plane.iter();
+        let mut things = Vec::new();
+
+        for y in 0..64 {
+            for x in 0..64 {
+                let c = plane_iter.next().unwrap();
+                let thing_type = match c {
+                    19 => ThingType::PlayerStart(FA_PI_FRAC_PI_2), // NORTH means facing -y
+                    20 => ThingType::PlayerStart(0),
+                    21 => ThingType::PlayerStart(FA_FRAC_PI_2),
+                    22 => ThingType::PlayerStart(FA_PI),
+                    _ => continue,
+                };
+
+                things.push(Thing {
+                    thing_type,
+                    x: FP16_HALF + x.into(),
+                    y: FP16_HALF + y.into(),
+                });
+            }
+        }
+        Things { things }
+    }
+
+    pub fn get_player_start(&self) -> Option<(Fp16, Fp16, i32)> {
+        for thing in &self.things {
+            match thing.thing_type {
+                ThingType::PlayerStart(rot) => return Some((thing.x, thing.y, rot)),
+                _ => continue,
+            }
+        }
+        None
+    }
+}
+
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
@@ -864,8 +915,6 @@ fn main() {
     // let resources = Resources::load_textures("textures.txt");
     let resources = Resources::load_wl6("vswap.wl6");
     let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
-
-    let (plane0, plane1) = maps.get_map_planes(0);
 
     let mut window = Window::new(
         "Test - ESC to exit",
@@ -885,20 +934,28 @@ fn main() {
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
+    let (plane0, plane1) = maps.get_map_planes(0);
+
     let mut player_vel = PlayerVel {
         forward: 0,
         right: 0,
         rot: 0,
     };
-    let mut player = Player {
-        x: Fp16 { v: 1933113 },
-        y: Fp16 { v: 3793254 },
-        rot: 3476,
-    };
-    // let mut player = Player::default();
+    // let mut player = Player {
+    //     x: Fp16 { v: 1933113 },
+    //     y: Fp16 { v: 3793254 },
+    //     rot: 3476,
+    // };
 
     let mut sprites = Sprites::from_map_plane(&plane1);
     // let mut sprites = Sprites::default();
+
+    let things = Things::from_map_plane(&plane1);
+
+    let mut player = things
+        .get_player_start()
+        .map(|(x, y, rot)| Player { x, y, rot })
+        .unwrap_or_default();
 
     let map = Map::from_map_planes(&plane0, &plane1);
     // let map = Map::default();
