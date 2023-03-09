@@ -338,7 +338,7 @@ impl Player {
         let dx = (cos * player_vel.forward + sin * player_vel.right) * dt;
         let dy = (sin * player_vel.forward - cos * player_vel.right) * dt;
 
-        let player_width: Fp16 = 0.4.into();
+        let player_width: Fp16 = 0.40.into();
 
         let tx = [
             self.x + player_width,
@@ -396,10 +396,12 @@ impl Player {
     }
 }
 
+// TODO: model this better
 #[derive(Debug, Clone, Copy)]
 enum MapTile {
     Wall(i32),
     Walkable(i32),
+    Blocked(i32),
 }
 
 struct Map {
@@ -425,16 +427,24 @@ impl Default for Map {
     }
 }
 
+const BLOCKING_PROPS: [u16; 21] = [
+    24, 25, 26, 28, 30, 31, 33, 34, 35, 36, 39, 40, 41, 45, 58, 59, 60, 62, 63, 68, 69,
+];
 impl Map {
-    fn from_map_plane(plane: &[u16]) -> Self {
+    fn from_map_planes(plane: &[u16], prop_plane: &[u16]) -> Self {
         assert_eq!(plane.len(), 64 * 64);
+        assert_eq!(prop_plane.len(), 64 * 64);
         let mut plane_iter = plane.iter();
+        let mut prop_plane_iter = prop_plane.iter();
         let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
         for line in &mut map {
             for out in line.iter_mut() {
                 let c = (*plane_iter.next().unwrap() - 1) * 2;
+                let p = *prop_plane_iter.next().unwrap();
                 if (0..64).contains(&c) {
                     *out = MapTile::Wall(c as i32);
+                } else if BLOCKING_PROPS.binary_search(&p).is_ok() {
+                    *out = MapTile::Blocked(p as i32)
                 }
             }
         }
@@ -448,7 +458,7 @@ impl Map {
         }
         match self.map[y as usize][x as usize] {
             MapTile::Wall(id) => Some(id),
-            MapTile::Walkable(_) => None,
+            MapTile::Walkable(_) | MapTile::Blocked(_) => None,
         }
     }
     fn can_walk(&self, x: i32, y: i32) -> bool {
@@ -532,7 +542,7 @@ impl Map {
             let mut hx = x + hstep_x.max(0);
             let mut hy = y + hstep_y.max(0);
 
-            let mut hit_tile;
+            let hit_tile;
             // let mut hit_dist = 0.0;
             let dx;
             let dy;
@@ -597,7 +607,7 @@ impl Map {
                 let h = HALF_HEIGHT - line_range.start; // overall (half) height of drawn column (partially offscreen)
                 let x = (HALF_TEX * HALF_HEIGHT) / h; // (half) number of texture pixels inside visible range (derived via HALF_HEIGHT / h == x / HALF_TEX)
                 let tex_clip = HALF_TEX - x;
-                (tex_clip, 0..(VIEW_HEIGHT as i32))
+                (tex_clip, 0..VIEW_HEIGHT)
             } else {
                 (0, line_range)
             };
@@ -776,7 +786,7 @@ impl Sprites {
                     sprites.push(Sprite {
                         x: FP16_HALF + x.into(),
                         y: FP16_HALF + y.into(),
-                        id: (c - 21) as i32,
+                        id: (c - props_range.start() + props_sprite_offset) as i32,
                         directional: false,
                     })
                 }
@@ -890,7 +900,7 @@ fn main() {
     let mut sprites = Sprites::from_map_plane(&plane1);
     // let mut sprites = Sprites::default();
 
-    let map = Map::from_map_plane(&plane0);
+    let map = Map::from_map_planes(&plane0, &plane1);
     // let map = Map::default();
 
     let mut frame = 0;
