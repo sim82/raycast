@@ -9,6 +9,11 @@ use raycast::{wl6, Resources};
 
 const WIDTH: usize = 320;
 const HEIGHT: usize = 200;
+
+const VIEW_HEIGHT: i32 = 160;
+const MID: i32 = VIEW_HEIGHT / 2;
+const HALF_HEIGHT: i32 = VIEW_HEIGHT / 2;
+
 const COLORS: [u32; 16] = [
     0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFF8000, 0x808080,
     0x800000, 0x008000, 0x000080, 0x808000, 0x008080, 0x800080, 0x804000,
@@ -573,7 +578,7 @@ impl Map {
                     nx += tx;
                 }
             }
-            const MID: i32 = (HEIGHT / 2) as i32;
+            // const MID: i32 = (HEIGHT / 2) as i32;
             const C: i32 = MID;
             let beta = player.rot;
             let p = fa_cos(beta) * dx + fa_sin(beta) * dy;
@@ -588,12 +593,11 @@ impl Map {
             // TODO: pre-compute LUTs for the non clipped cases?
             const TEXEL_SCALE: i32 = 1; // NOTE: this currently influences the performance of the bresenham loop
             let (tex_clip, line_range_clamped) = if line_range.start < 0 {
-                const HALF_HEIGHT: i32 = (HEIGHT / 2) as i32;
                 const HALF_TEX: i32 = 32 << TEXEL_SCALE;
                 let h = HALF_HEIGHT - line_range.start; // overall (half) height of drawn column (partially offscreen)
                 let x = (HALF_TEX * HALF_HEIGHT) / h; // (half) number of texture pixels inside visible range (derived via HALF_HEIGHT / h == x / HALF_TEX)
                 let tex_clip = HALF_TEX - x;
-                (tex_clip, 0..(HEIGHT as i32))
+                (tex_clip, 0..(VIEW_HEIGHT as i32))
             } else {
                 (0, line_range)
             };
@@ -672,7 +676,6 @@ fn draw_sprite(
 
     let tex = resources.get_sprite(id);
 
-    const MID: i32 = HEIGHT as i32 / 2;
     let target_size = 2 * offs;
     // TODO: re-think the whole thing... it kind of works without explicit clipping to screen bounds, but the redundant in-loop bounds checks are weird and inefficient
 
@@ -705,10 +708,10 @@ fn draw_sprite(
         let tex_col = tex[texcoord[x as usize] as usize];
         for y in 0..(target_size.min(WIDTH as i32)) {
             let row = y + (MID - offs);
-            if row < 0 || row >= HEIGHT as i32 {
+            if !(0..VIEW_HEIGHT).contains(&row) {
                 continue;
             }
-            if row >= 0 && row < HEIGHT as i32 {
+            if (0..VIEW_HEIGHT).contains(&row) {
                 let c = tex_col[texcoord[y as usize] as usize];
                 if c != 0 {
                     screen.point_rgb(column, row, c);
@@ -893,11 +896,13 @@ fn main() {
     let mut frame = 0;
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        for (i, chunk) in buffer.chunks_mut(320 * 100).enumerate() {
+        for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
             if i == 0 {
                 chunk.fill(0x38383838);
-            } else {
+            } else if i == 1 {
                 chunk.fill(0x64646464);
+            } else {
+                chunk.fill(0x00000064);
             }
         }
 
