@@ -4,7 +4,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use minifb::{Key, Window, WindowOptions};
+use minifb::{Key, Window, WindowOptions, KeyRepeat};
 use raycast::{wl6, Resources};
 
 const WIDTH: usize = 320;
@@ -644,6 +644,18 @@ impl Map {
             // screen.point(column as i32, MID - offs, 0);
         }
     }
+
+    fn draw_automap(&self,screen: &mut Vec<u32> ) {
+        for y in 0..64 {
+            for x in 0..64 {
+                match self.map[y][x] {
+                    MapTile::Wall(wall) => screen.point_world((x as i32).into(), (y as i32).into(), wall % 16),
+                    MapTile::Walkable(_) => (),
+                    MapTile::Blocked(_) => (),
+                }
+            }
+        }
+    }
 }
 
 #[test]
@@ -1088,7 +1100,7 @@ fn main() {
     });
 
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
-
+    let mut automap = false;
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
     let mut level_id = 0;
@@ -1181,6 +1193,10 @@ fn main() {
                 player = Player::default();
             }
 
+            if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
+                automap = !automap;
+            }
+
             player.apply_vel(&player_vel, dt, &map);
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
@@ -1199,6 +1215,10 @@ fn main() {
             // }
             sprites.draw(&mut buffer, &zbuffer, &resources, frame);
 
+            if automap {
+                map.draw_automap(&mut buffer);
+            }
+
             // }
             // println!(
             //     "time: {}us\t({}us sprite)",
@@ -1208,11 +1228,11 @@ fn main() {
 
             // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
             window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
-            if window.is_key_pressed(Key::F2, minifb::KeyRepeat::No) && level_id > 0 {
+            if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
                 level_id -= 1;
                 break;
             }
-            if window.is_key_pressed(Key::F3, minifb::KeyRepeat::No) && level_id < 99 {
+            if window.is_key_pressed(Key::F3, KeyRepeat::No) && level_id < 99 {
                 level_id += 1;
                 break;
             }
