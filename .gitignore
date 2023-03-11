@@ -3,3 +3,6 @@ perf.data*
 wolftex/
 textures.txt
 *.zip
+*.wl6
+*.wl1
+*.bin
