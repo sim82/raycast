@@ -8,7 +8,12 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use image::{ImageBuffer, Rgb};
 use wl6::VswapFile;
 
+pub mod fp16;
 pub mod wl6;
+
+pub mod prelude {
+    pub use crate::fp16::{Fp16, FP16_F, FP16_SCALE};
+}
 
 const TEX_SIZE: usize = wl6::TEX_SIZE;
 
