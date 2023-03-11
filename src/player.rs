@@ -50,20 +50,7 @@ impl Player {
         let dx = (cos * player_vel.forward + sin * player_vel.right) * dt;
         let dy = (sin * player_vel.forward - cos * player_vel.right) * dt;
 
-        let player_width: Fp16 = 0.40.into();
-
-        let tx = [
-            self.x + player_width,
-            self.x - player_width,
-            self.x - player_width,
-            self.x + player_width,
-        ];
-        let ty = [
-            self.y + player_width,
-            self.y + player_width,
-            self.y - player_width,
-            self.y - player_width,
-        ];
+        let (tx, ty) = self.get_corners();
 
         // select the three corners of the player box that need to be checked (depends on the quadrant of the actual movement)
         let tis = if dx >= FP16_ZERO && dy >= FP16_ZERO {
@@ -82,11 +69,11 @@ impl Player {
             let x = tx[ti] + dx;
             let y = ty[ti] + dy;
 
-            if !map.can_walk(x.get_int(), y.get_int()) {
-                println!("collision {}", ti + 1);
-                can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
-                can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
-            }
+            // if !map.can_walk(x.get_int(), y.get_int()) {
+            println!("collision {}", ti + 1);
+            can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
+            can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
+            // }
         }
         if can_move_x {
             self.x += dx;
@@ -94,6 +81,24 @@ impl Player {
         if can_move_y {
             self.y += dy;
         }
+    }
+
+    pub fn get_corners(&self) -> ([Fp16; 4], [Fp16; 4]) {
+        let player_width: Fp16 = 0.40.into();
+
+        let tx = [
+            self.x + player_width,
+            self.x - player_width,
+            self.x - player_width,
+            self.x + player_width,
+        ];
+        let ty = [
+            self.y + player_width,
+            self.y + player_width,
+            self.y - player_width,
+            self.y - player_width,
+        ];
+        (tx, ty)
     }
 
     pub fn draw(&self, buffer: &mut Vec<u32>) {

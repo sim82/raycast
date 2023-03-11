@@ -359,14 +359,6 @@ impl Map {
                 }
             }
 
-            // let tex_u = if (hit_direction == PlaneOrientation::X && hstep_x < 0)
-            //     || (hit_direction == PlaneOrientation::Y && hstep_y < 0)
-            // {
-            //     63 - tex_u
-            // } else {
-            //     tex_u
-            // };
-            // const MID: i32 = (HEIGHT / 2) as i32;
             const C: i32 = MID;
             let beta = player.rot;
             let p = fa_cos(beta) * dx + fa_sin(beta) * dy;
@@ -418,7 +410,7 @@ impl Map {
             MapTile::Wall(wall) => Some(wall % 16),
             MapTile::Walkable(_) => None,
             MapTile::Blocked(_) => None,
-            MapTile::Door(_, _, _) => todo!(),
+            MapTile::Door(_, _, _) => None,
         };
 
         for y in 0..64 {
@@ -455,15 +447,19 @@ impl Map {
                 }
             }
         }
-        let blocked_door_index = if let MapTile::Door(_, _, state_index) =
-            self.lookup_tile(player.x.get_int(), player.y.get_int())
-        {
-            Some(state_index)
-        } else {
-            None
-        };
+        let mut blocked_doors = HashSet::new();
+        let (tx, ty) = player.get_corners();
+
+        for i in 0..4 {
+            if let MapTile::Door(_, _, state_index) =
+                self.lookup_tile(tx[i].get_int(), ty[i].get_int())
+            {
+                blocked_doors.insert(state_index);
+            }
+        }
+
         for (i, door_state) in self.door_states.iter_mut().enumerate() {
-            door_state.update(trigger_doors.contains(&i), blocked_door_index == Some(i));
+            door_state.update(trigger_doors.contains(&i), blocked_doors.contains(&i));
         }
     }
 }
