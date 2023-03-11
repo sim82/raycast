@@ -396,7 +396,7 @@ impl Player {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum PlaneOrientation {
     X,
     Y,
@@ -446,11 +446,12 @@ impl Map {
         let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
         for line in &mut map {
             for out in line.iter_mut() {
-                let c = (*plane_iter.next().unwrap() - 1) * 2;
+                // let c = (*plane_iter.next().unwrap() - 1) * 2;
+                let c = *plane_iter.next().unwrap();
                 let p = *prop_plane_iter.next().unwrap();
 
                 match c {
-                    0..=63 => *out = MapTile::Wall(c as i32),
+                    1..=63 => *out = MapTile::Wall(((c - 1) * 2) as i32),
                     90 => *out = MapTile::Door(PlaneOrientation::X),
                     91 => *out = MapTile::Door(PlaneOrientation::Y),
                     _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
@@ -484,7 +485,10 @@ impl Map {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return false; // solid outer
         }
-        matches!(self.map[y as usize][x as usize], MapTile::Walkable(_))
+        matches!(
+            self.map[y as usize][x as usize],
+            MapTile::Walkable(_) | MapTile::Door(_)
+        )
     }
 
     pub fn sweep_raycast(
@@ -562,10 +566,14 @@ impl Map {
             let mut hy = y + hstep_y.max(0);
 
             let hit_tile;
+            let hit_direction;
             // let mut hit_dist = 0.0;
             let dx;
             let dy;
             let tex_u;
+            let tyh = ty * FP16_HALF;
+            let txh = tx * FP16_HALF;
+
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                     // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
@@ -574,6 +582,7 @@ impl Map {
                     if let MapTile::Wall(tile) = lookup_tile {
                         screen.point_world(hx.into(), ny, (tile) % 16);
                         hit_tile = tile + 1;
+                        hit_direction = PlaneOrientation::X;
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
                         tex_u = if hstep_x > 0 {
@@ -582,6 +591,17 @@ impl Map {
                             63 - (ny.get_fract() >> 10) as i32
                         };
                         break 'outer;
+                    } else if let MapTile::Door(PlaneOrientation::X) = lookup_tile {
+                        if (hstep_y > 0 && ny + tyh <= hy.into())
+                            || (hstep_y < 0 && ny + tyh >= hy.into())
+                        {
+                            hit_tile = 98;
+                            hit_direction = PlaneOrientation::X;
+                            dx = (Fp16::from(hx) + FP16_HALF * hstep_x) - player.x;
+                            dy = (ny + tyh) - player.y;
+                            tex_u = ((ny + tyh).get_fract() >> 10) as i32;
+                            break 'outer;
+                        }
                     }
 
                     hx += hstep_x;
@@ -590,8 +610,8 @@ impl Map {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                     let lookup_tile = self.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
                     if let MapTile::Wall(tile) = lookup_tile {
-                        // hit_tile += 8;
                         hit_tile = tile;
+                        hit_direction = PlaneOrientation::Y;
                         screen.point_world(nx, hy.into(), (tile) % 16);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
@@ -602,11 +622,30 @@ impl Map {
                         };
 
                         break 'outer;
+                    } else if let MapTile::Door(PlaneOrientation::Y) = lookup_tile {
+                        if (hstep_x > 0 && nx + txh <= hx.into())
+                            || (hstep_x < 0 && nx + txh >= hx.into())
+                        {
+                            hit_tile = 98;
+                            hit_direction = PlaneOrientation::Y;
+                            dx = (nx + txh) - player.x;
+                            dy = (Fp16::from(hy) + FP16_HALF * hstep_y) - player.y;
+                            tex_u = ((nx + txh).get_fract() >> 10) as i32;
+                            break 'outer;
+                        }
                     }
                     hy += hstep_y;
                     nx += tx;
                 }
             }
+
+            // let tex_u = if (hit_direction == PlaneOrientation::X && hstep_x < 0)
+            //     || (hit_direction == PlaneOrientation::Y && hstep_y < 0)
+            // {
+            //     63 - tex_u
+            // } else {
+            //     tex_u
+            // };
             // const MID: i32 = (HEIGHT / 2) as i32;
             const C: i32 = MID;
             let beta = player.rot;
