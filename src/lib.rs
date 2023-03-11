@@ -1,16 +1,16 @@
 use std::{
     fs::File,
-    io::{BufRead, BufReader, Cursor, Seek, SeekFrom},
+    io::{BufRead, BufReader},
     path::Path,
 };
-
-use byteorder::{LittleEndian, ReadBytesExt};
-use image::{ImageBuffer, Rgb};
-use wl6::VswapFile;
 
 pub mod draw;
 pub mod fa;
 pub mod fp16;
+pub mod map;
+pub mod player;
+pub mod sprite;
+pub mod thing;
 pub mod wl6;
 
 pub mod prelude {
@@ -21,17 +21,28 @@ pub mod prelude {
         FA_PI_FRAC_PI_2, FA_SCALEF, FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2,
         QUADRANT_3, QUADRANT_4, TAN_CLAMP,
     };
-    pub use {crate::HEIGHT, crate::WIDTH};
+    pub use crate::{HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH};
 
     pub use crate::draw::Draw;
+    pub use crate::map::{DoorType, Map, MapTile, PlaneOrientation};
+    pub use crate::player::{Player, PlayerVel};
+    pub use crate::sprite::{draw_sprite, Directionality, Sprite, Sprites};
+    pub use crate::thing::{Direction, Thing, ThingType, Things};
+    pub use crate::Resources;
 }
 
 pub const WIDTH: usize = 320;
 pub const HEIGHT: usize = 200;
+
+pub const VIEW_HEIGHT: i32 = 160;
+pub const MID: i32 = VIEW_HEIGHT / 2;
+pub const HALF_HEIGHT: i32 = VIEW_HEIGHT / 2;
+
 const TEX_SIZE: usize = wl6::TEX_SIZE;
 
 // column first order
 pub type Texture = [[u32; TEX_SIZE]; TEX_SIZE];
+use wl6::VswapFile;
 
 pub struct Resources {
     textures: Vec<Texture>,

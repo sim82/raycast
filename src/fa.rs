@@ -1,10 +1,6 @@
-use crate::prelude::Fp16;
+use crate::prelude::{Fp16, WIDTH};
 use lazy_static::lazy_static;
 use std;
-use std::ops;
-use std::ops::Range;
-
-const WIDTH: usize = 320;
 
 pub const FA_SCALEF: f32 = 10.0;
 pub const PIS_IN_180: f32 = 57.295_78_f32;

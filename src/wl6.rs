@@ -26,7 +26,7 @@ pub enum ChunkId {
 
 impl VswapFile {
     pub fn open<P: AsRef<Path>>(name: P) -> VswapFile {
-        let mut f = File::open("vswap.wl6").unwrap();
+        let mut f = File::open(name).unwrap();
         let num_chunks = f.read_u16::<LittleEndian>().unwrap();
         let last_wall = f.read_u16::<LittleEndian>().unwrap();
         let last_sprite = f.read_u16::<LittleEndian>().unwrap();
@@ -141,15 +141,15 @@ pub fn wall_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
 
 #[derive(Debug)]
 pub struct MapHeader {
-    plane0_offset: u32,
-    plane1_offset: u32,
-    plane2_offset: u32,
-    plane0_size: u16,
-    plane1_size: u16,
-    plane2_size: u16,
-    width: u16,
-    height: u16,
-    name: String,
+    pub plane0_offset: u32,
+    pub plane1_offset: u32,
+    pub plane2_offset: u32,
+    pub plane0_size: u16,
+    pub plane1_size: u16,
+    pub plane2_size: u16,
+    pub width: u16,
+    pub height: u16,
+    pub name: String,
 }
 
 pub struct MapsFile {
@@ -319,7 +319,7 @@ fn rlew_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
     let mut input = Cursor::new(input);
     // let output_len = input.read_u16::<LittleEndian>().unwrap() as usize;
     let output_len = input.read_u16::<LittleEndian>().unwrap() as usize;
-    output.reserve(output_len as usize);
+    output.reserve(output_len);
     // assert_eq!(data_len as u64 + 2, input_len);
     while input.position() < input_len
     /*&& output.len() < output_len*/
@@ -353,7 +353,7 @@ fn map_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
 
 #[test]
 fn test_vswap() {
-    let mut vs = VswapFile::open("vswap.wl6");
+    let vs = VswapFile::open("vswap.wl6");
 
     println!("chunks: {:?}", vs.chunks);
 
@@ -369,7 +369,7 @@ fn test_vswap() {
 fn test_maps() {
     let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
-    let (v0, v1, v2) = maps.get_map_plane_chunks(maps.get_map_id("Wolf1 Map2"));
+    let (v0, _v1, _v2) = maps.get_map_plane_chunks(maps.get_map_id("Wolf1 Map2"));
 
     println!("{:?}", maps.header_offsets);
     println!("{:?}", maps.map_headers);
