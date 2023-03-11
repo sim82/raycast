@@ -402,13 +402,32 @@ enum PlaneOrientation {
     Y,
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum DoorType {
+    Regular,
+    Elevator,
+    GoldLocked,
+    SilverLocked,
+}
+
+impl DoorType {
+    pub fn get_texture_id(&self) -> i32 {
+        match self {
+            DoorType::Regular => 98,
+            DoorType::Elevator => 102,
+            DoorType::GoldLocked => 104,
+            DoorType::SilverLocked => 104,
+        }
+    }
+}
+
 // TODO: model this better
 #[derive(Debug, Clone, Copy)]
 enum MapTile {
     Wall(i32),
     Walkable(i32),
     Blocked(i32),
-    Door(PlaneOrientation),
+    Door(PlaneOrientation, DoorType),
 }
 
 struct Map {
@@ -452,8 +471,14 @@ impl Map {
 
                 match c {
                     1..=63 => *out = MapTile::Wall(((c - 1) * 2) as i32),
-                    90 => *out = MapTile::Door(PlaneOrientation::X),
-                    91 => *out = MapTile::Door(PlaneOrientation::Y),
+                    90 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Regular),
+                    91 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Regular),
+                    92 => *out = MapTile::Door(PlaneOrientation::X, DoorType::GoldLocked),
+                    93 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::GoldLocked),
+                    94 => *out = MapTile::Door(PlaneOrientation::X, DoorType::SilverLocked),
+                    95 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::SilverLocked),
+                    100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator),
+                    101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator),
                     _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
                         *out = MapTile::Blocked(p as i32)
                     }
@@ -478,7 +503,7 @@ impl Map {
         match self.map[y as usize][x as usize] {
             MapTile::Wall(id) => Some(id),
             MapTile::Walkable(_) | MapTile::Blocked(_) => None,
-            MapTile::Door(_) => None,
+            MapTile::Door(_, _) => None,
         }
     }
     fn can_walk(&self, x: i32, y: i32) -> bool {
@@ -487,7 +512,7 @@ impl Map {
         }
         matches!(
             self.map[y as usize][x as usize],
-            MapTile::Walkable(_) | MapTile::Door(_)
+            MapTile::Walkable(_) | MapTile::Door(_, _)
         )
     }
 
@@ -500,6 +525,7 @@ impl Map {
         resources: &Resources,
     ) {
         let (x, y) = player.int_pos();
+
         if !self.can_walk(x, y) {
             return;
         }
@@ -566,13 +592,16 @@ impl Map {
             let mut hy = y + hstep_y.max(0);
 
             let hit_tile;
-            let hit_direction;
-            // let mut hit_dist = 0.0;
             let dx;
             let dy;
             let tex_u;
             let tyh = ty * FP16_HALF;
             let txh = tx * FP16_HALF;
+            let hstep_x_half = FP16_HALF * hstep_x;
+            let hstep_y_half = FP16_HALF * hstep_y;
+
+            // from_door tracks if the *last* tile we traced through was a door, to easily fix up textures on door sidewalls
+            let mut from_door = matches!(self.lookup_tile(x, y), MapTile::Door(_, _));
 
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
@@ -581,8 +610,13 @@ impl Map {
 
                     if let MapTile::Wall(tile) = lookup_tile {
                         screen.point_world(hx.into(), ny, (tile) % 16);
-                        hit_tile = tile + 1;
-                        hit_direction = PlaneOrientation::X;
+
+                        if from_door {
+                            hit_tile = 101;
+                        } else {
+                            hit_tile = tile + 1
+                        }
+
                         dx = Fp16::from(hx) - player.x;
                         dy = ny - player.y;
                         tex_u = if hstep_x > 0 {
@@ -591,17 +625,19 @@ impl Map {
                             63 - (ny.get_fract() >> 10) as i32
                         };
                         break 'outer;
-                    } else if let MapTile::Door(PlaneOrientation::X) = lookup_tile {
+                    } else if let MapTile::Door(PlaneOrientation::X, door_type) = lookup_tile {
                         if (hstep_y > 0 && ny + tyh <= hy.into())
                             || (hstep_y < 0 && ny + tyh >= hy.into())
                         {
-                            hit_tile = 98;
-                            hit_direction = PlaneOrientation::X;
-                            dx = (Fp16::from(hx) + FP16_HALF * hstep_x) - player.x;
+                            hit_tile = door_type.get_texture_id() + 1;
+                            dx = (Fp16::from(hx) + hstep_x_half) - player.x;
                             dy = (ny + tyh) - player.y;
                             tex_u = ((ny + tyh).get_fract() >> 10) as i32;
                             break 'outer;
                         }
+                        from_door = true;
+                    } else {
+                        from_door = false;
                     }
 
                     hx += hstep_x;
@@ -610,8 +646,12 @@ impl Map {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                     let lookup_tile = self.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
                     if let MapTile::Wall(tile) = lookup_tile {
-                        hit_tile = tile;
-                        hit_direction = PlaneOrientation::Y;
+                        if from_door {
+                            hit_tile = 100;
+                        } else {
+                            hit_tile = tile;
+                        }
+
                         screen.point_world(nx, hy.into(), (tile) % 16);
                         dx = nx - player.x;
                         dy = Fp16::from(hy) - player.y;
@@ -622,17 +662,19 @@ impl Map {
                         };
 
                         break 'outer;
-                    } else if let MapTile::Door(PlaneOrientation::Y) = lookup_tile {
+                    } else if let MapTile::Door(PlaneOrientation::Y, door_type) = lookup_tile {
                         if (hstep_x > 0 && nx + txh <= hx.into())
                             || (hstep_x < 0 && nx + txh >= hx.into())
                         {
-                            hit_tile = 98;
-                            hit_direction = PlaneOrientation::Y;
+                            hit_tile = door_type.get_texture_id();
                             dx = (nx + txh) - player.x;
-                            dy = (Fp16::from(hy) + FP16_HALF * hstep_y) - player.y;
+                            dy = (Fp16::from(hy) + hstep_y_half) - player.y;
                             tex_u = ((nx + txh).get_fract() >> 10) as i32;
                             break 'outer;
                         }
+                        from_door = true;
+                    } else {
+                        from_door = false;
                     }
                     hy += hstep_y;
                     nx += tx;
@@ -698,7 +740,7 @@ impl Map {
             MapTile::Wall(wall) => Some(wall % 16),
             MapTile::Walkable(_) => None,
             MapTile::Blocked(_) => None,
-            MapTile::Door(_) => todo!(),
+            MapTile::Door(_, _) => todo!(),
         };
 
         for y in 0..64 {
