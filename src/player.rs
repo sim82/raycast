@@ -1,3 +1,4 @@
+use crate::map::MapDynamic;
 pub use crate::prelude::*;
 
 #[derive(Debug)]
@@ -34,7 +35,13 @@ impl Player {
         (self.x.fract(), self.y.fract())
     }
 
-    pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16, map: &Map) {
+    pub fn apply_vel(
+        &mut self,
+        player_vel: &PlayerVel,
+        dt: Fp16,
+        map: &Map,
+        map_dynamic: &MapDynamic,
+    ) {
         self.rot += (dt * player_vel.rot).get_int();
         while self.rot < 0 {
             self.rot += FA_TAU;
@@ -71,8 +78,8 @@ impl Player {
 
             // if !map.can_walk(x.get_int(), y.get_int()) {
             println!("collision {}", ti + 1);
-            can_move_x &= map.can_walk(x.get_int(), ty[ti].get_int());
-            can_move_y &= map.can_walk(tx[ti].get_int(), y.get_int());
+            can_move_x &= map.can_walk(map_dynamic, x.get_int(), ty[ti].get_int());
+            can_move_y &= map.can_walk(map_dynamic, tx[ti].get_int(), y.get_int());
             // }
         }
         if can_move_x {

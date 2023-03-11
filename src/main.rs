@@ -62,7 +62,8 @@ fn main() {
             })
             .unwrap_or_default();
 
-        let mut map = Map::from_map_planes(&plane0, &plane1);
+        let (map, mut map_dynamic) = Map::from_map_planes(&plane0, &plane1).split_dynamic();
+
         // let map = Map::default();
 
         let mut frame = 0;
@@ -133,7 +134,9 @@ fn main() {
                 player.trigger = true;
             }
 
-            player.apply_vel(&player_vel, dt, &map);
+            map_dynamic.update(&map, &player);
+
+            player.apply_vel(&player_vel, dt, &map, &map_dynamic);
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
 
@@ -141,16 +144,14 @@ fn main() {
 
             let _start = Instant::now();
 
-            map.update(&player);
-
             // for _ in 0..1000 {
             map.sweep_raycast(
+                &map_dynamic,
                 &mut buffer,
                 &mut zbuffer,
                 &player,
                 0..WIDTH,
                 &resources,
-                frame,
             );
 
             let _sprite_start = Instant::now();

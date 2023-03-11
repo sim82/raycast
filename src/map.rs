@@ -84,6 +84,9 @@ impl DoorState {
 
 pub struct Map {
     pub map: [[MapTile; MAP_SIZE]; MAP_SIZE],
+}
+
+pub struct MapDynamic {
     pub door_states: Vec<DoorState>,
 }
 
@@ -103,10 +106,7 @@ impl Default for Map {
             }
         }
 
-        Self {
-            map,
-            door_states: Vec::new(),
-        }
+        Self { map }
     }
 }
 
@@ -120,7 +120,6 @@ impl Map {
         let mut plane_iter = plane.iter();
         let mut prop_plane_iter = prop_plane.iter();
         let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
-        let mut door_states = Vec::new();
         for line in &mut map {
             for out in line.iter_mut() {
                 let c = *plane_iter.next().unwrap();
@@ -141,16 +140,26 @@ impl Map {
                     }
                     _ => (),
                 }
-                // a bit crappy but simple: touch doors again to link state_index
-                if let MapTile::Door(_, _, state_index) = out {
+            }
+        }
+
+        Self { map }
+    }
+    pub fn split_dynamic(mut self) -> (Self, MapDynamic) {
+        let mut door_states = Vec::new();
+
+        for line in &mut self.map {
+            for tile in line.iter_mut() {
+                if let MapTile::Door(_, _, state_index) = tile {
                     *state_index = door_states.len();
                     door_states.push(Default::default());
                 }
             }
         }
 
-        Self { map, door_states }
+        (self, MapDynamic { door_states })
     }
+
     pub fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return MapTile::Wall(1); // solid outer
@@ -168,14 +177,17 @@ impl Map {
             MapTile::Door(_, _, _) => None,
         }
     }
-    pub fn can_walk(&self, x: i32, y: i32) -> bool {
+    pub fn can_walk(&self, map_dynamic: &MapDynamic, x: i32, y: i32) -> bool {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return false; // solid outer
         }
         match self.map[y as usize][x as usize] {
             MapTile::Walkable(_) => true,
             MapTile::Door(_, _, state_index) => {
-                matches!(self.door_states[state_index].action, DoorAction::Open(_))
+                matches!(
+                    map_dynamic.door_states[state_index].action,
+                    DoorAction::Open(_)
+                )
             }
             _ => false,
         }
@@ -183,16 +195,16 @@ impl Map {
 
     pub fn sweep_raycast(
         &self,
+        map_dynamic: &MapDynamic,
         screen: &mut Vec<u32>,
         zbuffer: &mut [Fp16; WIDTH],
         player: &Player,
         columns: Range<usize>,
         resources: &Resources,
-        frame: i32,
     ) {
         let (x, y) = player.int_pos();
 
-        if !self.can_walk(x, y) {
+        if !self.can_walk(map_dynamic, x, y) {
             return;
         }
         let (dx, dy) = player.frac_pos();
@@ -294,7 +306,7 @@ impl Map {
                     } else if let MapTile::Door(PlaneOrientation::X, door_type, state_index) =
                         lookup_tile
                     {
-                        let door_state = &self.door_states[state_index];
+                        let door_state = &map_dynamic.door_states[state_index];
                         let door_hit = ny + tyh;
                         let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
@@ -337,7 +349,7 @@ impl Map {
                     } else if let MapTile::Door(PlaneOrientation::Y, door_type, state_index) =
                         lookup_tile
                     {
-                        let door_state = &self.door_states[state_index];
+                        let door_state = &map_dynamic.door_states[state_index];
                         let door_hit = nx + txh;
                         let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
@@ -435,13 +447,16 @@ impl Map {
             }
         }
     }
-    pub fn update(&mut self, player: &Player) {
+}
+
+impl MapDynamic {
+    pub fn update(&mut self, map: &Map, player: &Player) {
         let mut trigger_doors = HashSet::new();
 
         if player.trigger {
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                 if let MapTile::Door(_, _, state_index) =
-                    self.lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
+                    map.lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
                 {
                     trigger_doors.insert(state_index);
                 }
@@ -452,7 +467,7 @@ impl Map {
 
         for i in 0..4 {
             if let MapTile::Door(_, _, state_index) =
-                self.lookup_tile(tx[i].get_int(), ty[i].get_int())
+                map.lookup_tile(tx[i].get_int(), ty[i].get_int())
             {
                 blocked_doors.insert(state_index);
             }
@@ -466,7 +481,7 @@ impl Map {
 
 #[test]
 fn raycast_test() {
-    let map = Map::default();
+    let (map, map_dynamic) = Map::default().split_dynamic();
     let resources = Resources::default();
     let mut screen = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
@@ -478,11 +493,11 @@ fn raycast_test() {
     };
     let col = 10;
     map.sweep_raycast(
+        &map_dynamic,
         &mut screen,
         &mut zbuffer,
         &player,
         col..(col + 1),
         &resources,
-        0,
     );
 }
