@@ -523,6 +523,7 @@ impl Map {
         player: &Player,
         columns: Range<usize>,
         resources: &Resources,
+        frame: i32,
     ) {
         let (x, y) = player.int_pos();
 
@@ -626,13 +627,18 @@ impl Map {
                         };
                         break 'outer;
                     } else if let MapTile::Door(PlaneOrientation::X, door_type) = lookup_tile {
-                        if (hstep_y > 0 && ny + tyh <= hy.into())
-                            || (hstep_y < 0 && ny + tyh >= hy.into())
+                        let door_open: Fp16 = ((frame % 64) as f32 / 64.0).into();
+
+                        let door_hit = ny + tyh;
+                        if (hstep_y > 0 && door_hit <= hy.into() && door_hit.fract() > door_open)
+                            || (hstep_y < 0
+                                && door_hit >= hy.into()
+                                && door_hit.fract() > door_open)
                         {
                             hit_tile = door_type.get_texture_id() + 1;
                             dx = (Fp16::from(hx) + hstep_x_half) - player.x;
-                            dy = (ny + tyh) - player.y;
-                            tex_u = ((ny + tyh).get_fract() >> 10) as i32;
+                            dy = door_hit - player.y;
+                            tex_u = ((door_hit - door_open).get_fract() >> 10) as i32;
                             break 'outer;
                         }
                         from_door = true;
@@ -663,13 +669,14 @@ impl Map {
 
                         break 'outer;
                     } else if let MapTile::Door(PlaneOrientation::Y, door_type) = lookup_tile {
-                        if (hstep_x > 0 && nx + txh <= hx.into())
-                            || (hstep_x < 0 && nx + txh >= hx.into())
+                        let door_hit = nx + txh; // + (((frame % 64) as f32) / 64.0 * hstep_y as f32).into();
+                        if (hstep_x > 0 && door_hit <= hx.into())
+                            || (hstep_x < 0 && door_hit >= hx.into())
                         {
                             hit_tile = door_type.get_texture_id();
-                            dx = (nx + txh) - player.x;
+                            dx = door_hit - player.x;
                             dy = (Fp16::from(hy) + hstep_y_half) - player.y;
-                            tex_u = ((nx + txh).get_fract() >> 10) as i32;
+                            tex_u = (door_hit.get_fract() >> 10) as i32;
                             break 'outer;
                         }
                         from_door = true;
@@ -1314,7 +1321,14 @@ fn main() {
             let start = Instant::now();
 
             // for _ in 0..1000 {
-            map.sweep_raycast(&mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
+            map.sweep_raycast(
+                &mut buffer,
+                &mut zbuffer,
+                &player,
+                0..WIDTH,
+                &resources,
+                frame,
+            );
 
             let sprite_start = Instant::now();
 
