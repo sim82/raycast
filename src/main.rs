@@ -4,7 +4,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use minifb::{Key, Window, WindowOptions, KeyRepeat};
+use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::{wl6, Resources};
 
 const WIDTH: usize = 320;
@@ -161,9 +161,9 @@ impl Fp16 {
     pub fn fract(&self) -> Fp16 {
         Self { v: self.v & 0xFFFF }
     }
-    pub fn as_f32(&self) -> f32 {
-        (self.v as f32) / FP16_F
-    }
+    // pub fn as_f32(&self) -> f32 {
+    //     (self.v as f32) / FP16_F
+    // }
 }
 
 impl Add<Fp16> for Fp16 {
@@ -619,21 +619,11 @@ impl Map {
             let tex_col = &resources.get_texture(hit_tile)[(tex_u) as usize];
 
             for row_screen in line_range_clamped {
-                if !true {
-                    let tex_v = (row_tex + tex_clip) >> TEXEL_SCALE;
-                    let color = if ((tex_v >> 1) ^ (tex_u >> 1)) % 2 == 0 {
-                        hit_tile + 8
-                    } else {
-                        hit_tile
-                    };
-                    screen.point(column as i32, row_screen, color);
-                } else {
-                    screen.point_rgb(
-                        column as i32,
-                        row_screen,
-                        tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
-                    );
-                }
+                screen.point_rgb(
+                    column as i32,
+                    row_screen,
+                    tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
+                );
                 while d > 0 {
                     row_tex += 1;
                     d -= 2 * d_screen;
@@ -645,13 +635,31 @@ impl Map {
         }
     }
 
-    fn draw_automap(&self,screen: &mut Vec<u32> ) {
+    fn draw_automap(&self, screen: &mut Vec<u32>) {
+        let wall_color = |x: usize, y: usize| match self.map[y][x] {
+            MapTile::Wall(wall) => Some(wall % 16),
+            MapTile::Walkable(_) => None,
+            MapTile::Blocked(_) => None,
+        };
+
         for y in 0..64 {
             for x in 0..64 {
-                match self.map[y][x] {
-                    MapTile::Wall(wall) => screen.point_world((x as i32).into(), (y as i32).into(), wall % 16),
-                    MapTile::Walkable(_) => (),
-                    MapTile::Blocked(_) => (),
+                if (1..63).contains(&x)
+                    && (1..63).contains(&y)
+                    && wall_color(x - 1, y).is_some()
+                    && wall_color(x + 1, y).is_some()
+                    && wall_color(x, y - 1).is_some()
+                    && wall_color(x, y + 1).is_some()
+                {
+                    continue;
+                }
+
+                if let Some(color) = wall_color(x, y) {
+                    screen.point_world(
+                        FP16_HALF + (x as i32).into(),
+                        FP16_HALF + (y as i32).into(),
+                        color,
+                    )
                 }
             }
         }
@@ -1021,7 +1029,7 @@ impl Things {
             EnemyState::Patrolling
         }
     }
-    
+
     #[rustfmt::skip]
     fn map_enemy(t: u16) -> Option<ThingType> {
         Some(match t {
