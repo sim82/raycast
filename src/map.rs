@@ -1,6 +1,6 @@
-use std::ops::Range;
+use std::{collections::HashSet, ops::Range};
 
-use crate::prelude::*;
+use crate::{fp16::FP16_FRAC_64, prelude::*};
 
 const MAP_SIZE: usize = 64;
 
@@ -38,16 +38,59 @@ pub enum MapTile {
     Wall(i32),
     Walkable(i32),
     Blocked(i32),
-    Door(PlaneOrientation, DoorType),
+    Door(PlaneOrientation, DoorType, usize),
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum DoorAction {
+    #[default]
+    Closed,
+    Opening,
+    Open(i32),
+    Closing,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DoorState {
+    pub open_f: Fp16,
+    pub action: DoorAction,
+}
+
+impl DoorState {
+    pub fn update(&mut self, trigger: bool, blocked: bool) {
+        match &mut self.action {
+            DoorAction::Closed if trigger => self.action = DoorAction::Opening,
+            DoorAction::Closed => (),
+            DoorAction::Opening if self.open_f < FP16_ONE => {
+                self.open_f += FP16_FRAC_64;
+                assert!(self.open_f <= FP16_ONE);
+            }
+            DoorAction::Opening => self.action = DoorAction::Open(60 * 4),
+            DoorAction::Open(ticks_left) => {
+                if (trigger || *ticks_left <= 0) && !blocked {
+                    self.action = DoorAction::Closing;
+                } else {
+                    *ticks_left -= 1;
+                }
+            }
+            DoorAction::Closing if self.open_f > FP16_ZERO => {
+                self.open_f -= FP16_FRAC_64;
+                assert!(self.open_f >= FP16_ZERO);
+            }
+            DoorAction::Closing => self.action = DoorAction::Closed,
+        }
+    }
 }
 
 pub struct Map {
     pub map: [[MapTile; MAP_SIZE]; MAP_SIZE],
+    pub door_states: Vec<DoorState>,
 }
 
 impl Default for Map {
     fn default() -> Self {
         let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
+
         for (in_line, out_line) in MAP.iter().zip(map.iter_mut()) {
             for (c, out) in in_line.iter().zip(out_line.iter_mut()) {
                 // FIXME: crappy harcoded
@@ -60,7 +103,10 @@ impl Default for Map {
             }
         }
 
-        Self { map }
+        Self {
+            map,
+            door_states: Vec::new(),
+        }
     }
 }
 
@@ -74,31 +120,36 @@ impl Map {
         let mut plane_iter = plane.iter();
         let mut prop_plane_iter = prop_plane.iter();
         let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
+        let mut door_states = Vec::new();
         for line in &mut map {
             for out in line.iter_mut() {
-                // let c = (*plane_iter.next().unwrap() - 1) * 2;
                 let c = *plane_iter.next().unwrap();
                 let p = *prop_plane_iter.next().unwrap();
 
                 match c {
                     1..=63 => *out = MapTile::Wall(((c - 1) * 2) as i32),
-                    90 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Regular),
-                    91 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Regular),
-                    92 => *out = MapTile::Door(PlaneOrientation::X, DoorType::GoldLocked),
-                    93 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::GoldLocked),
-                    94 => *out = MapTile::Door(PlaneOrientation::X, DoorType::SilverLocked),
-                    95 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::SilverLocked),
-                    100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator),
-                    101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator),
+                    90 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Regular, 0),
+                    91 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Regular, 0),
+                    92 => *out = MapTile::Door(PlaneOrientation::X, DoorType::GoldLocked, 0),
+                    93 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::GoldLocked, 0),
+                    94 => *out = MapTile::Door(PlaneOrientation::X, DoorType::SilverLocked, 0),
+                    95 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::SilverLocked, 0),
+                    100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator, 0),
+                    101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator, 0),
                     _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
                         *out = MapTile::Blocked(p as i32)
                     }
                     _ => (),
                 }
+                // a bit crappy but simple: touch doors again to link state_index
+                if let MapTile::Door(_, _, state_index) = out {
+                    *state_index = door_states.len();
+                    door_states.push(Default::default());
+                }
             }
         }
 
-        Self { map }
+        Self { map, door_states }
     }
     pub fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
@@ -114,17 +165,20 @@ impl Map {
         match self.map[y as usize][x as usize] {
             MapTile::Wall(id) => Some(id),
             MapTile::Walkable(_) | MapTile::Blocked(_) => None,
-            MapTile::Door(_, _) => None,
+            MapTile::Door(_, _, _) => None,
         }
     }
     pub fn can_walk(&self, x: i32, y: i32) -> bool {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return false; // solid outer
         }
-        matches!(
-            self.map[y as usize][x as usize],
-            MapTile::Walkable(_) | MapTile::Door(_, _)
-        )
+        match self.map[y as usize][x as usize] {
+            MapTile::Walkable(_) => true,
+            MapTile::Door(_, _, state_index) => {
+                matches!(self.door_states[state_index].action, DoorAction::Open(_))
+            }
+            _ => false,
+        }
     }
 
     pub fn sweep_raycast(
@@ -213,7 +267,7 @@ impl Map {
             let hstep_y_half = FP16_HALF * hstep_y;
 
             // from_door tracks if the *last* tile we traced through was a door, to easily fix up textures on door sidewalls
-            let mut from_door = matches!(self.lookup_tile(x, y), MapTile::Door(_, _));
+            let mut from_door = matches!(self.lookup_tile(x, y), MapTile::Door(_, _, _));
 
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
@@ -237,11 +291,12 @@ impl Map {
                             63 - (ny.get_fract() >> 10) as i32
                         };
                         break 'outer;
-                    } else if let MapTile::Door(PlaneOrientation::X, door_type) = lookup_tile {
-                        let door_open: Fp16 = ((frame % 64) as f32 / 64.0).into();
-
+                    } else if let MapTile::Door(PlaneOrientation::X, door_type, state_index) =
+                        lookup_tile
+                    {
+                        let door_state = &self.door_states[state_index];
                         let door_hit = ny + tyh;
-                        let door_hit_f = door_hit.fract() - door_open;
+                        let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
                             && ((hstep_y > 0 && door_hit <= hy.into())
                                 || (hstep_y < 0 && door_hit >= hy.into()))
@@ -279,10 +334,12 @@ impl Map {
                         };
 
                         break 'outer;
-                    } else if let MapTile::Door(PlaneOrientation::Y, door_type) = lookup_tile {
-                        let door_open: Fp16 = ((frame % 64) as f32 / 64.0).into();
+                    } else if let MapTile::Door(PlaneOrientation::Y, door_type, state_index) =
+                        lookup_tile
+                    {
+                        let door_state = &self.door_states[state_index];
                         let door_hit = nx + txh;
-                        let door_hit_f = door_hit.fract() - door_open;
+                        let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
                             && ((hstep_x > 0 && door_hit <= hx.into())
                                 || (hstep_x < 0 && door_hit >= hx.into()))
@@ -361,7 +418,7 @@ impl Map {
             MapTile::Wall(wall) => Some(wall % 16),
             MapTile::Walkable(_) => None,
             MapTile::Blocked(_) => None,
-            MapTile::Door(_, _) => todo!(),
+            MapTile::Door(_, _, _) => todo!(),
         };
 
         for y in 0..64 {
@@ -386,6 +443,29 @@ impl Map {
             }
         }
     }
+    pub fn update(&mut self, player: &Player) {
+        let mut trigger_doors = HashSet::new();
+
+        if player.trigger {
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                if let MapTile::Door(_, _, state_index) =
+                    self.lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
+                {
+                    trigger_doors.insert(state_index);
+                }
+            }
+        }
+        let blocked_door_index = if let MapTile::Door(_, _, state_index) =
+            self.lookup_tile(player.x.get_int(), player.y.get_int())
+        {
+            Some(state_index)
+        } else {
+            None
+        };
+        for (i, door_state) in self.door_states.iter_mut().enumerate() {
+            door_state.update(trigger_doors.contains(&i), blocked_door_index == Some(i));
+        }
+    }
 }
 
 #[test]
@@ -398,6 +478,7 @@ fn raycast_test() {
         x: Fp16 { v: 72090 },
         y: Fp16 { v: 72090 },
         rot: 0,
+        trigger: false,
     };
     let col = 10;
     map.sweep_raycast(

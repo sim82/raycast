@@ -5,6 +5,7 @@ pub struct Player {
     pub x: Fp16,
     pub y: Fp16,
     pub rot: i32,
+    pub trigger: bool,
 }
 
 #[derive(Debug)]
@@ -20,6 +21,7 @@ impl Default for Player {
             x: 3.1.into(),
             y: 3.1.into(),
             rot: 0,
+            trigger: false,
         }
     }
 }

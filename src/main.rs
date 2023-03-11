@@ -54,10 +54,15 @@ fn main() {
 
         let mut player = things
             .get_player_start()
-            .map(|(x, y, rot)| Player { x, y, rot })
+            .map(|(x, y, rot)| Player {
+                x,
+                y,
+                rot,
+                trigger: false,
+            })
             .unwrap_or_default();
 
-        let map = Map::from_map_planes(&plane0, &plane1);
+        let mut map = Map::from_map_planes(&plane0, &plane1);
         // let map = Map::default();
 
         let mut frame = 0;
@@ -90,7 +95,7 @@ fn main() {
             player_vel.forward = 0;
             player_vel.right = 0;
             player_vel.rot = 0;
-
+            player.trigger = false;
             let (fwd_speed, rot_speed) = if window.is_key_down(Key::LeftShift) {
                 (2, 360)
             } else {
@@ -124,12 +129,19 @@ fn main() {
                 automap = !automap;
             }
 
+            if window.is_key_down(Key::Space) {
+                player.trigger = true;
+            }
+
             player.apply_vel(&player_vel, dt, &map);
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
 
             player.draw(&mut buffer);
+
             let _start = Instant::now();
+
+            map.update(&player);
 
             // for _ in 0..1000 {
             map.sweep_raycast(
