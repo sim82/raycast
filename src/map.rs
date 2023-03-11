@@ -1,5 +1,7 @@
 use std::{collections::HashSet, ops::Range};
 
+use byteorder::{LittleEndian, WriteBytesExt};
+
 use crate::{fp16::FP16_FRAC_64, prelude::*};
 
 const MAP_SIZE: usize = 64;
@@ -50,10 +52,31 @@ pub enum DoorAction {
     Closing,
 }
 
+impl ms::Writable for DoorAction {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        match self {
+            DoorAction::Closed => w.write_u8(0).unwrap(),
+            DoorAction::Opening => w.write_u8(1).unwrap(),
+            DoorAction::Open(ticks) => {
+                w.write_u8(2).unwrap();
+                w.write_i32::<LittleEndian>(*ticks).unwrap();
+            }
+            DoorAction::Closing => w.write_u8(3).unwrap(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DoorState {
     pub open_f: Fp16,
     pub action: DoorAction,
+}
+
+impl ms::Writable for DoorState {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        w.write_i32::<LittleEndian>(self.open_f.v).unwrap();
+        self.action.write(w);
+    }
 }
 
 impl DoorState {
@@ -475,6 +498,16 @@ impl MapDynamic {
 
         for (i, door_state) in self.door_states.iter_mut().enumerate() {
             door_state.update(trigger_doors.contains(&i), blocked_doors.contains(&i));
+        }
+    }
+}
+
+impl ms::Writable for MapDynamic {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        w.write_i32::<LittleEndian>(self.door_states.len() as i32)
+            .unwrap();
+        for state in &self.door_states {
+            state.write(w);
         }
     }
 }

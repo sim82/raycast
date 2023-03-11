@@ -13,6 +13,8 @@ pub mod sprite;
 pub mod thing;
 pub mod wl6;
 
+pub mod ms;
+
 pub mod prelude {
     pub use crate::fp16::{Fp16, FP16_F, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO};
 
@@ -25,6 +27,7 @@ pub mod prelude {
 
     pub use crate::draw::Draw;
     pub use crate::map::{DoorType, Map, MapTile, PlaneOrientation};
+    pub use crate::ms;
     pub use crate::player::{Player, PlayerVel};
     pub use crate::sprite::{draw_sprite, Directionality, Sprite, Sprites};
     pub use crate::thing::{Direction, Thing, ThingType, Things};

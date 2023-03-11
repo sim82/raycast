@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
+use raycast::ms::Writable;
 use raycast::{wl6, Resources};
 
 use raycast::prelude::*;
@@ -183,6 +184,11 @@ fn main() {
                 level_id += 1;
                 break;
             }
+            if window.is_key_pressed(Key::F5, KeyRepeat::No) {
+                let mut f = std::fs::File::create("save.bin").unwrap();
+                map_dynamic.write(&mut f);
+            }
+
             frame += 1;
         }
     }
