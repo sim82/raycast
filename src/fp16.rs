@@ -8,6 +8,12 @@ pub struct Fp16 {
 pub const FP16_SCALE: i32 = 16;
 pub const FP16_F: f32 = (1 << FP16_SCALE) as f32;
 
+pub const FP16_ZERO: Fp16 = Fp16 { v: 0 };
+pub const FP16_ONE: Fp16 = Fp16 { v: 1 << FP16_SCALE };
+pub const FP16_HALF: Fp16 = Fp16 {
+    v: (1 << FP16_SCALE) / 2,
+};
+
 impl From<f32> for Fp16 {
     fn from(f: f32) -> Self {
         let e = if f >= 0.0 { 0.5 } else { -0.5 };
