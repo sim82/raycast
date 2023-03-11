@@ -1,8 +1,8 @@
 use std::{collections::HashSet, ops::Range};
 
-use byteorder::{LittleEndian, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::{fp16::FP16_FRAC_64, prelude::*};
+use crate::{fp16::FP16_FRAC_64, ms::Loadable, prelude::*};
 
 const MAP_SIZE: usize = 64;
 
@@ -66,6 +66,22 @@ impl ms::Writable for DoorAction {
     }
 }
 
+impl Loadable for DoorAction {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let d = r.read_u8().unwrap();
+        match d {
+            0 => DoorAction::Closed,
+            1 => DoorAction::Opening,
+            2 => {
+                let ticks = r.read_i32::<LittleEndian>().unwrap();
+                DoorAction::Open(ticks)
+            }
+            3 => DoorAction::Closing,
+            _ => panic!(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct DoorState {
     pub open_f: Fp16,
@@ -76,6 +92,17 @@ impl ms::Writable for DoorState {
     fn write(&self, w: &mut dyn std::io::Write) {
         w.write_i32::<LittleEndian>(self.open_f.v).unwrap();
         self.action.write(w);
+    }
+}
+
+impl ms::Loadable for DoorState {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let open = r.read_i32::<LittleEndian>().unwrap();
+        let action = DoorAction::read_from(r);
+        Self {
+            open_f: Fp16 { v: open },
+            action,
+        }
     }
 }
 
@@ -509,6 +536,18 @@ impl ms::Writable for MapDynamic {
         for state in &self.door_states {
             state.write(w);
         }
+    }
+}
+
+impl ms::Loadable for MapDynamic {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let s = r.read_i32::<LittleEndian>().unwrap();
+        let mut door_states = Vec::new();
+        for _ in 0..s {
+            door_states.push(DoorState::read_from(r));
+        }
+
+        MapDynamic { door_states }
     }
 }
 
