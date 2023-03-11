@@ -396,12 +396,19 @@ impl Player {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum PlaneOrientation {
+    X,
+    Y,
+}
+
 // TODO: model this better
 #[derive(Debug, Clone, Copy)]
 enum MapTile {
     Wall(i32),
     Walkable(i32),
     Blocked(i32),
+    Door(PlaneOrientation),
 }
 
 struct Map {
@@ -441,15 +448,26 @@ impl Map {
             for out in line.iter_mut() {
                 let c = (*plane_iter.next().unwrap() - 1) * 2;
                 let p = *prop_plane_iter.next().unwrap();
-                if (0..64).contains(&c) {
-                    *out = MapTile::Wall(c as i32);
-                } else if BLOCKING_PROPS.binary_search(&p).is_ok() {
-                    *out = MapTile::Blocked(p as i32)
+
+                match c {
+                    0..=63 => *out = MapTile::Wall(c as i32),
+                    90 => *out = MapTile::Door(PlaneOrientation::X),
+                    91 => *out = MapTile::Door(PlaneOrientation::Y),
+                    _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
+                        *out = MapTile::Blocked(p as i32)
+                    }
+                    _ => (),
                 }
             }
         }
 
         Self { map }
+    }
+    fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
+        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
+            return MapTile::Wall(1); // solid outer
+        }
+        self.map[y as usize][x as usize]
     }
 
     fn lookup_wall(&self, x: i32, y: i32) -> Option<i32> {
@@ -459,6 +477,7 @@ impl Map {
         match self.map[y as usize][x as usize] {
             MapTile::Wall(id) => Some(id),
             MapTile::Walkable(_) | MapTile::Blocked(_) => None,
+            MapTile::Door(_) => None,
         }
     }
     fn can_walk(&self, x: i32, y: i32) -> bool {
@@ -550,9 +569,9 @@ impl Map {
             'outer: loop {
                 if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                     // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                    let lookup_tile = self.lookup_wall(hx + hstep_x.min(0), ny.get_int());
+                    let lookup_tile = self.lookup_tile(hx + hstep_x.min(0), ny.get_int());
 
-                    if let Some(tile) = lookup_tile {
+                    if let MapTile::Wall(tile) = lookup_tile {
                         screen.point_world(hx.into(), ny, (tile) % 16);
                         hit_tile = tile + 1;
                         dx = Fp16::from(hx) - player.x;
@@ -569,8 +588,8 @@ impl Map {
                     ny += ty;
                 } else {
                     // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                    let lookup_tile = self.lookup_wall(nx.get_int(), hy + hstep_y.min(0));
-                    if let Some(tile) = lookup_tile {
+                    let lookup_tile = self.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
+                    if let MapTile::Wall(tile) = lookup_tile {
                         // hit_tile += 8;
                         hit_tile = tile;
                         screen.point_world(nx, hy.into(), (tile) % 16);
@@ -640,6 +659,7 @@ impl Map {
             MapTile::Wall(wall) => Some(wall % 16),
             MapTile::Walkable(_) => None,
             MapTile::Blocked(_) => None,
+            MapTile::Door(_) => todo!(),
         };
 
         for y in 0..64 {
