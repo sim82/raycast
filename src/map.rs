@@ -467,7 +467,7 @@ impl MapDynamic {
                     }
                     MapTile::PushWall(_, state_index) => {
                         // FIXME: quick-n-dirty calc push direction
-                        let push_direction = if dx > 1 {
+                        let push_direction = if dx > 0 {
                             Direction::E
                         } else if dx < 0 {
                             Direction::W
