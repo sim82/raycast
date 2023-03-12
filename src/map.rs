@@ -135,7 +135,27 @@ impl DoorState {
 
 #[derive(Debug, Clone, Default)]
 pub struct PushwallState {
-    pub open_f: Fp16,
+    pub pushed: bool,
+}
+impl PushwallState {
+    fn update(&mut self, triggered: bool) {
+        if triggered && !self.pushed {
+            self.pushed = true;
+        }
+    }
+}
+
+impl ms::Writable for PushwallState {
+    fn write(&self, w: &mut dyn Write) {
+        w.write_u8(if self.pushed { 1 } else { 0 }).unwrap();
+    }
+}
+
+impl ms::Loadable for PushwallState {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let pushed = r.read_u8().unwrap() != 0;
+        Self { pushed }
+    }
 }
 
 pub struct Map {
@@ -186,8 +206,11 @@ impl Map {
                 let p = *prop_plane_iter.next().unwrap();
                 write!(dump_f, "{:2x}:{:2x} ", c, p).unwrap();
 
+                let pushwall = p == 98;
+
                 match c {
-                    1..=63 => *out = MapTile::Wall(((c - 1) * 2) as i32),
+                    1..=63 if !pushwall => *out = MapTile::Wall(((c - 1) * 2) as i32),
+                    1..=63 if pushwall => *out = MapTile::PushWall(((c - 1) * 2) as i32, 0),
                     90 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Regular, 0),
                     91 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Regular, 0),
                     92 => *out = MapTile::Door(PlaneOrientation::X, DoorType::GoldLocked, 0),
@@ -196,7 +219,6 @@ impl Map {
                     95 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::SilverLocked, 0),
                     100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator, 0),
                     101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator, 0),
-                    97 => *out = MapTile::PushWall(((c - 1) * 2) as i32, 0),
                     _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
                         *out = MapTile::Blocked(p as i32)
                     }
@@ -273,10 +295,14 @@ impl MapDynamic {
     pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: Map) -> MapDynamic {
         let s = r.read_i32::<LittleEndian>().unwrap();
         let mut door_states = Vec::new();
-        let pushwall_states = Vec::new();
-
         for _ in 0..s {
             door_states.push(DoorState::read_from(r));
+        }
+
+        let s = r.read_i32::<LittleEndian>().unwrap();
+        let mut pushwall_states = Vec::new();
+        for _ in 0..s {
+            pushwall_states.push(PushwallState::read_from(r));
         }
 
         let mut door_count = 0;
@@ -327,6 +353,7 @@ impl MapDynamic {
             MapTile::Door(_, _, state_index) => {
                 matches!(self.door_states[state_index].action, DoorAction::Open(_))
             }
+            MapTile::PushWall(_, state_index) => self.pushwall_states[state_index].pushed,
             _ => false,
         }
     }
@@ -335,19 +362,34 @@ impl MapDynamic {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return MapTile::Wall(1); // solid outer
         }
-        self.map.map[y as usize][x as usize]
+        let tile = self.map.map[y as usize][x as usize];
+        if let MapTile::PushWall(id, state_index) = tile {
+            if !self.pushwall_states[state_index].pushed {
+                MapTile::Wall(id)
+            } else {
+                MapTile::Walkable(0)
+            }
+        } else {
+            tile
+        }
     }
 
     pub fn update(&mut self, player: &Player) {
         let mut trigger_doors = HashSet::new();
-
+        let mut trigger_pushwalls = HashSet::new();
         if player.trigger {
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                if let MapTile::Door(_, _, state_index) = self
+                match self
                     .map
                     .lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
                 {
-                    trigger_doors.insert(state_index);
+                    MapTile::Door(_, _, state_index) => {
+                        trigger_doors.insert(state_index);
+                    }
+                    MapTile::PushWall(_, state_index) => {
+                        trigger_pushwalls.insert(state_index);
+                    }
+                    _ => (),
                 }
             }
         }
@@ -365,6 +407,10 @@ impl MapDynamic {
         for (i, door_state) in self.door_states.iter_mut().enumerate() {
             door_state.update(trigger_doors.contains(&i), blocked_doors.contains(&i));
         }
+
+        for (i, pushwall_state) in self.pushwall_states.iter_mut().enumerate() {
+            pushwall_state.update(trigger_pushwalls.contains(&i));
+        }
     }
 }
 
@@ -373,6 +419,12 @@ impl ms::Writable for MapDynamic {
         w.write_i32::<LittleEndian>(self.door_states.len() as i32)
             .unwrap();
         for state in &self.door_states {
+            state.write(w);
+        }
+
+        w.write_i32::<LittleEndian>(self.pushwall_states.len() as i32)
+            .unwrap();
+        for state in &self.pushwall_states {
             state.write(w);
         }
     }
