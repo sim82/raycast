@@ -1,3 +1,5 @@
+use byteorder::{ReadBytesExt, WriteBytesExt};
+
 use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -60,12 +62,35 @@ pub enum ThingType {
     Enemy(Direction, Difficulty, EnemyType, EnemyState),
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Direction {
     N,
     E,
     S,
     W,
+}
+
+impl ms::Writable for Direction {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        match self {
+            Direction::N => w.write_u8(0).unwrap(),
+            Direction::E => w.write_u8(1).unwrap(),
+            Direction::S => w.write_u8(2).unwrap(),
+            Direction::W => w.write_u8(3).unwrap(),
+        }
+    }
+}
+
+impl ms::Loadable for Direction {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        match r.read_u8().unwrap() {
+            0 => Direction::N,
+            1 => Direction::E,
+            2 => Direction::S,
+            3 => Direction::W,
+            _ => panic!(),
+        }
+    }
 }
 
 impl Direction {

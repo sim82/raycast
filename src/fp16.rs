@@ -1,5 +1,9 @@
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
+use crate::ms;
+
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Fp16 {
     pub v: i32,
@@ -30,6 +34,19 @@ impl From<f32> for Fp16 {
 impl From<i32> for Fp16 {
     fn from(f: i32) -> Self {
         Self { v: f << FP16_SCALE }
+    }
+}
+
+impl ms::Writable for Fp16 {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        w.write_i32::<LittleEndian>(self.v).unwrap();
+    }
+}
+
+impl ms::Loadable for Fp16 {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let v = r.read_i32::<LittleEndian>().unwrap();
+        Self { v }
     }
 }
 

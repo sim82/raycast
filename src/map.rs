@@ -42,6 +42,7 @@ pub enum MapTile {
     Blocked(i32),
     Door(PlaneOrientation, DoorType, usize),
     PushWall(i32, usize),
+    OffsetWall(i32, Direction, Fp16),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -133,28 +134,63 @@ impl DoorState {
     }
 }
 
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub enum PushwallAction {
+    #[default]
+    Closed,
+    Sliding(Direction, Fp16),
+    Open,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct PushwallState {
-    pub pushed: bool,
+    pub action: PushwallAction,
 }
 impl PushwallState {
     fn update(&mut self, triggered: bool) {
-        if triggered && !self.pushed {
-            self.pushed = true;
+        match &mut self.action {
+            PushwallAction::Closed if triggered => {
+                self.action = PushwallAction::Sliding(Direction::W, FP16_ZERO)
+            }
+            PushwallAction::Sliding(_, f) if *f < FP16_ONE => {
+                *f += FP16_FRAC_64;
+            }
+            PushwallAction::Sliding(_, _) => self.action = PushwallAction::Open,
+            _ => (),
+        }
+        if triggered && self.action == PushwallAction::Closed {
+            self.action = PushwallAction::Open;
         }
     }
 }
 
 impl ms::Writable for PushwallState {
     fn write(&self, w: &mut dyn Write) {
-        w.write_u8(if self.pushed { 1 } else { 0 }).unwrap();
+        match self.action {
+            PushwallAction::Closed => w.write_u8(0).unwrap(),
+            PushwallAction::Sliding(direction, f) => {
+                w.write_u8(1).unwrap();
+                direction.write(w);
+                f.write(w);
+            }
+            PushwallAction::Open => w.write_u8(2).unwrap(),
+        }
     }
 }
 
 impl ms::Loadable for PushwallState {
     fn read_from(r: &mut dyn std::io::Read) -> Self {
-        let pushed = r.read_u8().unwrap() != 0;
-        Self { pushed }
+        let action = match r.read_u8().unwrap() {
+            0 => PushwallAction::Closed,
+            1 => {
+                let direction = Direction::read_from(r);
+                let f = Fp16::read_from(r);
+                PushwallAction::Sliding(direction, f)
+            }
+            2 => PushwallAction::Open,
+            _ => panic!(),
+        };
+        Self { action }
     }
 }
 
@@ -242,6 +278,7 @@ impl Map {
             MapTile::Blocked(_) => None,
             MapTile::Door(_, _, _) => None,
             MapTile::PushWall(_, _) => None,
+            MapTile::OffsetWall(_, _, _) => None,
         };
 
         for y in 0..64 {
@@ -353,7 +390,9 @@ impl MapDynamic {
             MapTile::Door(_, _, state_index) => {
                 matches!(self.door_states[state_index].action, DoorAction::Open(_))
             }
-            MapTile::PushWall(_, state_index) => self.pushwall_states[state_index].pushed,
+            MapTile::PushWall(_, state_index) => {
+                self.pushwall_states[state_index].action == PushwallAction::Open
+            }
             _ => false,
         }
     }
@@ -364,10 +403,10 @@ impl MapDynamic {
         }
         let tile = self.map.map[y as usize][x as usize];
         if let MapTile::PushWall(id, state_index) = tile {
-            if !self.pushwall_states[state_index].pushed {
-                MapTile::Wall(id)
-            } else {
-                MapTile::Walkable(0)
+            match self.pushwall_states[state_index].action {
+                PushwallAction::Closed => MapTile::Wall(id),
+                PushwallAction::Sliding(direction, f) => MapTile::OffsetWall(id, direction, f),
+                PushwallAction::Open => MapTile::Walkable(0),
             }
         } else {
             tile
