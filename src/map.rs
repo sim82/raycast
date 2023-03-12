@@ -223,6 +223,7 @@ pub struct MapDynamic {
     pub map: Map,
     pub door_states: Vec<DoorState>,
     pub pushwall_states: Vec<PushwallState>,
+    pub pushwall_patch: HashMap<(i32, i32), MapTile>,
 }
 
 impl Default for Map {
@@ -288,8 +289,8 @@ impl Map {
         Self { map }
     }
 
-    fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
-        self.map[y as usize][x as usize]
+    fn lookup_tile(&self, x: i32, y: i32) -> &MapTile {
+        &self.map[y as usize][x as usize]
     }
 
     pub fn draw_automap(&self, screen: &mut Vec<u32>) {
@@ -351,6 +352,7 @@ impl MapDynamic {
             map,
             door_states,
             pushwall_states,
+            pushwall_patch: Default::default(),
         }
     }
 
@@ -388,6 +390,7 @@ impl MapDynamic {
             map,
             door_states,
             pushwall_states,
+            pushwall_patch: Default::default(),
         }
     }
 
@@ -410,39 +413,19 @@ impl MapDynamic {
             return false; // solid outer
         }
 
-        // FIXME: this could be updated once per frame
-        // check if an active / finished pushwall 'patches' over static map data
-        for pushwall_state in &self.pushwall_states {
-            match pushwall_state.action {
-                PushwallAction::Sliding(direction, f) => {
-                    let (dx, dy) = direction.tile_offset();
-                    let fi = f.get_int();
-                    if (fi * dx) + pushwall_state.x == x && (fi * dy) + pushwall_state.y == y {
-                        if let MapTile::PushWall(_, _) =
-                            self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
-                        {
-                            return false;
-                        }
-                    }
-                }
-                PushwallAction::Open(xoffs, yoffs)
-                    if xoffs + pushwall_state.x == x && yoffs + pushwall_state.y == y =>
-                {
-                    return false
-                }
+        let tile = if let Some(tile) = self.pushwall_patch.get(&(x, y)) {
+            tile
+        } else {
+            self.map.lookup_tile(x, y)
+        };
 
-                _ => (),
-            }
-        }
-
-        let tile = self.map.lookup_tile(x, y);
         match tile {
             MapTile::Walkable(_) => true,
             MapTile::Door(_, _, state_index) => {
-                matches!(self.door_states[state_index].action, DoorAction::Open(_))
+                matches!(self.door_states[*state_index].action, DoorAction::Open(_))
             }
             MapTile::PushWall(_, state_index) => !matches!(
-                self.pushwall_states[state_index].action,
+                self.pushwall_states[*state_index].action,
                 PushwallAction::Closed
             ),
             _ => false,
@@ -454,45 +437,19 @@ impl MapDynamic {
             return MapTile::Wall(1); // solid outer
         }
 
-        // FIXME: this could be updated once per frame
-        // check if an active / finished pushwall 'patches' over static map data
-        for pushwall_state in &self.pushwall_states {
-            match pushwall_state.action {
-                PushwallAction::Sliding(direction, f) => {
-                    let (dx, dy) = direction.tile_offset();
-                    let fi = f.get_int();
-                    if (fi * dx) + pushwall_state.x == x && (fi * dy) + pushwall_state.y == y {
-                        if let MapTile::PushWall(id, _) =
-                            self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
-                        {
-                            return MapTile::OffsetWall(id, direction, f.fract());
-                        }
-                    }
-                }
-                PushwallAction::Open(xoffs, yoffs)
-                    if xoffs + pushwall_state.x == x && yoffs + pushwall_state.y == y =>
-                {
-                    if let MapTile::PushWall(id, _) =
-                        self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
-                    {
-                        return MapTile::Wall(id);
-                    }
-                }
+        let tile = if let Some(tile) = self.pushwall_patch.get(&(x, y)) {
+            tile
+        } else {
+            self.map.lookup_tile(x, y)
+        };
 
-                _ => (),
-            }
-        }
-
-        let tile = self.map.map[y as usize][x as usize];
         if let MapTile::PushWall(id, state_index) = tile {
-            match self.pushwall_states[state_index].action {
-                PushwallAction::Closed => MapTile::Wall(id),
+            match self.pushwall_states[*state_index].action {
+                PushwallAction::Closed => MapTile::Wall(*id),
                 _ => MapTile::Walkable(0),
-                // PushwallAction::Sliding(direction, f) => MapTile::OffsetWall(id, direction, f),
-                // PushwallAction::Open(_, _) => MapTile::Walkable(0),
             }
         } else {
-            tile
+            *tile
         }
     }
 
@@ -544,10 +501,41 @@ impl MapDynamic {
         for (i, pushwall_state) in self.pushwall_states.iter_mut().enumerate() {
             let trigger = trigger_pushwalls.get(&i);
             if let Some(dir) = trigger {
-                println!("trigger: {dir:?}");
+                // println!("trigger: {dir:?}");
             }
 
             pushwall_state.update(trigger.cloned())
+        }
+
+        // update active / finished pushwall 'patching' over static map data
+        self.pushwall_patch.clear();
+        for pushwall_state in &self.pushwall_states {
+            match pushwall_state.action {
+                PushwallAction::Sliding(direction, f) => {
+                    let (dx, dy) = direction.tile_offset();
+                    let fi = f.get_int();
+                    if let MapTile::PushWall(id, _) =
+                        self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                    {
+                        self.pushwall_patch.insert(
+                            ((fi * dx) + pushwall_state.x, (fi * dy) + pushwall_state.y),
+                            MapTile::OffsetWall(id, direction, f.fract()),
+                        );
+                    }
+                }
+                PushwallAction::Open(xoffs, yoffs) => {
+                    if let MapTile::PushWall(id, _) =
+                        self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                    {
+                        self.pushwall_patch.insert(
+                            (pushwall_state.x + xoffs, pushwall_state.y + yoffs),
+                            MapTile::Wall(id),
+                        );
+                    }
+                }
+
+                _ => (),
+            }
         }
     }
 }
