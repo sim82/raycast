@@ -28,7 +28,7 @@ pub mod prelude {
         ms,
         player::{Player, PlayerVel},
         render,
-        sprite::{draw_sprite, Directionality, Sprite, Sprites},
+        sprite::{Directionality, Sprite, Sprites},
         thing::{Direction, Thing, ThingType, Things},
         Resources, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };

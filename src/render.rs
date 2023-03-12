@@ -226,6 +226,69 @@ pub fn sweep_raycast(
     }
 }
 
+pub fn draw_sprite(
+    screen: &mut Vec<u32>,
+    zbuffer: &[Fp16],
+    resources: &Resources,
+    id: i32,
+    x_mid: i32,
+    z: Fp16,
+) {
+    const C: i32 = MID;
+    let offs = if z > FP16_ZERO {
+        (C << FP16_SCALE) / z.v
+    } else {
+        C
+    };
+    let line_range = (MID - offs)..(MID + offs);
+
+    let tex = resources.get_sprite(id);
+
+    let target_size = 2 * offs;
+    // TODO: re-think the whole thing... it kind of works without explicit clipping to screen bounds, but the redundant in-loop bounds checks are weird and inefficient
+
+    let texcoord = {
+        // pre-calc screen -> tex coords
+        let mut texcoord = [0u8; WIDTH];
+
+        let d_screen = (line_range.end - line_range.start) - 1;
+        let d_tex = 64 - 1;
+        let mut d = 2 * d_tex - d_screen;
+        let mut tex = 0;
+        // only fill first (2 * offs, screen-space target size) entries of the texcoord array, using bresenham-style interpolator
+        for tx in texcoord.iter_mut().take(target_size as usize) {
+            *tx = tex;
+
+            while d > 0 {
+                tex += 1;
+                d -= 2 * d_screen;
+            }
+            d += 2 * d_tex;
+        }
+        texcoord
+    };
+    for x in 0..(target_size.min(WIDTH as i32)) {
+        let column = x + (x_mid - offs);
+        // TODO: clip to screen bounds
+        if column < 0 || column >= WIDTH as i32 || zbuffer[column as usize] <= z {
+            continue;
+        }
+        let tex_col = tex[texcoord[x as usize] as usize];
+        for y in 0..(target_size.min(WIDTH as i32)) {
+            let row = y + (MID - offs);
+            if !(0..VIEW_HEIGHT).contains(&row) {
+                continue;
+            }
+            if (0..VIEW_HEIGHT).contains(&row) {
+                let c = tex_col[texcoord[y as usize] as usize];
+                if c != 0 {
+                    screen.point_rgb(column, row, c);
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn raycast_test() {
     let (map, map_dynamic) = Map::default().split_dynamic();
