@@ -128,7 +128,11 @@ pub fn sweep_raycast(
                             }
                             hit_tile = tile + 1;
                             dy = hit_y - player.y;
-                            tex_u = ((hit_y).get_fract() >> 10) as i32;
+                            tex_u = if hstep_x > 0 {
+                                (hit_y.get_fract() >> 10) as i32
+                            } else {
+                                63 - (hit_y.get_fract() >> 10) as i32
+                            };
                             break 'outer;
                         }
                     }
@@ -192,7 +196,12 @@ pub fn sweep_raycast(
                             }
                             hit_tile = tile;
                             dx = hit_x - player.x;
-                            tex_u = ((hit_x).get_fract() >> 10) as i32;
+                            tex_u = if hstep_y < 0 {
+                                (hit_x.get_fract() >> 10) as i32
+                            } else {
+                                63 - (hit_x.get_fract() >> 10) as i32
+                            };
+
                             break 'outer;
                         }
                     }

@@ -30,6 +30,7 @@ fn main() {
 
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
     let mut automap = false;
+    let mut stop_the_world_mode = false;
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
     let mut level_id = 0;
@@ -131,14 +132,18 @@ fn main() {
             if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
                 automap = !automap;
             }
+            if window.is_key_pressed(Key::F7, KeyRepeat::No) {
+                stop_the_world_mode = !stop_the_world_mode;
+            }
 
             if window.is_key_down(Key::Space) {
                 player.trigger = true;
             }
 
-            map_dynamic.update(&player);
-
-            player.apply_vel(&player_vel, dt, &map_dynamic);
+            if !stop_the_world_mode {
+                map_dynamic.update(&player);
+            }
+            player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
 

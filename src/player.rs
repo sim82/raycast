@@ -63,7 +63,13 @@ impl Player {
         (self.x.fract(), self.y.fract())
     }
 
-    pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16, map_dynamic: &MapDynamic) {
+    pub fn apply_vel(
+        &mut self,
+        player_vel: &PlayerVel,
+        dt: Fp16,
+        map_dynamic: &MapDynamic,
+        collisions: bool,
+    ) {
         self.rot += (dt * player_vel.rot).get_int();
         while self.rot < 0 {
             self.rot += FA_TAU;
@@ -94,15 +100,17 @@ impl Player {
 
         let mut can_move_x = true;
         let mut can_move_y = true;
-        for ti in tis {
-            let x = tx[ti] + dx;
-            let y = ty[ti] + dy;
+        if collisions {
+            for ti in tis {
+                let x = tx[ti] + dx;
+                let y = ty[ti] + dy;
 
-            // if !map.can_walk(x.get_int(), y.get_int()) {
-            // println!("collision {}", ti + 1);
-            can_move_x &= map_dynamic.can_walk(x.get_int(), ty[ti].get_int());
-            can_move_y &= map_dynamic.can_walk(tx[ti].get_int(), y.get_int());
-            // }
+                // if !map.can_walk(x.get_int(), y.get_int()) {
+                // println!("collision {}", ti + 1);
+                can_move_x &= map_dynamic.can_walk(x.get_int(), ty[ti].get_int());
+                can_move_y &= map_dynamic.can_walk(tx[ti].get_int(), y.get_int());
+                // }
+            }
         }
         if can_move_x {
             self.x += dx;
