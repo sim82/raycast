@@ -8,30 +8,30 @@ pub mod draw;
 pub mod fa;
 pub mod fp16;
 pub mod map;
+pub mod ms;
 pub mod player;
+pub mod render;
 pub mod sprite;
 pub mod thing;
 pub mod wl6;
 
-pub mod ms;
-
 pub mod prelude {
-    pub use crate::fp16::{Fp16, FP16_F, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO};
-
-    pub use crate::fa::{
-        fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI,
-        FA_PI_FRAC_PI_2, FA_SCALEF, FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2,
-        QUADRANT_3, QUADRANT_4, TAN_CLAMP,
+    pub use crate::{
+        draw::Draw,
+        fa::{
+            fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI,
+            FA_PI_FRAC_PI_2, FA_SCALEF, FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2,
+            QUADRANT_3, QUADRANT_4, TAN_CLAMP,
+        },
+        fp16::{Fp16, FP16_F, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        map::{DoorType, Map, MapDynamic, MapTile, PlaneOrientation},
+        ms,
+        player::{Player, PlayerVel},
+        render,
+        sprite::{draw_sprite, Directionality, Sprite, Sprites},
+        thing::{Direction, Thing, ThingType, Things},
+        Resources, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
-    pub use crate::{HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH};
-
-    pub use crate::draw::Draw;
-    pub use crate::map::{DoorType, Map, MapTile, PlaneOrientation};
-    pub use crate::ms;
-    pub use crate::player::{Player, PlayerVel};
-    pub use crate::sprite::{draw_sprite, Directionality, Sprite, Sprites};
-    pub use crate::thing::{Direction, Thing, ThingType, Things};
-    pub use crate::Resources;
 }
 
 pub const WIDTH: usize = 320;

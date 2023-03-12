@@ -147,7 +147,8 @@ fn main() {
             let _start = Instant::now();
 
             // for _ in 0..1000 {
-            map.sweep_raycast(
+            render::sweep_raycast(
+                &map,
                 &map_dynamic,
                 &mut buffer,
                 &mut zbuffer,
