@@ -48,6 +48,15 @@ impl AnimationState {
             AnimationState::Walk4 => 32,
         }
     }
+    pub fn advance_animation(&self) -> Self {
+        match self {
+            AnimationState::Stand => AnimationState::Stand,
+            AnimationState::Walk1 => AnimationState::Walk2,
+            AnimationState::Walk2 => AnimationState::Walk3,
+            AnimationState::Walk3 => AnimationState::Walk4,
+            AnimationState::Walk4 => AnimationState::Walk1,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -124,10 +133,12 @@ pub struct Thing {
     pub thing_type: ThingType,
     pub x: Fp16,
     pub y: Fp16,
+    pub animation_state: AnimationState, // FIXME: hack, this does not belong here
 }
 
 pub struct Things {
     pub things: Vec<Thing>,
+    anim_timeout: i32,
 }
 
 impl Things {
@@ -155,10 +166,14 @@ impl Things {
                     thing_type,
                     x: FP16_HALF + x.into(),
                     y: FP16_HALF + y.into(),
+                    animation_state: AnimationState::Walk1,
                 });
             }
         }
-        Things { things }
+        Things {
+            things,
+            anim_timeout: 30,
+        }
     }
 
     fn oa(o: u16) -> Direction {
@@ -219,7 +234,7 @@ impl Things {
             .filter_map(|thing| match &thing.thing_type {
                 ThingType::Enemy(direction, _difficulty, enemy_type, _state) => {
                     let id = enemy_type.sprite_offset()
-                    + AnimationState::Stand.sprite_offset()
+                    + thing.animation_state.sprite_offset()
                     /*+ direction.sprite_offset()*/;
                     Some(Sprite {
                         id,
@@ -231,5 +246,17 @@ impl Things {
                 _ => None,
             })
             .collect()
+    }
+
+    pub fn update(&mut self) {
+        self.anim_timeout -= 1;
+        if self.anim_timeout > 0 {
+            return;
+        }
+        self.anim_timeout = 10;
+
+        for thing in &mut self.things {
+            thing.animation_state = thing.animation_state.advance_animation();
+        }
     }
 }

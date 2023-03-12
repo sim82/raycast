@@ -49,7 +49,7 @@ fn main() {
         //     rot: 3476,
         // };
 
-        let things = Things::from_map_plane(&plane1);
+        let mut things = Things::from_map_plane(&plane1);
 
         let mut sprites = Sprites::from_map_plane(&plane1);
         sprites.sprites.append(&mut things.get_sprites());
@@ -142,6 +142,8 @@ fn main() {
 
             if !stop_the_world_mode {
                 map_dynamic.update(&player);
+                things.update();
+                sprites.sprites = things.get_sprites();
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
