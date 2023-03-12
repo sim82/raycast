@@ -1,5 +1,9 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
 use crate::map::MapDynamic;
 pub use crate::prelude::*;
+
+use self::ms::{Loadable, Writable};
 
 #[derive(Debug)]
 pub struct Player {
@@ -24,6 +28,30 @@ impl Default for Player {
             rot: 0,
             trigger: false,
         }
+    }
+}
+
+impl Writable for Player {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        w.write_i32::<LittleEndian>(self.x.v).unwrap();
+        w.write_i32::<LittleEndian>(self.y.v).unwrap();
+        w.write_i32::<LittleEndian>(self.rot).unwrap();
+        w.write_u8(if self.trigger { 1 } else { 0 }).unwrap();
+    }
+}
+
+impl Loadable for Player {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let x = Fp16 {
+            v: r.read_i32::<LittleEndian>().unwrap(),
+        };
+        let y = Fp16 {
+            v: r.read_i32::<LittleEndian>().unwrap(),
+        };
+        let rot = r.read_i32::<LittleEndian>().unwrap();
+        let trigger = r.read_u8().unwrap() != 0;
+
+        Self { x, y, rot, trigger }
     }
 }
 
