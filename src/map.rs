@@ -155,7 +155,7 @@ impl PushwallState {
             (PushwallAction::Closed, Some(direction)) => {
                 self.action = PushwallAction::Sliding(direction, FP16_ZERO)
             }
-            (PushwallAction::Sliding(_, f), _) if *f < FP16_ONE => {
+            (PushwallAction::Sliding(_, f), _) if *f < (FP16_ONE * 2) => {
                 *f += FP16_FRAC_64;
             }
             (PushwallAction::Sliding(_, _), _) => self.action = PushwallAction::Open,
