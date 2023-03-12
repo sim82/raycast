@@ -3,7 +3,6 @@ use std::ops::Range;
 use crate::prelude::*;
 
 pub fn sweep_raycast(
-    map: &Map,
     map_dynamic: &MapDynamic,
     screen: &mut Vec<u32>,
     zbuffer: &mut [Fp16; WIDTH],
@@ -13,7 +12,7 @@ pub fn sweep_raycast(
 ) {
     let (x, y) = player.int_pos();
 
-    if !map.can_walk(map_dynamic, x, y) {
+    if !map_dynamic.can_walk(x, y) {
         return;
     }
     let (dx, dy) = player.frac_pos();
@@ -88,12 +87,12 @@ pub fn sweep_raycast(
         let hstep_y_half = FP16_HALF * hstep_y;
 
         // from_door tracks if the *last* tile we traced through was a door, to easily fix up textures on door sidewalls
-        let mut from_door = matches!(map.lookup_tile(x, y), MapTile::Door(_, _, _));
+        let mut from_door = matches!(map_dynamic.lookup_tile(x, y), MapTile::Door(_, _, _));
 
         'outer: loop {
             if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                 // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                let lookup_tile = map.lookup_tile(hx + hstep_x.min(0), ny.get_int());
+                let lookup_tile = map_dynamic.lookup_tile(hx + hstep_x.min(0), ny.get_int());
 
                 if let MapTile::Wall(tile) = lookup_tile {
                     screen.point_world(hx.into(), ny, (tile) % 16);
@@ -137,7 +136,7 @@ pub fn sweep_raycast(
                 ny += ty;
             } else {
                 // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                let lookup_tile = map.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
+                let lookup_tile = map_dynamic.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
                 if let MapTile::Wall(tile) = lookup_tile {
                     if from_door {
                         hit_tile = 100;
@@ -291,7 +290,7 @@ pub fn draw_sprite(
 
 #[test]
 fn raycast_test() {
-    let (map, map_dynamic) = Map::default().split_dynamic();
+    let map_dynamic = MapDynamic::wrap(Map::default());
     let resources = Resources::default();
     let mut screen = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
@@ -303,7 +302,6 @@ fn raycast_test() {
     };
     let col = 10;
     sweep_raycast(
-        &map,
         &map_dynamic,
         &mut screen,
         &mut zbuffer,

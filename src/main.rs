@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::map::MapDynamic;
-use raycast::ms::{Loadable, Writable};
+use raycast::ms::Writable;
 use raycast::{wl6, Resources};
 
 use raycast::prelude::*;
@@ -64,7 +64,7 @@ fn main() {
             })
             .unwrap_or_default();
 
-        let (map, mut map_dynamic) = Map::from_map_planes(&plane0, &plane1).split_dynamic();
+        let mut map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
 
         // let map = Map::default();
 
@@ -136,9 +136,9 @@ fn main() {
                 player.trigger = true;
             }
 
-            map_dynamic.update(&map, &player);
+            map_dynamic.update(&player);
 
-            player.apply_vel(&player_vel, dt, &map, &map_dynamic);
+            player.apply_vel(&player_vel, dt, &map_dynamic);
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
 
@@ -148,7 +148,6 @@ fn main() {
 
             // for _ in 0..1000 {
             render::sweep_raycast(
-                &map,
                 &map_dynamic,
                 &mut buffer,
                 &mut zbuffer,
@@ -166,7 +165,7 @@ fn main() {
             sprites.draw(&mut buffer, &zbuffer, &resources, frame);
 
             if automap {
-                map.draw_automap(&mut buffer);
+                map_dynamic.map.draw_automap(&mut buffer);
             }
 
             // }
@@ -191,8 +190,9 @@ fn main() {
                 map_dynamic.write(&mut f);
             }
             if window.is_key_pressed(Key::F6, KeyRepeat::No) {
+                let map = map_dynamic.release();
                 let mut f = std::fs::File::open("save.bin").unwrap();
-                map_dynamic = MapDynamic::read_from(&mut f);
+                map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
             }
 
             frame += 1;

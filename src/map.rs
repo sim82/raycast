@@ -1,4 +1,4 @@
-use std::{collections::HashSet, ops::Range};
+use std::{collections::HashSet, io::Write};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -41,6 +41,7 @@ pub enum MapTile {
     Walkable(i32),
     Blocked(i32),
     Door(PlaneOrientation, DoorType, usize),
+    PushWall(i32, usize),
 }
 
 #[derive(Debug, Clone, Default)]
@@ -132,12 +133,19 @@ impl DoorState {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct PushwallState {
+    pub open_f: Fp16,
+}
+
 pub struct Map {
     pub map: [[MapTile; MAP_SIZE]; MAP_SIZE],
 }
 
 pub struct MapDynamic {
+    pub map: Map,
     pub door_states: Vec<DoorState>,
+    pub pushwall_states: Vec<PushwallState>,
 }
 
 impl Default for Map {
@@ -170,10 +178,13 @@ impl Map {
         let mut plane_iter = plane.iter();
         let mut prop_plane_iter = prop_plane.iter();
         let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
+
+        let mut dump_f = std::fs::File::create("map.txt").unwrap();
         for line in &mut map {
             for out in line.iter_mut() {
                 let c = *plane_iter.next().unwrap();
                 let p = *prop_plane_iter.next().unwrap();
+                write!(dump_f, "{:2x}:{:2x} ", c, p).unwrap();
 
                 match c {
                     1..=63 => *out = MapTile::Wall(((c - 1) * 2) as i32),
@@ -185,62 +196,21 @@ impl Map {
                     95 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::SilverLocked, 0),
                     100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator, 0),
                     101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator, 0),
+                    97 => *out = MapTile::PushWall(((c - 1) * 2) as i32, 0),
                     _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
                         *out = MapTile::Blocked(p as i32)
                     }
                     _ => (),
                 }
             }
+            writeln!(dump_f).unwrap();
         }
 
         Self { map }
     }
-    pub fn split_dynamic(mut self) -> (Self, MapDynamic) {
-        let mut door_states = Vec::new();
 
-        for line in &mut self.map {
-            for tile in line.iter_mut() {
-                if let MapTile::Door(_, _, state_index) = tile {
-                    *state_index = door_states.len();
-                    door_states.push(Default::default());
-                }
-            }
-        }
-
-        (self, MapDynamic { door_states })
-    }
-
-    pub fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
-        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
-            return MapTile::Wall(1); // solid outer
-        }
+    fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
         self.map[y as usize][x as usize]
-    }
-
-    pub fn lookup_wall(&self, x: i32, y: i32) -> Option<i32> {
-        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
-            return Some(1); // solid outer
-        }
-        match self.map[y as usize][x as usize] {
-            MapTile::Wall(id) => Some(id),
-            MapTile::Walkable(_) | MapTile::Blocked(_) => None,
-            MapTile::Door(_, _, _) => None,
-        }
-    }
-    pub fn can_walk(&self, map_dynamic: &MapDynamic, x: i32, y: i32) -> bool {
-        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
-            return false; // solid outer
-        }
-        match self.map[y as usize][x as usize] {
-            MapTile::Walkable(_) => true,
-            MapTile::Door(_, _, state_index) => {
-                matches!(
-                    map_dynamic.door_states[state_index].action,
-                    DoorAction::Open(_)
-                )
-            }
-            _ => false,
-        }
     }
 
     pub fn draw_automap(&self, screen: &mut Vec<u32>) {
@@ -249,6 +219,7 @@ impl Map {
             MapTile::Walkable(_) => None,
             MapTile::Blocked(_) => None,
             MapTile::Door(_, _, _) => None,
+            MapTile::PushWall(_, _) => None,
         };
 
         for y in 0..64 {
@@ -276,13 +247,105 @@ impl Map {
 }
 
 impl MapDynamic {
-    pub fn update(&mut self, map: &Map, player: &Player) {
+    pub fn wrap(mut map: Map) -> MapDynamic {
+        let mut door_states = Vec::new();
+        let mut pushwall_states = Vec::new();
+
+        for line in &mut map.map {
+            for tile in line.iter_mut() {
+                if let MapTile::Door(_, _, state_index) = tile {
+                    *state_index = door_states.len();
+                    door_states.push(Default::default());
+                } else if let MapTile::PushWall(_, state_index) = tile {
+                    *state_index = pushwall_states.len();
+                    pushwall_states.push(Default::default());
+                }
+            }
+        }
+
+        MapDynamic {
+            map,
+            door_states,
+            pushwall_states,
+        }
+    }
+
+    pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: Map) -> MapDynamic {
+        let s = r.read_i32::<LittleEndian>().unwrap();
+        let mut door_states = Vec::new();
+        let pushwall_states = Vec::new();
+
+        for _ in 0..s {
+            door_states.push(DoorState::read_from(r));
+        }
+
+        let mut door_count = 0;
+        let mut pushwall_count = 0;
+        for line in &mut map.map {
+            for tile in line.iter_mut() {
+                if let MapTile::Door(_, _, state_index) = tile {
+                    *state_index = door_count;
+                    door_count += 1;
+                } else if let MapTile::PushWall(_, state_index) = tile {
+                    *state_index = pushwall_count;
+                    pushwall_count += 1;
+                }
+            }
+        }
+
+        assert_eq!(door_count, door_states.len());
+        assert_eq!(pushwall_count, pushwall_states.len());
+
+        MapDynamic {
+            map,
+            door_states,
+            pushwall_states,
+        }
+    }
+
+    pub fn release(mut self) -> Map {
+        for line in &mut self.map.map {
+            for tile in line.iter_mut() {
+                if let MapTile::Door(_, _, state_index) = tile {
+                    *state_index = 0;
+                } else if let MapTile::PushWall(_, state_index) = tile {
+                    *state_index = 0;
+                }
+            }
+        }
+
+        self.map
+    }
+
+    pub fn can_walk(&self, x: i32, y: i32) -> bool {
+        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
+            return false; // solid outer
+        }
+        let tile = self.map.lookup_tile(x, y);
+        match tile {
+            MapTile::Walkable(_) => true,
+            MapTile::Door(_, _, state_index) => {
+                matches!(self.door_states[state_index].action, DoorAction::Open(_))
+            }
+            _ => false,
+        }
+    }
+
+    pub fn lookup_tile(&self, x: i32, y: i32) -> MapTile {
+        if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
+            return MapTile::Wall(1); // solid outer
+        }
+        self.map.map[y as usize][x as usize]
+    }
+
+    pub fn update(&mut self, player: &Player) {
         let mut trigger_doors = HashSet::new();
 
         if player.trigger {
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                if let MapTile::Door(_, _, state_index) =
-                    map.lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
+                if let MapTile::Door(_, _, state_index) = self
+                    .map
+                    .lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
                 {
                     trigger_doors.insert(state_index);
                 }
@@ -293,7 +356,7 @@ impl MapDynamic {
 
         for i in 0..4 {
             if let MapTile::Door(_, _, state_index) =
-                map.lookup_tile(tx[i].get_int(), ty[i].get_int())
+                self.map.lookup_tile(tx[i].get_int(), ty[i].get_int())
             {
                 blocked_doors.insert(state_index);
             }
@@ -312,17 +375,5 @@ impl ms::Writable for MapDynamic {
         for state in &self.door_states {
             state.write(w);
         }
-    }
-}
-
-impl ms::Loadable for MapDynamic {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        let s = r.read_i32::<LittleEndian>().unwrap();
-        let mut door_states = Vec::new();
-        for _ in 0..s {
-            door_states.push(DoorState::read_from(r));
-        }
-
-        MapDynamic { door_states }
     }
 }
