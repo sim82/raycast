@@ -114,15 +114,15 @@ pub fn sweep_raycast(
                         break 'outer;
                     }
                     MapTile::OffsetWall(tile, direction, f) => {
-                        let hit_y = ny + ty * f.fract();
+                        let hit_y = ny + ty * f;
 
                         if (hstep_y > 0 && hit_y <= hy.into())
                             || (hstep_y < 0 && hit_y >= hy.into())
                         {
                             if direction == Direction::W && hstep_x < 0 {
-                                dx = Fp16::from(hx) - player.x - f.fract();
+                                dx = Fp16::from(hx) - player.x - f;
                             } else if direction == Direction::E && hstep_x > 0 {
-                                dx = Fp16::from(hx) - player.x + f.fract();
+                                dx = Fp16::from(hx) - player.x + f;
                             } else {
                                 dx = Fp16::from(hx) - player.x;
                             }

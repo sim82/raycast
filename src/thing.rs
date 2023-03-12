@@ -110,6 +110,14 @@ impl Direction {
             Direction::W => 6,
         }
     }
+    pub fn tile_offset(&self) -> (i32, i32) {
+        match self {
+            Direction::N => (0, -1),
+            Direction::E => (1, 0),
+            Direction::S => (0, 1),
+            Direction::W => (-1, 0),
+        }
+    }
 }
 
 pub struct Thing {

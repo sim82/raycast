@@ -142,11 +142,13 @@ pub enum PushwallAction {
     #[default]
     Closed,
     Sliding(Direction, Fp16),
-    Open,
+    Open(i32, i32),
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct PushwallState {
+    x: i32, // FIXME: storing the pos is a q-n-d kludge
+    y: i32,
     pub action: PushwallAction,
 }
 impl PushwallState {
@@ -158,14 +160,23 @@ impl PushwallState {
             (PushwallAction::Sliding(_, f), _) if *f < (FP16_ONE * 2) => {
                 *f += FP16_FRAC_64;
             }
-            (PushwallAction::Sliding(_, _), _) => self.action = PushwallAction::Open,
+            (PushwallAction::Sliding(direction, f), _) => {
+                let (dx, dy) = direction.tile_offset();
+                self.action = PushwallAction::Open(dx * f.get_int(), dy * f.get_int());
+            }
             _ => (),
         }
     }
 }
 
+fn slide_end_offset(direction: Direction, f: Fp16) -> (i32, i32) {
+    todo!()
+}
+
 impl ms::Writable for PushwallState {
     fn write(&self, w: &mut dyn Write) {
+        w.write_i32::<LittleEndian>(self.x).unwrap();
+        w.write_i32::<LittleEndian>(self.y).unwrap();
         match self.action {
             PushwallAction::Closed => w.write_u8(0).unwrap(),
             PushwallAction::Sliding(direction, f) => {
@@ -173,13 +184,19 @@ impl ms::Writable for PushwallState {
                 direction.write(w);
                 f.write(w);
             }
-            PushwallAction::Open => w.write_u8(2).unwrap(),
+            PushwallAction::Open(x, y) => {
+                w.write_u8(2).unwrap();
+                w.write_i32::<LittleEndian>(x).unwrap();
+                w.write_i32::<LittleEndian>(y).unwrap();
+            }
         }
     }
 }
 
 impl ms::Loadable for PushwallState {
     fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let x = r.read_i32::<LittleEndian>().unwrap();
+        let y = r.read_i32::<LittleEndian>().unwrap();
         let action = match r.read_u8().unwrap() {
             0 => PushwallAction::Closed,
             1 => {
@@ -187,10 +204,14 @@ impl ms::Loadable for PushwallState {
                 let f = Fp16::read_from(r);
                 PushwallAction::Sliding(direction, f)
             }
-            2 => PushwallAction::Open,
+            2 => {
+                let x = r.read_i32::<LittleEndian>().unwrap();
+                let y = r.read_i32::<LittleEndian>().unwrap();
+                PushwallAction::Open(x, y)
+            }
             _ => panic!(),
         };
-        Self { action }
+        Self { x, y, action }
     }
 }
 
@@ -310,14 +331,18 @@ impl MapDynamic {
         let mut door_states = Vec::new();
         let mut pushwall_states = Vec::new();
 
-        for line in &mut map.map {
-            for tile in line.iter_mut() {
+        for (y, line) in map.map.iter_mut().enumerate() {
+            for (x, tile) in line.iter_mut().enumerate() {
                 if let MapTile::Door(_, _, state_index) = tile {
                     *state_index = door_states.len();
                     door_states.push(Default::default());
                 } else if let MapTile::PushWall(_, state_index) = tile {
                     *state_index = pushwall_states.len();
-                    pushwall_states.push(Default::default());
+                    pushwall_states.push(PushwallState {
+                        x: x as i32,
+                        y: y as i32,
+                        ..Default::default()
+                    });
                 }
             }
         }
@@ -384,15 +409,42 @@ impl MapDynamic {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return false; // solid outer
         }
+
+        // FIXME: this could be updated once per frame
+        // check if an active / finished pushwall 'patches' over static map data
+        for pushwall_state in &self.pushwall_states {
+            match pushwall_state.action {
+                PushwallAction::Sliding(direction, f) => {
+                    let (dx, dy) = direction.tile_offset();
+                    let fi = f.get_int();
+                    if (fi * dx) + pushwall_state.x == x && (fi * dy) + pushwall_state.y == y {
+                        if let MapTile::PushWall(_, _) =
+                            self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                        {
+                            return false;
+                        }
+                    }
+                }
+                PushwallAction::Open(xoffs, yoffs)
+                    if xoffs + pushwall_state.x == x && yoffs + pushwall_state.y == y =>
+                {
+                    return false
+                }
+
+                _ => (),
+            }
+        }
+
         let tile = self.map.lookup_tile(x, y);
         match tile {
             MapTile::Walkable(_) => true,
             MapTile::Door(_, _, state_index) => {
                 matches!(self.door_states[state_index].action, DoorAction::Open(_))
             }
-            MapTile::PushWall(_, state_index) => {
-                self.pushwall_states[state_index].action == PushwallAction::Open
-            }
+            MapTile::PushWall(_, state_index) => !matches!(
+                self.pushwall_states[state_index].action,
+                PushwallAction::Closed
+            ),
             _ => false,
         }
     }
@@ -401,12 +453,43 @@ impl MapDynamic {
         if x < 0 || y < 0 || (x as usize) >= MAP_SIZE || (y as usize) >= MAP_SIZE {
             return MapTile::Wall(1); // solid outer
         }
+
+        // FIXME: this could be updated once per frame
+        // check if an active / finished pushwall 'patches' over static map data
+        for pushwall_state in &self.pushwall_states {
+            match pushwall_state.action {
+                PushwallAction::Sliding(direction, f) => {
+                    let (dx, dy) = direction.tile_offset();
+                    let fi = f.get_int();
+                    if (fi * dx) + pushwall_state.x == x && (fi * dy) + pushwall_state.y == y {
+                        if let MapTile::PushWall(id, _) =
+                            self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                        {
+                            return MapTile::OffsetWall(id, direction, f.fract());
+                        }
+                    }
+                }
+                PushwallAction::Open(xoffs, yoffs)
+                    if xoffs + pushwall_state.x == x && yoffs + pushwall_state.y == y =>
+                {
+                    if let MapTile::PushWall(id, _) =
+                        self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                    {
+                        return MapTile::Wall(id);
+                    }
+                }
+
+                _ => (),
+            }
+        }
+
         let tile = self.map.map[y as usize][x as usize];
         if let MapTile::PushWall(id, state_index) = tile {
             match self.pushwall_states[state_index].action {
                 PushwallAction::Closed => MapTile::Wall(id),
-                PushwallAction::Sliding(direction, f) => MapTile::OffsetWall(id, direction, f),
-                PushwallAction::Open => MapTile::Walkable(0),
+                _ => MapTile::Walkable(0),
+                // PushwallAction::Sliding(direction, f) => MapTile::OffsetWall(id, direction, f),
+                // PushwallAction::Open(_, _) => MapTile::Walkable(0),
             }
         } else {
             tile
