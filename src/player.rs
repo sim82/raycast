@@ -99,7 +99,7 @@ impl Player {
             let y = ty[ti] + dy;
 
             // if !map.can_walk(x.get_int(), y.get_int()) {
-            println!("collision {}", ti + 1);
+            // println!("collision {}", ti + 1);
             can_move_x &= map_dynamic.can_walk(x.get_int(), ty[ti].get_int());
             can_move_y &= map_dynamic.can_walk(tx[ti].get_int(), y.get_int());
             // }

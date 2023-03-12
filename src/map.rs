@@ -1,4 +1,7 @@
-use std::{collections::HashSet, io::Write};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Write,
+};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -147,19 +150,16 @@ pub struct PushwallState {
     pub action: PushwallAction,
 }
 impl PushwallState {
-    fn update(&mut self, triggered: bool) {
-        match &mut self.action {
-            PushwallAction::Closed if triggered => {
-                self.action = PushwallAction::Sliding(Direction::W, FP16_ZERO)
+    fn update(&mut self, trigger_direction: Option<Direction>) {
+        match (&mut self.action, trigger_direction) {
+            (PushwallAction::Closed, Some(direction)) => {
+                self.action = PushwallAction::Sliding(direction, FP16_ZERO)
             }
-            PushwallAction::Sliding(_, f) if *f < FP16_ONE => {
+            (PushwallAction::Sliding(_, f), _) if *f < FP16_ONE => {
                 *f += FP16_FRAC_64;
             }
-            PushwallAction::Sliding(_, _) => self.action = PushwallAction::Open,
+            (PushwallAction::Sliding(_, _), _) => self.action = PushwallAction::Open,
             _ => (),
-        }
-        if triggered && self.action == PushwallAction::Closed {
-            self.action = PushwallAction::Open;
         }
     }
 }
@@ -415,7 +415,7 @@ impl MapDynamic {
 
     pub fn update(&mut self, player: &Player) {
         let mut trigger_doors = HashSet::new();
-        let mut trigger_pushwalls = HashSet::new();
+        let mut trigger_pushwalls = HashMap::new();
         if player.trigger {
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                 match self
@@ -426,7 +426,18 @@ impl MapDynamic {
                         trigger_doors.insert(state_index);
                     }
                     MapTile::PushWall(_, state_index) => {
-                        trigger_pushwalls.insert(state_index);
+                        // FIXME: quick-n-dirty calc push direction
+                        let push_direction = if dx > 1 {
+                            Direction::E
+                        } else if dx < 0 {
+                            Direction::W
+                        } else if dy > 0 {
+                            Direction::S
+                        } else {
+                            Direction::N
+                        };
+
+                        trigger_pushwalls.insert(state_index, push_direction);
                     }
                     _ => (),
                 }
@@ -448,7 +459,12 @@ impl MapDynamic {
         }
 
         for (i, pushwall_state) in self.pushwall_states.iter_mut().enumerate() {
-            pushwall_state.update(trigger_pushwalls.contains(&i));
+            let trigger = trigger_pushwalls.get(&i);
+            if let Some(dir) = trigger {
+                println!("trigger: {dir:?}");
+            }
+
+            pushwall_state.update(trigger.cloned())
         }
     }
 }

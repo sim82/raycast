@@ -158,42 +158,63 @@ pub fn sweep_raycast(
             } else {
                 // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
                 let lookup_tile = map_dynamic.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
-                if let MapTile::Wall(tile) = lookup_tile {
-                    if from_door {
-                        hit_tile = 100;
-                    } else {
-                        hit_tile = tile;
-                    }
+                match lookup_tile {
+                    MapTile::Wall(tile) => {
+                        if from_door {
+                            hit_tile = 100;
+                        } else {
+                            hit_tile = tile;
+                        }
 
-                    screen.point_world(nx, hy.into(), (tile) % 16);
-                    dx = nx - player.x;
-                    dy = Fp16::from(hy) - player.y;
-                    tex_u = if hstep_y < 0 {
-                        (nx.get_fract() >> 10) as i32
-                    } else {
-                        63 - (nx.get_fract() >> 10) as i32
-                    };
+                        screen.point_world(nx, hy.into(), (tile) % 16);
+                        dx = nx - player.x;
+                        dy = Fp16::from(hy) - player.y;
+                        tex_u = if hstep_y < 0 {
+                            (nx.get_fract() >> 10) as i32
+                        } else {
+                            63 - (nx.get_fract() >> 10) as i32
+                        };
 
-                    break 'outer;
-                } else if let MapTile::Door(PlaneOrientation::Y, door_type, state_index) =
-                    lookup_tile
-                {
-                    let door_state = &map_dynamic.door_states[state_index];
-                    let door_hit = nx + txh;
-                    let door_hit_f = door_hit.fract() - door_state.open_f;
-                    if door_hit_f > FP16_ZERO
-                        && ((hstep_x > 0 && door_hit <= hx.into())
-                            || (hstep_x < 0 && door_hit >= hx.into()))
-                    {
-                        hit_tile = door_type.get_texture_id();
-                        dx = door_hit - player.x;
-                        dy = (Fp16::from(hy) + hstep_y_half) - player.y;
-                        tex_u = (door_hit_f.get_fract() >> 10) as i32;
                         break 'outer;
                     }
-                    from_door = true;
-                } else {
-                    from_door = false;
+                    MapTile::OffsetWall(tile, direction, f) => {
+                        let hit_x = nx + tx * f;
+
+                        if (hstep_x > 0 && hit_x <= hx.into())
+                            || (hstep_x < 0 && hit_x >= hx.into())
+                        {
+                            if direction == Direction::N && hstep_y < 0 {
+                                dy = Fp16::from(hy) - player.y - f;
+                            } else if direction == Direction::S && hstep_y > 0 {
+                                dy = Fp16::from(hy) - player.y + f;
+                            } else {
+                                dy = Fp16::from(hy) - player.y;
+                            }
+                            hit_tile = tile;
+                            dx = hit_x - player.x;
+                            tex_u = ((hit_x).get_fract() >> 10) as i32;
+                            break 'outer;
+                        }
+                    }
+                    MapTile::Door(PlaneOrientation::Y, door_type, state_index) => {
+                        let door_state = &map_dynamic.door_states[state_index];
+                        let door_hit = nx + txh;
+                        let door_hit_f = door_hit.fract() - door_state.open_f;
+                        if door_hit_f > FP16_ZERO
+                            && ((hstep_x > 0 && door_hit <= hx.into())
+                                || (hstep_x < 0 && door_hit >= hx.into()))
+                        {
+                            hit_tile = door_type.get_texture_id();
+                            dx = door_hit - player.x;
+                            dy = (Fp16::from(hy) + hstep_y_half) - player.y;
+                            tex_u = (door_hit_f.get_fract() >> 10) as i32;
+                            break 'outer;
+                        }
+                        from_door = true;
+                    }
+                    _ => {
+                        from_door = false;
+                    }
                 }
                 hy += hstep_y;
                 nx += tx;
