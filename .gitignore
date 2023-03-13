@@ -7,3 +7,4 @@ textures.txt
 *.wl1
 *.bin
 map.txt
+.cargo/

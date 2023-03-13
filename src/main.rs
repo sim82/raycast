@@ -51,10 +51,6 @@ fn main() {
 
         let mut things = Things::from_map_plane(&plane1);
 
-        // let mut sprites = Sprites::from_map_plane(&plane1);
-        // sprites.sprites.append(&mut things.get_sprites());
-        // let mut sprites = Sprites::default();
-
         let mut player = things
             .get_player_start()
             .map(|(x, y, rot)| Player {
@@ -68,8 +64,6 @@ fn main() {
         let mut map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
 
         // let map = Map::default();
-
-        let mut frame = 0;
 
         loop {
             if !window.is_open() || window.is_key_down(Key::Escape) {
@@ -85,12 +79,6 @@ fn main() {
                     chunk.fill(0x00000064);
                 }
             }
-
-            // for i in buffer.iter_mut() {
-            //     // *i = 0x40404040; // write something more funny here!
-
-            //     *i = 0x84848484; // write something more funny here!
-            // }
 
             for i in 0..16 {
                 buffer.point(10 + i, 10 + i, i);
@@ -204,8 +192,6 @@ fn main() {
                 player = Player::read_from(&mut f);
                 map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
             }
-
-            frame += 1;
         }
     }
 }

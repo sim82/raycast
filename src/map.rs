@@ -169,10 +169,6 @@ impl PushwallState {
     }
 }
 
-fn slide_end_offset(direction: Direction, f: Fp16) -> (i32, i32) {
-    todo!()
-}
-
 impl ms::Writable for PushwallState {
     fn write(&self, w: &mut dyn Write) {
         w.write_i32::<LittleEndian>(self.x).unwrap();
@@ -500,10 +496,6 @@ impl MapDynamic {
 
         for (i, pushwall_state) in self.pushwall_states.iter_mut().enumerate() {
             let trigger = trigger_pushwalls.get(&i);
-            if let Some(dir) = trigger {
-                // println!("trigger: {dir:?}");
-            }
-
             pushwall_state.update(trigger.cloned())
         }
 
