@@ -15,8 +15,8 @@ struct StaticMapData {
 }
 
 enum SpawnInfo {
-    StartLevel(i32),
-    LoadSavegame,
+    StartLevel(i32, Option<StaticMapData>),
+    LoadSavegame(Option<StaticMapData>),
 }
 
 fn main() {
@@ -46,8 +46,7 @@ fn main() {
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
-    let mut existing_static_map_data: Option<StaticMapData> = None;
-    let mut spawn = SpawnInfo::StartLevel(0);
+    let mut spawn = SpawnInfo::StartLevel(0, None);
 
     'outer: loop {
         let mut map_dynamic;
@@ -56,7 +55,7 @@ fn main() {
         let mut player;
 
         match spawn {
-            SpawnInfo::StartLevel(id) => {
+            SpawnInfo::StartLevel(id, existing_static_map_data) => {
                 match existing_static_map_data {
                     Some(StaticMapData {
                         map,
@@ -88,7 +87,7 @@ fn main() {
                     .unwrap_or_default();
             }
 
-            SpawnInfo::LoadSavegame => {
+            SpawnInfo::LoadSavegame(existing_static_map_data) => {
                 let mut f = std::fs::File::open("save.bin").unwrap();
                 level_id = f.read_i32::<LittleEndian>().unwrap();
 
@@ -229,32 +228,37 @@ fn main() {
             window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
 
             if window.is_key_released(Key::F1) {
-                existing_static_map_data = Some(StaticMapData {
+                spawn = SpawnInfo::StartLevel(
                     level_id,
-                    map: map_dynamic.release(),
-                    things,
-                });
-                spawn = SpawnInfo::StartLevel(level_id);
+                    Some(StaticMapData {
+                        level_id,
+                        map: map_dynamic.release(),
+                        things,
+                    }),
+                );
                 break;
             }
 
             if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
-                existing_static_map_data = Some(StaticMapData {
-                    level_id,
-                    map: map_dynamic.release(),
-                    things,
-                });
-                spawn = SpawnInfo::StartLevel(level_id - 1);
+                spawn = SpawnInfo::StartLevel(
+                    level_id - 1,
+                    Some(StaticMapData {
+                        level_id,
+                        map: map_dynamic.release(),
+                        things,
+                    }),
+                );
                 break;
             }
             if window.is_key_pressed(Key::F3, KeyRepeat::No) && level_id < 99 {
-                existing_static_map_data = Some(StaticMapData {
-                    level_id,
-                    map: map_dynamic.release(),
-                    things,
-                });
-
-                spawn = SpawnInfo::StartLevel(level_id + 1);
+                spawn = SpawnInfo::StartLevel(
+                    level_id + 1,
+                    Some(StaticMapData {
+                        level_id,
+                        map: map_dynamic.release(),
+                        things,
+                    }),
+                );
                 break;
             }
             if window.is_key_pressed(Key::F5, KeyRepeat::No) {
@@ -264,12 +268,11 @@ fn main() {
                 map_dynamic.write(&mut f);
             }
             if window.is_key_pressed(Key::F6, KeyRepeat::No) {
-                existing_static_map_data = Some(StaticMapData {
+                spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
                     level_id,
                     map: map_dynamic.release(),
                     things,
-                });
-                spawn = SpawnInfo::LoadSavegame;
+                }));
                 break;
             }
         }
