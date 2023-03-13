@@ -6,63 +6,48 @@ pub enum Directionality {
     Undirectional,
 }
 
-pub struct Sprite {
+pub struct SpriteDef {
     pub x: Fp16,
     pub y: Fp16,
     pub id: i32,
     pub directionality: Directionality,
 }
 
-#[derive(Default)]
-pub struct Sprites {
-    pub sprites: Vec<Sprite>,
-    pub screen_pos: Vec<(Fp16, i32, i32)>,
+pub struct SpriteSceenSetup {
+    z: Fp16,
+    screen_x: i32,
+    id: i32,
 }
 
-impl Sprites {
-    pub fn from_map_plane(plane: &[u16]) -> Sprites {
-        assert_eq!(plane.len(), 64 * 64);
-        let mut plane_iter = plane.iter();
-        let props_range = 23..=70;
-        let props_sprite_offset = 2;
-        let mut sprites = Vec::new();
-        for y in 0..64 {
-            for x in 0..64 {
-                let c = (*plane_iter.next().unwrap()) + 1;
-
-                if props_range.contains(&c) {
-                    sprites.push(Sprite {
-                        x: FP16_HALF + x.into(),
-                        y: FP16_HALF + y.into(),
-                        id: (c - props_range.start() + props_sprite_offset) as i32,
-                        directionality: Directionality::Undirectional,
-                    })
-                }
-            }
-        }
-        Sprites {
-            sprites,
-            ..Default::default()
-        }
+pub fn draw(
+    sprite_screen_setup: impl IntoIterator<Item = SpriteSceenSetup>,
+    screen: &mut Vec<u32>,
+    zbuffer: &[Fp16],
+    resources: &Resources,
+) {
+    for SpriteSceenSetup { z, screen_x, id } in sprite_screen_setup.into_iter() {
+        render::draw_sprite(screen, zbuffer, resources, id, screen_x, z);
     }
+}
 
-    pub fn setup_screen_pos_for_player(&mut self, player: &Player) {
-        self.screen_pos.clear();
-        self.screen_pos.reserve(self.sprites.len());
-        let inv_sin = fa_sin(fa_fix_angle(-player.rot));
-        let inv_cos = fa_cos(fa_fix_angle(-player.rot));
+pub fn setup_screen_pos_for_player(
+    sprites: impl IntoIterator<Item = SpriteDef>,
+    player: &Player,
+) -> impl IntoIterator<Item = SpriteSceenSetup> {
+    let inv_sin = fa_sin(fa_fix_angle(-player.rot));
+    let inv_cos = fa_cos(fa_fix_angle(-player.rot));
 
-        for sprite in &self.sprites {
+    let mut screen_pos = sprites
+        .into_iter()
+        .filter_map(|sprite| {
             let x = sprite.x - player.x;
             let y = sprite.y - player.y;
 
             let tx = x * inv_cos - y * inv_sin;
             let ty = y * inv_cos + x * inv_sin;
 
-            if tx <= FP16_HALF
-            /*|| tx.get_int() < 1 */
-            {
-                continue;
+            if tx <= FP16_HALF {
+                return None;
             }
 
             let z = tx;
@@ -92,22 +77,9 @@ impl Sprites {
                 sprite.id
             };
             // println!("viewangle: {viewangle}");
-            self.screen_pos.push((z, screen_x, id));
-        }
-        self.screen_pos.sort_by_key(|(z, _, _)| -(*z));
-    }
-    pub fn draw(
-        &self,
-        screen: &mut Vec<u32>,
-        zbuffer: &[Fp16],
-        resources: &Resources,
-        _frame: i32,
-    ) {
-        for (z, mid, id) in &self.screen_pos {
-            render::draw_sprite(
-                screen, zbuffer, resources, *id, /*+ ((frame / 30) % 8)*/
-                *mid, *z,
-            );
-        }
-    }
+            Some(SpriteSceenSetup { z, screen_x, id })
+        })
+        .collect::<Vec<_>>();
+    screen_pos.sort_by_key(|SpriteSceenSetup { z, .. }| -(*z));
+    screen_pos
 }

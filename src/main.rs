@@ -51,8 +51,8 @@ fn main() {
 
         let mut things = Things::from_map_plane(&plane1);
 
-        let mut sprites = Sprites::from_map_plane(&plane1);
-        sprites.sprites.append(&mut things.get_sprites());
+        // let mut sprites = Sprites::from_map_plane(&plane1);
+        // sprites.sprites.append(&mut things.get_sprites());
         // let mut sprites = Sprites::default();
 
         let mut player = things
@@ -143,9 +143,9 @@ fn main() {
             if !stop_the_world_mode {
                 map_dynamic.update(&player);
                 things.update();
-                sprites.sprites = things.get_sprites();
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
+
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
 
@@ -167,9 +167,9 @@ fn main() {
 
             // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
             // if frame % 4 == 0 {
-            sprites.setup_screen_pos_for_player(&player);
-            // }
-            sprites.draw(&mut buffer, &zbuffer, &resources, frame);
+            let sprite_screen_setup =
+                sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
+            sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);
 
             if automap {
                 map_dynamic.map.draw_automap(&mut buffer);

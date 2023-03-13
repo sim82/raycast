@@ -69,6 +69,7 @@ pub enum EnemyState {
 pub enum ThingType {
     PlayerStart(i32),
     Enemy(Direction, Difficulty, EnemyType, EnemyState),
+    Prop(i32),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -158,6 +159,7 @@ impl Things {
                         20 => ThingType::PlayerStart(0),
                         21 => ThingType::PlayerStart(FA_FRAC_PI_2),
                         22 => ThingType::PlayerStart(FA_PI),
+                        23..=71 => ThingType::Prop((c - 22 + 2) as i32),
                         _ => continue,
                     }
                 };
@@ -228,7 +230,7 @@ impl Things {
         None
     }
 
-    pub fn get_sprites(&self) -> Vec<Sprite> {
+    pub fn get_sprites(&self) -> Vec<SpriteDef> {
         self.things
             .iter()
             .filter_map(|thing| match &thing.thing_type {
@@ -236,13 +238,20 @@ impl Things {
                     let id = enemy_type.sprite_offset()
                     + thing.animation_state.sprite_offset()
                     /*+ direction.sprite_offset()*/;
-                    Some(Sprite {
+                    Some(SpriteDef {
                         id,
                         x: thing.x,
                         y: thing.y,
                         directionality: Directionality::Direction(*direction),
                     })
                 }
+                ThingType::Prop(id) => Some(SpriteDef {
+                    id: *id,
+                    x: thing.x,
+                    y: thing.y,
+                    directionality: Directionality::Undirectional,
+                }),
+
                 _ => None,
             })
             .collect()
