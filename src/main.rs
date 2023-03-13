@@ -1,11 +1,23 @@
 use std::time::Instant;
 
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::map::MapDynamic;
 use raycast::ms::{Loadable, Writable};
 use raycast::{wl6, Resources};
 
 use raycast::prelude::*;
+
+struct StaticMapData {
+    level_id: i32,
+    map: Map,
+    things: Things,
+}
+
+enum SpawnInfo {
+    StartLevel(i32),
+    LoadSavegame,
+}
 
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
@@ -33,37 +45,83 @@ fn main() {
     let mut stop_the_world_mode = false;
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
-    let mut level_id = 0;
+
+    let mut existing_static_map_data: Option<StaticMapData> = None;
+    let mut spawn = SpawnInfo::StartLevel(0);
+
     'outer: loop {
-        println!("start level: {level_id} {}", maps.get_map_name(level_id));
-        let (plane0, plane1) = maps.get_map_planes(level_id);
+        let mut map_dynamic;
+        let mut things;
+        let level_id;
+        let mut player;
+
+        match spawn {
+            SpawnInfo::StartLevel(id) => {
+                match existing_static_map_data {
+                    Some(StaticMapData {
+                        map,
+                        things: x,
+                        level_id: y,
+                    }) if id == y => {
+                        println!("starting level. re-using static map data");
+                        map_dynamic = MapDynamic::wrap(map);
+                        things = x;
+                        level_id = y;
+                    }
+                    _ => {
+                        println!("starting level. load static map data");
+                        let (plane0, plane1) = maps.get_map_planes(id);
+
+                        map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
+                        things = Things::from_map_plane(&plane1);
+                        level_id = id;
+                    }
+                }
+                player = things
+                    .get_player_start()
+                    .map(|(x, y, rot)| Player {
+                        x,
+                        y,
+                        rot,
+                        trigger: false,
+                    })
+                    .unwrap_or_default();
+            }
+
+            SpawnInfo::LoadSavegame => {
+                let mut f = std::fs::File::open("save.bin").unwrap();
+                level_id = f.read_i32::<LittleEndian>().unwrap();
+
+                player = Player::read_from(&mut f);
+                match existing_static_map_data {
+                    Some(StaticMapData {
+                        map,
+                        things: x,
+                        level_id: y,
+                    }) if level_id == y => {
+                        println!("load savegame. re-using static map data");
+                        map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
+                        things = x;
+                    }
+                    _ => {
+                        println!("load savegame. load static map data");
+                        let (plane0, plane1) = maps.get_map_planes(level_id);
+
+                        map_dynamic = MapDynamic::read_and_wrap(
+                            &mut f,
+                            Map::from_map_planes(&plane0, &plane1),
+                        );
+                        things = Things::from_map_plane(&plane1);
+                    }
+                }
+            }
+        }
 
         let mut player_vel = PlayerVel {
             forward: 0,
             right: 0,
             rot: 0,
         };
-        // let mut player = Player {
-        //     x: Fp16 { v: 1933113 },
-        //     y: Fp16 { v: 3793254 },
-        //     rot: 3476,
-        // };
-
-        let mut things = Things::from_map_plane(&plane1);
-
-        let mut player = things
-            .get_player_start()
-            .map(|(x, y, rot)| Player {
-                x,
-                y,
-                rot,
-                trigger: false,
-            })
-            .unwrap_or_default();
-
-        let mut map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
-
-        // let map = Map::default();
 
         loop {
             if !window.is_open() || window.is_key_down(Key::Escape) {
@@ -112,9 +170,6 @@ fn main() {
             }
             if window.is_key_down(Key::A) {
                 player_vel.rot -= rot_speed;
-            }
-            if window.is_key_released(Key::F1) {
-                player = Player::default();
             }
 
             if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
@@ -172,25 +227,50 @@ fn main() {
 
             // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
             window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+
+            if window.is_key_released(Key::F1) {
+                existing_static_map_data = Some(StaticMapData {
+                    level_id,
+                    map: map_dynamic.release(),
+                    things,
+                });
+                spawn = SpawnInfo::StartLevel(level_id);
+                break;
+            }
+
             if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
-                level_id -= 1;
+                existing_static_map_data = Some(StaticMapData {
+                    level_id,
+                    map: map_dynamic.release(),
+                    things,
+                });
+                spawn = SpawnInfo::StartLevel(level_id - 1);
                 break;
             }
             if window.is_key_pressed(Key::F3, KeyRepeat::No) && level_id < 99 {
-                level_id += 1;
+                existing_static_map_data = Some(StaticMapData {
+                    level_id,
+                    map: map_dynamic.release(),
+                    things,
+                });
+
+                spawn = SpawnInfo::StartLevel(level_id + 1);
                 break;
             }
             if window.is_key_pressed(Key::F5, KeyRepeat::No) {
                 let mut f = std::fs::File::create("save.bin").unwrap();
+                f.write_i32::<LittleEndian>(level_id).unwrap();
                 player.write(&mut f);
                 map_dynamic.write(&mut f);
             }
             if window.is_key_pressed(Key::F6, KeyRepeat::No) {
-                let map = map_dynamic.release();
-                let mut f = std::fs::File::open("save.bin").unwrap();
-
-                player = Player::read_from(&mut f);
-                map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
+                existing_static_map_data = Some(StaticMapData {
+                    level_id,
+                    map: map_dynamic.release(),
+                    things,
+                });
+                spawn = SpawnInfo::LoadSavegame;
+                break;
             }
         }
     }
