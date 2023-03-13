@@ -68,7 +68,10 @@ fn main() {
                         level_id = y;
                     }
                     _ => {
-                        println!("starting level. load static map data");
+                        println!(
+                            "starting level. load static map data {}",
+                            maps.get_map_name(id)
+                        );
                         let (plane0, plane1) = maps.get_map_planes(id);
 
                         map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
@@ -103,7 +106,10 @@ fn main() {
                         things = x;
                     }
                     _ => {
-                        println!("load savegame. load static map data");
+                        println!(
+                            "load savegame. load static map data {}",
+                            maps.get_map_name(level_id)
+                        );
                         let (plane0, plane1) = maps.get_map_planes(level_id);
 
                         map_dynamic = MapDynamic::read_and_wrap(
