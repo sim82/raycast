@@ -326,8 +326,6 @@ impl ThingDefs {
 }
 
 pub struct Thing {
-    pub x: Fp16,
-    pub y: Fp16,
     pub animation_frames: Option<AnimationFrames>,
     pub sprite_index: i32,
     pub anim_index: i32,
@@ -346,16 +344,12 @@ impl Things {
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
             match thing_def.thing_type {
                 ThingType::Enemy(_, _, enemy_type, _) => things.push(Thing {
-                    x: thing_def.x,
-                    y: thing_def.y,
                     animation_frames: Some(enemy_type.animation_frames(AnimationPhase::Walk)),
                     sprite_index: 0,
                     anim_index: 0,
                     static_index: i,
                 }),
                 ThingType::Prop(sprite_index) => things.push(Thing {
-                    x: thing_def.x, // fixme: do not need dynamic x/y for props
-                    y: thing_def.y,
                     animation_frames: None,
                     sprite_index,
                     anim_index: 0,
@@ -390,26 +384,27 @@ impl Things {
     pub fn get_sprites(&self, thing_defs: &ThingDefs) -> Vec<SpriteDef> {
         self.things
             .iter()
-            .filter_map(
-                |thing| match &thing_defs.thing_defs[thing.static_index].thing_type {
+            .filter_map(|thing| {
+                let thing_def = &thing_defs.thing_defs[thing.static_index];
+                match thing_def.thing_type {
                     ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
                         Some(SpriteDef {
                             id: thing.sprite_index,
-                            x: thing.x,
-                            y: thing.y,
-                            directionality: Directionality::Direction(*direction),
+                            x: thing_def.x,
+                            y: thing_def.y,
+                            directionality: Directionality::Direction(direction),
                         })
                     }
                     ThingType::Prop(id) => Some(SpriteDef {
-                        id: *id,
-                        x: thing.x,
-                        y: thing.y,
+                        id,
+                        x: thing_def.x,
+                        y: thing_def.y,
                         directionality: Directionality::Undirectional,
                     }),
 
                     _ => None,
-                },
-            )
+                }
+            })
             .collect()
     }
 }
