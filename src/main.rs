@@ -4,6 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::map::MapDynamic;
 use raycast::ms::{Loadable, Writable};
+use raycast::thing::ThingsDyn;
 use raycast::{wl6, Resources};
 
 use raycast::prelude::*;
@@ -53,7 +54,6 @@ fn main() {
         let mut things;
         let level_id;
         let mut player;
-
         match spawn {
             SpawnInfo::StartLevel(id, existing_static_map_data) => {
                 match existing_static_map_data {
@@ -79,6 +79,7 @@ fn main() {
                         level_id = id;
                     }
                 }
+
                 player = things
                     .get_player_start()
                     .map(|(x, y, rot)| Player {
@@ -121,6 +122,8 @@ fn main() {
                 }
             }
         }
+
+        let mut things_dyn = ThingsDyn::from_things(&things);
 
         let mut player_vel = PlayerVel {
             forward: 0,
@@ -190,7 +193,7 @@ fn main() {
 
             if !stop_the_world_mode {
                 map_dynamic.update(&player);
-                things.update();
+                things_dyn.update();
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
 
@@ -216,7 +219,7 @@ fn main() {
             // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
             // if frame % 4 == 0 {
             let sprite_screen_setup =
-                sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
+                sprite::setup_screen_pos_for_player(things_dyn.get_sprites(&things), &player);
             sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);
 
             if automap {
@@ -244,7 +247,6 @@ fn main() {
                 );
                 break;
             }
-
             if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
                 spawn = SpawnInfo::StartLevel(
                     level_id - 1,

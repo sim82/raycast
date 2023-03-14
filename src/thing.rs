@@ -1,6 +1,7 @@
+use crate::prelude::*;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
-use crate::prelude::*;
+pub mod anim_def;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Difficulty {
@@ -18,16 +19,110 @@ pub enum EnemyType {
     Rotten,
 }
 
+pub struct AnimationFrames {
+    pub frames: &'static [i32],
+    pub direction_stride: i32,
+}
+
+const START_BROWN: i32 = 51;
+const NUM_HUMANOID: i32 = 49;
+const NUM_CANINE: i32 = 39;
+const NUM_ROTTOID: i32 = 51;
+
 impl EnemyType {
     pub fn sprite_offset(&self) -> i32 {
         match self {
-            EnemyType::Brown => 51,
-            EnemyType::White => 51 + 49 + 49 + 49 + 49,
-            EnemyType::Blue => 51 + 49 + 49,
-            EnemyType::Woof => 51 + 49,
-            EnemyType::Rotten => 51 + 49 + 49 + 49,
+            EnemyType::Brown => START_BROWN,
+            EnemyType::White => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE + NUM_ROTTOID,
+            EnemyType::Blue => START_BROWN + NUM_HUMANOID + NUM_CANINE,
+            EnemyType::Woof => START_BROWN + NUM_HUMANOID,
+            EnemyType::Rotten => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE,
         }
     }
+
+    pub fn animation_frames(&self, phase: AnimationPhase) -> AnimationFrames {
+        match self {
+            EnemyType::Brown => match phase {
+                AnimationPhase::Stand => AnimationFrames {
+                    frames: &*anim_def::BROWN_STAND,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Walk => AnimationFrames {
+                    frames: &*anim_def::BROWN_WALK,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Die => todo!(),
+                AnimationPhase::Dead => todo!(),
+                AnimationPhase::Shoot => todo!(),
+            },
+            EnemyType::White => match phase {
+                AnimationPhase::Stand => AnimationFrames {
+                    frames: &*anim_def::WHITE_STAND,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Walk => AnimationFrames {
+                    frames: &*anim_def::WHITE_WALK,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Die => todo!(),
+                AnimationPhase::Dead => todo!(),
+                AnimationPhase::Shoot => todo!(),
+            },
+            EnemyType::Blue => match phase {
+                AnimationPhase::Stand => AnimationFrames {
+                    frames: &*anim_def::BLUE_STAND,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Walk => AnimationFrames {
+                    frames: &*anim_def::BLUE_WALK,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Die => todo!(),
+                AnimationPhase::Dead => todo!(),
+                AnimationPhase::Shoot => todo!(),
+            },
+            EnemyType::Woof => match phase {
+                AnimationPhase::Stand => AnimationFrames {
+                    frames: &*anim_def::WOOF_STAND,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Walk => AnimationFrames {
+                    frames: &*anim_def::WOOF_WALK,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Die => todo!(),
+                AnimationPhase::Dead => todo!(),
+                AnimationPhase::Shoot => todo!(),
+            },
+            EnemyType::Rotten => match phase {
+                AnimationPhase::Stand => AnimationFrames {
+                    frames: &*anim_def::ROTTEN_STAND,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Walk => AnimationFrames {
+                    frames: &*anim_def::ROTTEN_WALK,
+                    direction_stride: 1,
+                },
+                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Die => todo!(),
+                AnimationPhase::Dead => todo!(),
+                AnimationPhase::Shoot => todo!(),
+            },
+        }
+    }
+}
+
+pub enum AnimationPhase {
+    Stand,
+    Walk,
+    Pain,
+    Die,
+    Dead,
+    Shoot,
 }
 
 pub enum AnimationState {
@@ -37,6 +132,11 @@ pub enum AnimationState {
     Walk3,
     Walk4,
 }
+
+// trait AnimationControl {
+//     fn sprite_offset(&self) -> i32;
+
+// }
 
 impl AnimationState {
     pub fn sprite_offset(&self) -> i32 {
@@ -134,7 +234,6 @@ pub struct Thing {
     pub thing_type: ThingType,
     pub x: Fp16,
     pub y: Fp16,
-    pub animation_state: AnimationState, // FIXME: hack, this does not belong here
 }
 
 pub struct Things {
@@ -168,7 +267,6 @@ impl Things {
                     thing_type,
                     x: FP16_HALF + x.into(),
                     y: FP16_HALF + y.into(),
-                    animation_state: AnimationState::Walk1,
                 });
             }
         }
@@ -230,31 +328,90 @@ impl Things {
         None
     }
 
-    pub fn get_sprites(&self) -> Vec<SpriteDef> {
-        self.things
-            .iter()
-            .filter_map(|thing| match &thing.thing_type {
-                ThingType::Enemy(direction, _difficulty, enemy_type, _state) => {
-                    let id = enemy_type.sprite_offset()
-                    + thing.animation_state.sprite_offset()
-                    /*+ direction.sprite_offset()*/;
-                    Some(SpriteDef {
-                        id,
-                        x: thing.x,
-                        y: thing.y,
-                        directionality: Directionality::Direction(*direction),
-                    })
-                }
-                ThingType::Prop(id) => Some(SpriteDef {
-                    id: *id,
-                    x: thing.x,
-                    y: thing.y,
-                    directionality: Directionality::Undirectional,
-                }),
+    // pub fn get_sprites(&self) -> Vec<SpriteDef> {
+    //     self.things
+    //         .iter()
+    //         .filter_map(|thing| match &thing.thing_type {
+    //             ThingType::Enemy(direction, _difficulty, enemy_type, _state) => {
+    //                 let id = enemy_type.sprite_offset()
+    //                 + thing.animation_state.sprite_offset()
+    //                 /*+ direction.sprite_offset()*/;
+    //                 Some(SpriteDef {
+    //                     id,
+    //                     x: thing.x,
+    //                     y: thing.y,
+    //                     directionality: Directionality::Direction(*direction),
+    //                 })
+    //             }
+    //             ThingType::Prop(id) => Some(SpriteDef {
+    //                 id: *id,
+    //                 x: thing.x,
+    //                 y: thing.y,
+    //                 directionality: Directionality::Undirectional,
+    //             }),
 
-                _ => None,
-            })
-            .collect()
+    //             _ => None,
+    //         })
+    //         .collect()
+    // }
+
+    // pub fn update(&mut self) {
+    //     self.anim_timeout -= 1;
+    //     if self.anim_timeout > 0 {
+    //         return;
+    //     }
+    //     self.anim_timeout = 10;
+
+    //     for thing in &mut self.things {
+    //         thing.animation_state = thing.animation_state.advance_animation();
+    //     }
+    // }
+}
+
+pub struct ThingDyn {
+    pub x: Fp16,
+    pub y: Fp16,
+    pub animation_frames: Option<AnimationFrames>,
+    pub sprite_index: i32,
+    pub anim_index: i32,
+    pub static_index: usize,
+}
+
+pub struct ThingsDyn {
+    pub things: Vec<ThingDyn>,
+    pub anim_timeout: i32,
+}
+
+impl ThingsDyn {
+    pub fn from_things(thing_defs: &Things) -> Self {
+        let mut things = Vec::new();
+
+        for (i, thing_def) in thing_defs.things.iter().enumerate() {
+            match thing_def.thing_type {
+                ThingType::Enemy(_, _, enemy_type, _) => things.push(ThingDyn {
+                    x: thing_def.x,
+                    y: thing_def.y,
+                    animation_frames: Some(enemy_type.animation_frames(AnimationPhase::Walk)),
+                    sprite_index: 0,
+                    anim_index: 0,
+                    static_index: i,
+                }),
+                ThingType::Prop(sprite_index) => things.push(ThingDyn {
+                    x: thing_def.x, // fixme: do not need dynamic x/y for props
+                    y: thing_def.y,
+                    animation_frames: None,
+                    sprite_index,
+                    anim_index: 0,
+                    static_index: i,
+                }),
+                ThingType::PlayerStart(_) => (),
+            }
+        }
+
+        ThingsDyn {
+            things,
+            anim_timeout: 0,
+        }
     }
 
     pub fn update(&mut self) {
@@ -265,7 +422,39 @@ impl Things {
         self.anim_timeout = 10;
 
         for thing in &mut self.things {
-            thing.animation_state = thing.animation_state.advance_animation();
+            thing.anim_index += 1;
+
+            if let Some(frames) = &thing.animation_frames {
+                thing.sprite_index =
+                    frames.frames[(thing.anim_index as usize) % frames.frames.len()];
+            }
         }
+    }
+    pub fn get_sprites(&self, thing_defs: &Things) -> Vec<SpriteDef> {
+        self.things
+            .iter()
+            .filter_map(
+                |thing| match &thing_defs.things[thing.static_index].thing_type {
+                    ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
+                        // let id =
+                        /*+ direction.sprite_offset()*/
+                        Some(SpriteDef {
+                            id: thing.sprite_index,
+                            x: thing.x,
+                            y: thing.y,
+                            directionality: Directionality::Direction(*direction),
+                        })
+                    }
+                    ThingType::Prop(id) => Some(SpriteDef {
+                        id: *id,
+                        x: thing.x,
+                        y: thing.y,
+                        directionality: Directionality::Undirectional,
+                    }),
+
+                    _ => None,
+                },
+            )
+            .collect()
     }
 }
