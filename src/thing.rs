@@ -1,5 +1,7 @@
+use core::num;
+
 use crate::prelude::*;
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub mod anim_def;
 
@@ -19,10 +21,10 @@ pub enum EnemyType {
     Rotten,
 }
 
-pub struct AnimationFrames {
-    pub frames: &'static [i32],
-    pub direction_stride: i32,
-}
+// pub struct AnimationFrames {
+//     pub frames: &'static [i32],
+//     pub direction_stride: i32,
+// }
 
 const START_BROWN: i32 = 51;
 const NUM_HUMANOID: i32 = 49;
@@ -40,73 +42,45 @@ impl EnemyType {
         }
     }
 
-    pub fn animation_frames(&self, phase: AnimationPhase) -> AnimationFrames {
+    pub fn animation_frames(&self, phase: AnimationPhase) -> &'static [i32] {
         match self {
             EnemyType::Brown => match phase {
-                AnimationPhase::Stand => AnimationFrames {
-                    frames: &*anim_def::BROWN_STAND,
-                    direction_stride: 1,
-                },
-                AnimationPhase::Walk => AnimationFrames {
-                    frames: &*anim_def::BROWN_WALK,
-                    direction_stride: 1,
-                },
+                AnimationPhase::Stand => &*anim_def::BROWN_STAND,
+
+                AnimationPhase::Walk => &*anim_def::BROWN_WALK,
+
                 AnimationPhase::Pain => todo!(),
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
             EnemyType::White => match phase {
-                AnimationPhase::Stand => AnimationFrames {
-                    frames: &*anim_def::WHITE_STAND,
-                    direction_stride: 1,
-                },
-                AnimationPhase::Walk => AnimationFrames {
-                    frames: &*anim_def::WHITE_WALK,
-                    direction_stride: 1,
-                },
+                AnimationPhase::Stand => &*anim_def::WHITE_STAND,
+                AnimationPhase::Walk => &*anim_def::WHITE_WALK,
                 AnimationPhase::Pain => todo!(),
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
             EnemyType::Blue => match phase {
-                AnimationPhase::Stand => AnimationFrames {
-                    frames: &*anim_def::BLUE_STAND,
-                    direction_stride: 1,
-                },
-                AnimationPhase::Walk => AnimationFrames {
-                    frames: &*anim_def::BLUE_WALK,
-                    direction_stride: 1,
-                },
+                AnimationPhase::Stand => &*anim_def::BLUE_STAND,
+                AnimationPhase::Walk => &*anim_def::BLUE_WALK,
                 AnimationPhase::Pain => todo!(),
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
             EnemyType::Woof => match phase {
-                AnimationPhase::Stand => AnimationFrames {
-                    frames: &*anim_def::WOOF_STAND,
-                    direction_stride: 1,
-                },
-                AnimationPhase::Walk => AnimationFrames {
-                    frames: &*anim_def::WOOF_WALK,
-                    direction_stride: 1,
-                },
+                AnimationPhase::Stand => &*anim_def::WOOF_STAND,
+                AnimationPhase::Walk => &*anim_def::WOOF_WALK,
                 AnimationPhase::Pain => todo!(),
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
             EnemyType::Rotten => match phase {
-                AnimationPhase::Stand => AnimationFrames {
-                    frames: &*anim_def::ROTTEN_STAND,
-                    direction_stride: 1,
-                },
-                AnimationPhase::Walk => AnimationFrames {
-                    frames: &*anim_def::ROTTEN_WALK,
-                    direction_stride: 1,
-                },
+                AnimationPhase::Stand => &*anim_def::ROTTEN_STAND,
+                AnimationPhase::Walk => &*anim_def::ROTTEN_WALK,
                 AnimationPhase::Pain => todo!(),
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
@@ -325,16 +299,110 @@ impl ThingDefs {
     }
 }
 
+pub enum Actor {
+    Item { collected: bool },
+    Guard,
+}
+
+impl ms::Writable for Actor {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        match self {
+            Actor::Item { collected } => {
+                w.write_u8(0).unwrap();
+                w.write_u8(if *collected { 1 } else { 0 }).unwrap();
+            }
+            Actor::Guard => {
+                w.write_u8(1).unwrap();
+            }
+        }
+    }
+}
+
+impl ms::Loadable for Actor {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        match r.read_u8().unwrap() {
+            0 => Actor::Item {
+                collected: r.read_u8().unwrap() != 0,
+            },
+            1 => Actor::Guard,
+            _ => panic!(),
+        }
+    }
+}
+
 pub struct Thing {
-    pub animation_frames: Option<AnimationFrames>,
+    pub animation_frames: Vec<i32>, // FIXME
     pub sprite_index: i32,
     pub anim_index: i32,
+    pub actor: Actor,
     pub static_index: usize,
+}
+
+impl ms::Writable for Thing {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        w.write_u32::<LittleEndian>(self.animation_frames.len() as u32)
+            .unwrap();
+        for f in &self.animation_frames {
+            w.write_i32::<LittleEndian>(*f).unwrap();
+        }
+        w.write_i32::<LittleEndian>(self.sprite_index).unwrap();
+        w.write_i32::<LittleEndian>(self.anim_index).unwrap();
+        w.write_i32::<LittleEndian>(self.static_index as i32)
+            .unwrap(); // FIXME
+        self.actor.write(w);
+    }
+}
+
+impl ms::Loadable for Thing {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let num_anim_frames = r.read_u32::<LittleEndian>().unwrap();
+        let mut animation_frames = Vec::new();
+        for _ in 0..num_anim_frames {
+            animation_frames.push(r.read_i32::<LittleEndian>().unwrap());
+        }
+        let sprite_index = r.read_i32::<LittleEndian>().unwrap();
+        let anim_index = r.read_i32::<LittleEndian>().unwrap();
+        let static_index = r.read_i32::<LittleEndian>().unwrap() as usize;
+        let actor = Actor::read_from(r);
+        Self {
+            animation_frames,
+            sprite_index,
+            anim_index,
+            actor,
+            static_index,
+        }
+    }
 }
 
 pub struct Things {
     pub things: Vec<Thing>,
     pub anim_timeout: i32,
+}
+
+impl ms::Writable for Things {
+    fn write(&self, w: &mut dyn std::io::Write) {
+        w.write_u32::<LittleEndian>(self.things.len() as u32)
+            .unwrap();
+        for thing in &self.things {
+            thing.write(w);
+        }
+        w.write_i32::<LittleEndian>(self.anim_timeout).unwrap();
+    }
+}
+
+impl ms::Loadable for Things {
+    fn read_from(r: &mut dyn std::io::Read) -> Self {
+        let num_things = r.read_u32::<LittleEndian>().unwrap();
+        let mut things = Vec::new();
+        for _ in 0..num_things {
+            things.push(Thing::read_from(r));
+        }
+        let anim_timeout = r.read_i32::<LittleEndian>().unwrap();
+        Self {
+            things,
+            anim_timeout,
+        }
+    }
 }
 
 impl Things {
@@ -344,16 +412,18 @@ impl Things {
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
             match thing_def.thing_type {
                 ThingType::Enemy(_, _, enemy_type, _) => things.push(Thing {
-                    animation_frames: Some(enemy_type.animation_frames(AnimationPhase::Walk)),
+                    animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
                     sprite_index: 0,
                     anim_index: 0,
                     static_index: i,
+                    actor: Actor::Item { collected: false },
                 }),
                 ThingType::Prop(sprite_index) => things.push(Thing {
-                    animation_frames: None,
+                    animation_frames: Vec::new(),
                     sprite_index,
                     anim_index: 0,
                     static_index: i,
+                    actor: Actor::Guard,
                 }),
                 ThingType::PlayerStart(_) => (),
             }
@@ -375,9 +445,9 @@ impl Things {
         for thing in &mut self.things {
             thing.anim_index += 1;
 
-            if let Some(frames) = &thing.animation_frames {
-                thing.sprite_index =
-                    frames.frames[(thing.anim_index as usize) % frames.frames.len()];
+            if !thing.animation_frames.is_empty() {
+                thing.sprite_index = thing.animation_frames
+                    [(thing.anim_index as usize) % thing.animation_frames.len()];
             }
         }
     }

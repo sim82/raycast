@@ -54,6 +54,8 @@ fn main() {
         let mut things;
         let level_id;
         let mut player;
+        let mut things_dyn;
+
         match spawn {
             SpawnInfo::StartLevel(id, existing_static_map_data) => {
                 match existing_static_map_data {
@@ -65,6 +67,7 @@ fn main() {
                         println!("starting level. re-using static map data");
                         map_dynamic = MapDynamic::wrap(map);
                         things = x;
+                        things_dyn = Things::from_thing_defs(&things);
                         level_id = y;
                     }
                     _ => {
@@ -76,6 +79,7 @@ fn main() {
 
                         map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
                         things = ThingDefs::from_map_plane(&plane1);
+                        things_dyn = Things::from_thing_defs(&things);
                         level_id = id;
                     }
                 }
@@ -105,6 +109,7 @@ fn main() {
                         println!("load savegame. re-using static map data");
                         map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
                         things = x;
+                        things_dyn = Things::read_from(&mut f);
                     }
                     _ => {
                         println!(
@@ -118,12 +123,11 @@ fn main() {
                             Map::from_map_planes(&plane0, &plane1),
                         );
                         things = ThingDefs::from_map_plane(&plane1);
+                        things_dyn = Things::read_from(&mut f);
                     }
                 }
             }
         }
-
-        let mut things_dyn = Things::from_thing_defs(&things);
 
         let mut player_vel = PlayerVel {
             forward: 0,
@@ -274,6 +278,7 @@ fn main() {
                 f.write_i32::<LittleEndian>(level_id).unwrap();
                 player.write(&mut f);
                 map_dynamic.write(&mut f);
+                things_dyn.write(&mut f);
             }
             if window.is_key_pressed(Key::F6, KeyRepeat::No) {
                 spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
