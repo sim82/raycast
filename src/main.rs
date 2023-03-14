@@ -12,7 +12,7 @@ use raycast::prelude::*;
 struct StaticMapData {
     level_id: i32,
     map: Map,
-    things: ThingDefs,
+    thing_defs: ThingDefs,
 }
 
 enum SpawnInfo {
@@ -51,23 +51,21 @@ fn main() {
 
     'outer: loop {
         let mut map_dynamic;
-        let mut things;
         let level_id;
         let mut player;
-        let mut things_dyn;
+        let mut things;
 
         match spawn {
             SpawnInfo::StartLevel(id, existing_static_map_data) => {
                 match existing_static_map_data {
                     Some(StaticMapData {
                         map,
-                        things: x,
+                        thing_defs,
                         level_id: y,
                     }) if id == y => {
                         println!("starting level. re-using static map data");
                         map_dynamic = MapDynamic::wrap(map);
-                        things = x;
-                        things_dyn = Things::from_thing_defs(&things);
+                        things = Things::from_thing_defs(thing_defs);
                         level_id = y;
                     }
                     _ => {
@@ -78,13 +76,13 @@ fn main() {
                         let (plane0, plane1) = maps.get_map_planes(id);
 
                         map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
-                        things = ThingDefs::from_map_plane(&plane1);
-                        things_dyn = Things::from_thing_defs(&things);
+                        things = Things::from_thing_defs(ThingDefs::from_map_plane(&plane1));
                         level_id = id;
                     }
                 }
 
                 player = things
+                    .thing_defs
                     .get_player_start()
                     .map(|(x, y, rot)| Player {
                         x,
@@ -103,13 +101,12 @@ fn main() {
                 match existing_static_map_data {
                     Some(StaticMapData {
                         map,
-                        things: x,
+                        thing_defs,
                         level_id: y,
                     }) if level_id == y => {
                         println!("load savegame. re-using static map data");
                         map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
-                        things = x;
-                        things_dyn = Things::read_from(&mut f);
+                        things = Things::read_from(&mut f, thing_defs);
                     }
                     _ => {
                         println!(
@@ -122,8 +119,7 @@ fn main() {
                             &mut f,
                             Map::from_map_planes(&plane0, &plane1),
                         );
-                        things = ThingDefs::from_map_plane(&plane1);
-                        things_dyn = Things::read_from(&mut f);
+                        things = Things::read_from(&mut f, ThingDefs::from_map_plane(&plane1));
                     }
                 }
             }
@@ -197,7 +193,7 @@ fn main() {
 
             if !stop_the_world_mode {
                 map_dynamic.update(&player);
-                things_dyn.update();
+                things.update(&player);
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
 
@@ -223,7 +219,7 @@ fn main() {
             // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
             // if frame % 4 == 0 {
             let sprite_screen_setup =
-                sprite::setup_screen_pos_for_player(things_dyn.get_sprites(&things), &player);
+                sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
             sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);
 
             if automap {
@@ -246,7 +242,7 @@ fn main() {
                     Some(StaticMapData {
                         level_id,
                         map: map_dynamic.release(),
-                        things,
+                        thing_defs: things.release(),
                     }),
                 );
                 break;
@@ -257,7 +253,7 @@ fn main() {
                     Some(StaticMapData {
                         level_id,
                         map: map_dynamic.release(),
-                        things,
+                        thing_defs: things.release(),
                     }),
                 );
                 break;
@@ -268,7 +264,7 @@ fn main() {
                     Some(StaticMapData {
                         level_id,
                         map: map_dynamic.release(),
-                        things,
+                        thing_defs: things.release(),
                     }),
                 );
                 break;
@@ -278,13 +274,13 @@ fn main() {
                 f.write_i32::<LittleEndian>(level_id).unwrap();
                 player.write(&mut f);
                 map_dynamic.write(&mut f);
-                things_dyn.write(&mut f);
+                things.write(&mut f);
             }
             if window.is_key_pressed(Key::F6, KeyRepeat::No) {
                 spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
                     level_id,
                     map: map_dynamic.release(),
-                    things,
+                    thing_defs: things.release(),
                 }));
                 break;
             }

@@ -1,6 +1,6 @@
 use core::num;
 
-use crate::prelude::*;
+use crate::{ms::Loadable, prelude::*};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub mod anim_def;
@@ -375,6 +375,7 @@ impl ms::Loadable for Thing {
 }
 
 pub struct Things {
+    pub thing_defs: ThingDefs,
     pub things: Vec<Thing>,
     pub anim_timeout: i32,
 }
@@ -390,8 +391,8 @@ impl ms::Writable for Things {
     }
 }
 
-impl ms::Loadable for Things {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
+impl Things {
+    pub fn read_from(r: &mut dyn std::io::Read, thing_defs: ThingDefs) -> Self {
         let num_things = r.read_u32::<LittleEndian>().unwrap();
         let mut things = Vec::new();
         for _ in 0..num_things {
@@ -399,14 +400,12 @@ impl ms::Loadable for Things {
         }
         let anim_timeout = r.read_i32::<LittleEndian>().unwrap();
         Self {
+            thing_defs,
             things,
             anim_timeout,
         }
     }
-}
-
-impl Things {
-    pub fn from_thing_defs(thing_defs: &ThingDefs) -> Self {
+    pub fn from_thing_defs(thing_defs: ThingDefs) -> Self {
         let mut things = Vec::new();
 
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
@@ -430,12 +429,13 @@ impl Things {
         }
 
         Things {
+            thing_defs,
             things,
             anim_timeout: 0,
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, player: &Player) {
         self.anim_timeout -= 1;
         if self.anim_timeout > 0 {
             return;
@@ -451,11 +451,11 @@ impl Things {
             }
         }
     }
-    pub fn get_sprites(&self, thing_defs: &ThingDefs) -> Vec<SpriteDef> {
+    pub fn get_sprites(&self) -> Vec<SpriteDef> {
         self.things
             .iter()
             .filter_map(|thing| {
-                let thing_def = &thing_defs.thing_defs[thing.static_index];
+                let thing_def = &self.thing_defs.thing_defs[thing.static_index];
                 match thing_def.thing_type {
                     ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
                         Some(SpriteDef {
@@ -476,5 +476,9 @@ impl Things {
                 }
             })
             .collect()
+    }
+
+    pub fn release(self) -> ThingDefs {
+        self.thing_defs
     }
 }
