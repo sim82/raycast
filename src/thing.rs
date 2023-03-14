@@ -204,6 +204,7 @@ impl Direction {
     }
 }
 
+#[derive(Debug)]
 pub struct ThingDef {
     pub thing_type: ThingType,
     pub x: Fp16,
@@ -299,6 +300,7 @@ impl ThingDefs {
     }
 }
 
+#[derive(Debug)]
 pub enum Actor {
     Item { collected: bool },
     Guard,
@@ -415,14 +417,14 @@ impl Things {
                     sprite_index: 0,
                     anim_index: 0,
                     static_index: i,
-                    actor: Actor::Item { collected: false },
+                    actor: Actor::Guard,
                 }),
                 ThingType::Prop(sprite_index) => things.push(Thing {
                     animation_frames: Vec::new(),
                     sprite_index,
                     anim_index: 0,
                     static_index: i,
-                    actor: Actor::Guard,
+                    actor: Actor::Item { collected: false },
                 }),
                 ThingType::PlayerStart(_) => (),
             }
@@ -449,6 +451,21 @@ impl Things {
                 thing.sprite_index = thing.animation_frames
                     [(thing.anim_index as usize) % thing.animation_frames.len()];
             }
+
+            let thing_def = &self.thing_defs.thing_defs[thing.static_index];
+            #[allow(clippy::single_match)]
+            match (thing_def.thing_type, &mut thing.actor) {
+                (ThingType::Prop(_id), Actor::Item { collected }) => {
+                    let dx = player.x - thing_def.x;
+                    let dy = player.y - thing_def.y;
+                    if dx.get_int().abs() == 0 && dy.get_int().abs() == 0 {
+                        println!("collected: {:?}", thing_def);
+
+                        *collected = true;
+                    }
+                }
+                _ => (),
+            }
         }
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {
@@ -456,8 +473,9 @@ impl Things {
             .iter()
             .filter_map(|thing| {
                 let thing_def = &self.thing_defs.thing_defs[thing.static_index];
-                match thing_def.thing_type {
-                    ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
+                // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
+                match (thing_def.thing_type, &thing.actor) {
+                    (ThingType::Enemy(direction, _difficulty, _enemy_type, _state), _) => {
                         Some(SpriteDef {
                             id: thing.sprite_index,
                             x: thing_def.x,
@@ -465,15 +483,35 @@ impl Things {
                             directionality: Directionality::Direction(direction),
                         })
                     }
-                    ThingType::Prop(id) => Some(SpriteDef {
-                        id,
-                        x: thing_def.x,
-                        y: thing_def.y,
-                        directionality: Directionality::Undirectional,
-                    }),
-
+                    (ThingType::Prop(id), Actor::Item { collected }) if !*collected => {
+                        Some(SpriteDef {
+                            id,
+                            x: thing_def.x,
+                            y: thing_def.y,
+                            directionality: Directionality::Undirectional,
+                        })
+                    }
                     _ => None,
                 }
+                // match thing_def.thing_type {
+                //     ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
+                //         Some(SpriteDef {
+                //             id: thing.sprite_index,
+                //             x: thing_def.x,
+                //             y: thing_def.y,
+                //             directionality: Directionality::Direction(direction),
+                //         })
+                //     }
+                //     ThingType::Prop(id)/*if !*collected */=> {
+                //         Some(SpriteDef {
+                //             id,
+                //             x: thing_def.x,
+                //             y: thing_def.y,
+                //             directionality: Directionality::Undirectional,
+                //         })
+                //     }
+                //     _ => None,
+                // }
             })
             .collect()
     }
