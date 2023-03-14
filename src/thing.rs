@@ -230,27 +230,26 @@ impl Direction {
     }
 }
 
-pub struct Thing {
+pub struct ThingDef {
     pub thing_type: ThingType,
     pub x: Fp16,
     pub y: Fp16,
 }
 
-pub struct Things {
-    pub things: Vec<Thing>,
-    anim_timeout: i32,
+pub struct ThingDefs {
+    pub thing_defs: Vec<ThingDef>,
 }
 
-impl Things {
+impl ThingDefs {
     pub fn from_map_plane(plane: &[u16]) -> Self {
         let mut plane_iter = plane.iter();
-        let mut things = Vec::new();
+        let mut thing_defs = Vec::new();
 
         for y in 0..64 {
             for x in 0..64 {
                 let c = plane_iter.next().unwrap();
 
-                let thing_type = if let Some(enemy) = Things::map_enemy(*c) {
+                let thing_type = if let Some(enemy) = ThingDefs::map_enemy(*c) {
                     enemy
                 } else {
                     match *c {
@@ -263,17 +262,14 @@ impl Things {
                     }
                 };
 
-                things.push(Thing {
+                thing_defs.push(ThingDef {
                     thing_type,
                     x: FP16_HALF + x.into(),
                     y: FP16_HALF + y.into(),
                 });
             }
         }
-        Things {
-            things,
-            anim_timeout: 30,
-        }
+        ThingDefs { thing_defs }
     }
 
     fn oa(o: u16) -> Direction {
@@ -297,29 +293,29 @@ impl Things {
     fn map_enemy(t: u16) -> Option<ThingType> {
     Some(match t {
         // easy
-        108..=115 => ThingType::Enemy(Things::oa(t - 108), Difficulty::Easy, EnemyType::Brown, Things::os(t - 108)),
-        116..=123 => ThingType::Enemy(Things::oa(t - 116), Difficulty::Easy, EnemyType::White, Things::os(t - 116)),
-        126..=133 => ThingType::Enemy(Things::oa(t - 126), Difficulty::Easy, EnemyType::Blue, Things::os(t - 126)),
-        134..=141 => ThingType::Enemy(Things::oa(t - 134), Difficulty::Easy, EnemyType::Woof, Things::os(t - 134)),
-        216..=223 => ThingType::Enemy(Things::oa(t - 134), Difficulty::Easy, EnemyType::Rotten, Things::os(t - 216)),
+        108..=115 => ThingType::Enemy(ThingDefs::oa(t - 108), Difficulty::Easy, EnemyType::Brown, ThingDefs::os(t - 108)),
+        116..=123 => ThingType::Enemy(ThingDefs::oa(t - 116), Difficulty::Easy, EnemyType::White, ThingDefs::os(t - 116)),
+        126..=133 => ThingType::Enemy(ThingDefs::oa(t - 126), Difficulty::Easy, EnemyType::Blue, ThingDefs::os(t - 126)),
+        134..=141 => ThingType::Enemy(ThingDefs::oa(t - 134), Difficulty::Easy, EnemyType::Woof, ThingDefs::os(t - 134)),
+        216..=223 => ThingType::Enemy(ThingDefs::oa(t - 134), Difficulty::Easy, EnemyType::Rotten, ThingDefs::os(t - 216)),
         // medium
-        144..=151 => ThingType::Enemy(Things::oa(t - 144), Difficulty::Medium, EnemyType::Brown, Things::os(t - 144)),
-        152..=159 => ThingType::Enemy(Things::oa(t - 152), Difficulty::Medium, EnemyType::White, Things::os(t - 152)),
-        162..=169 => ThingType::Enemy(Things::oa(t - 162), Difficulty::Medium, EnemyType::Blue, Things::os(t - 162)),
-        170..=177 => ThingType::Enemy(Things::oa(t - 170), Difficulty::Medium, EnemyType::Woof, Things::os(t - 170)),
-        234..=241 => ThingType::Enemy(Things::oa(t - 234), Difficulty::Medium, EnemyType::Rotten, Things::os(t - 234)),
+        144..=151 => ThingType::Enemy(ThingDefs::oa(t - 144), Difficulty::Medium, EnemyType::Brown, ThingDefs::os(t - 144)),
+        152..=159 => ThingType::Enemy(ThingDefs::oa(t - 152), Difficulty::Medium, EnemyType::White, ThingDefs::os(t - 152)),
+        162..=169 => ThingType::Enemy(ThingDefs::oa(t - 162), Difficulty::Medium, EnemyType::Blue, ThingDefs::os(t - 162)),
+        170..=177 => ThingType::Enemy(ThingDefs::oa(t - 170), Difficulty::Medium, EnemyType::Woof, ThingDefs::os(t - 170)),
+        234..=241 => ThingType::Enemy(ThingDefs::oa(t - 234), Difficulty::Medium, EnemyType::Rotten, ThingDefs::os(t - 234)),
         // hard
-        180..=187 => ThingType::Enemy(Things::oa(t - 180), Difficulty::Hard, EnemyType::Brown, Things::os(t - 180)),
-        188..=195 => ThingType::Enemy(Things::oa(t - 188), Difficulty::Hard, EnemyType::White, Things::os(t - 188)),
-        198..=205 => ThingType::Enemy(Things::oa(t - 198), Difficulty::Hard, EnemyType::Blue, Things::os(t - 198)),
-        206..=213 => ThingType::Enemy(Things::oa(t - 206), Difficulty::Hard, EnemyType::Woof, Things::os(t - 206)),
-        252..=259 => ThingType::Enemy(Things::oa(t - 252), Difficulty::Hard, EnemyType::Rotten, Things::os(t - 252)),
+        180..=187 => ThingType::Enemy(ThingDefs::oa(t - 180), Difficulty::Hard, EnemyType::Brown, ThingDefs::os(t - 180)),
+        188..=195 => ThingType::Enemy(ThingDefs::oa(t - 188), Difficulty::Hard, EnemyType::White, ThingDefs::os(t - 188)),
+        198..=205 => ThingType::Enemy(ThingDefs::oa(t - 198), Difficulty::Hard, EnemyType::Blue, ThingDefs::os(t - 198)),
+        206..=213 => ThingType::Enemy(ThingDefs::oa(t - 206), Difficulty::Hard, EnemyType::Woof, ThingDefs::os(t - 206)),
+        252..=259 => ThingType::Enemy(ThingDefs::oa(t - 252), Difficulty::Hard, EnemyType::Rotten, ThingDefs::os(t - 252)),
         _ => return None,
     })
 }
 
     pub fn get_player_start(&self) -> Option<(Fp16, Fp16, i32)> {
-        for thing in &self.things {
+        for thing in &self.thing_defs {
             match thing.thing_type {
                 ThingType::PlayerStart(rot) => return Some((thing.x, thing.y, rot)),
                 _ => continue,
@@ -327,48 +323,9 @@ impl Things {
         }
         None
     }
-
-    // pub fn get_sprites(&self) -> Vec<SpriteDef> {
-    //     self.things
-    //         .iter()
-    //         .filter_map(|thing| match &thing.thing_type {
-    //             ThingType::Enemy(direction, _difficulty, enemy_type, _state) => {
-    //                 let id = enemy_type.sprite_offset()
-    //                 + thing.animation_state.sprite_offset()
-    //                 /*+ direction.sprite_offset()*/;
-    //                 Some(SpriteDef {
-    //                     id,
-    //                     x: thing.x,
-    //                     y: thing.y,
-    //                     directionality: Directionality::Direction(*direction),
-    //                 })
-    //             }
-    //             ThingType::Prop(id) => Some(SpriteDef {
-    //                 id: *id,
-    //                 x: thing.x,
-    //                 y: thing.y,
-    //                 directionality: Directionality::Undirectional,
-    //             }),
-
-    //             _ => None,
-    //         })
-    //         .collect()
-    // }
-
-    // pub fn update(&mut self) {
-    //     self.anim_timeout -= 1;
-    //     if self.anim_timeout > 0 {
-    //         return;
-    //     }
-    //     self.anim_timeout = 10;
-
-    //     for thing in &mut self.things {
-    //         thing.animation_state = thing.animation_state.advance_animation();
-    //     }
-    // }
 }
 
-pub struct ThingDyn {
+pub struct Thing {
     pub x: Fp16,
     pub y: Fp16,
     pub animation_frames: Option<AnimationFrames>,
@@ -377,18 +334,18 @@ pub struct ThingDyn {
     pub static_index: usize,
 }
 
-pub struct ThingsDyn {
-    pub things: Vec<ThingDyn>,
+pub struct Things {
+    pub things: Vec<Thing>,
     pub anim_timeout: i32,
 }
 
-impl ThingsDyn {
-    pub fn from_things(thing_defs: &Things) -> Self {
+impl Things {
+    pub fn from_thing_defs(thing_defs: &ThingDefs) -> Self {
         let mut things = Vec::new();
 
-        for (i, thing_def) in thing_defs.things.iter().enumerate() {
+        for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
             match thing_def.thing_type {
-                ThingType::Enemy(_, _, enemy_type, _) => things.push(ThingDyn {
+                ThingType::Enemy(_, _, enemy_type, _) => things.push(Thing {
                     x: thing_def.x,
                     y: thing_def.y,
                     animation_frames: Some(enemy_type.animation_frames(AnimationPhase::Walk)),
@@ -396,7 +353,7 @@ impl ThingsDyn {
                     anim_index: 0,
                     static_index: i,
                 }),
-                ThingType::Prop(sprite_index) => things.push(ThingDyn {
+                ThingType::Prop(sprite_index) => things.push(Thing {
                     x: thing_def.x, // fixme: do not need dynamic x/y for props
                     y: thing_def.y,
                     animation_frames: None,
@@ -408,7 +365,7 @@ impl ThingsDyn {
             }
         }
 
-        ThingsDyn {
+        Things {
             things,
             anim_timeout: 0,
         }
@@ -430,14 +387,12 @@ impl ThingsDyn {
             }
         }
     }
-    pub fn get_sprites(&self, thing_defs: &Things) -> Vec<SpriteDef> {
+    pub fn get_sprites(&self, thing_defs: &ThingDefs) -> Vec<SpriteDef> {
         self.things
             .iter()
             .filter_map(
-                |thing| match &thing_defs.things[thing.static_index].thing_type {
+                |thing| match &thing_defs.thing_defs[thing.static_index].thing_type {
                     ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
-                        // let id =
-                        /*+ direction.sprite_offset()*/
                         Some(SpriteDef {
                             id: thing.sprite_index,
                             x: thing.x,

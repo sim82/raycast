@@ -4,7 +4,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::map::MapDynamic;
 use raycast::ms::{Loadable, Writable};
-use raycast::thing::ThingsDyn;
+use raycast::thing::Things;
 use raycast::{wl6, Resources};
 
 use raycast::prelude::*;
@@ -12,7 +12,7 @@ use raycast::prelude::*;
 struct StaticMapData {
     level_id: i32,
     map: Map,
-    things: Things,
+    things: ThingDefs,
 }
 
 enum SpawnInfo {
@@ -75,7 +75,7 @@ fn main() {
                         let (plane0, plane1) = maps.get_map_planes(id);
 
                         map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
-                        things = Things::from_map_plane(&plane1);
+                        things = ThingDefs::from_map_plane(&plane1);
                         level_id = id;
                     }
                 }
@@ -117,13 +117,13 @@ fn main() {
                             &mut f,
                             Map::from_map_planes(&plane0, &plane1),
                         );
-                        things = Things::from_map_plane(&plane1);
+                        things = ThingDefs::from_map_plane(&plane1);
                     }
                 }
             }
         }
 
-        let mut things_dyn = ThingsDyn::from_things(&things);
+        let mut things_dyn = Things::from_thing_defs(&things);
 
         let mut player_vel = PlayerVel {
             forward: 0,

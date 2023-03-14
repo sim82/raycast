@@ -29,7 +29,7 @@ pub mod prelude {
         player::{Player, PlayerVel},
         render,
         sprite::{self, Directionality, SpriteDef},
-        thing::{Direction, Thing, ThingType, Things},
+        thing::{Direction, ThingDef, ThingDefs, ThingType},
         Resources, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
 }
