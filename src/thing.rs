@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{ms::Loadable, prelude::*};
+use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub mod anim_def;
@@ -20,11 +21,6 @@ pub enum EnemyType {
     Woof,
     Rotten,
 }
-
-// pub struct AnimationFrames {
-//     pub frames: &'static [i32],
-//     pub direction_stride: i32,
-// }
 
 const START_BROWN: i32 = 51;
 const NUM_HUMANOID: i32 = 49;
@@ -46,9 +42,7 @@ impl EnemyType {
         match self {
             EnemyType::Brown => match phase {
                 AnimationPhase::Stand => &*anim_def::BROWN_STAND,
-
                 AnimationPhase::Walk => &*anim_def::BROWN_WALK,
-
                 AnimationPhase::Pain => todo!(),
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
@@ -301,22 +295,27 @@ impl ThingDefs {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Actor {
-    Item { collected: bool },
+    Item {
+        collected: bool,
+        collectible: Collectible,
+    },
     Guard,
+    #[default]
+    None,
 }
 
 impl ms::Writable for Actor {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
-            Actor::Item { collected } => {
+            Actor::Item { collected, collectible } => {
                 w.write_u8(0)?;
                 w.write_u8(if *collected { 1 } else { 0 })?;
+                collectible.write(w)?;
             }
-            Actor::Guard => {
-                w.write_u8(1)?;
-            }
+            Actor::Guard => w.write_u8(1)?,
+            Actor::None => w.write_u8(2)?,
         }
         Ok(())
     }
@@ -327,8 +326,10 @@ impl ms::Loadable for Actor {
         Ok(match r.read_u8()? {
             0 => Actor::Item {
                 collected: r.read_u8()? != 0,
+                collectible: Collectible::read_from(r)?,
             },
             1 => Actor::Guard,
+            2 => Actor::None,
             _ => panic!(),
         })
     }
@@ -421,13 +422,21 @@ impl Things {
                     static_index: i,
                     actor: Actor::Guard,
                 }),
-                ThingType::Prop(sprite_index) => things.push(Thing {
-                    animation_frames: Cow::Borrowed(&[]),
-                    sprite_index,
-                    anim_index: 0,
-                    static_index: i,
-                    actor: Actor::Item { collected: false },
-                }),
+                ThingType::Prop(sprite_index) => {
+                    let actor = try_to_collectible(sprite_index)
+                        .map(|collectible| Actor::Item {
+                            collected: false,
+                            collectible,
+                        })
+                        .unwrap_or_default();
+                    things.push(Thing {
+                        animation_frames: Cow::Borrowed(&[]),
+                        sprite_index,
+                        anim_index: 0,
+                        static_index: i,
+                        actor,
+                    });
+                }
                 ThingType::PlayerStart(_) => (),
             }
         }
@@ -456,12 +465,11 @@ impl Things {
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
             match (thing_def.thing_type, &mut thing.actor) {
-                (ThingType::Prop(_id), Actor::Item { collected }) => {
+                (ThingType::Prop(_id), Actor::Item { collected, collectible }) if !*collected => {
                     let dx = player.x - thing_def.x;
                     let dy = player.y - thing_def.y;
                     if dx.get_int().abs() == 0 && dy.get_int().abs() == 0 {
-                        println!("collected: {:?}", thing_def);
-
+                        println!("collected: {:?} {:?}", thing_def, collectible);
                         *collected = true;
                     }
                 }
@@ -482,7 +490,14 @@ impl Things {
                         y: thing_def.y,
                         directionality: Directionality::Direction(direction),
                     }),
-                    (ThingType::Prop(id), Actor::Item { collected }) if !*collected => Some(SpriteDef {
+                    (
+                        ThingType::Prop(id),
+                        Actor::Item {
+                            collected: false,
+                            collectible: _,
+                        },
+                    )
+                    | (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
                         id,
                         x: thing_def.x,
                         y: thing_def.y,
@@ -490,30 +505,64 @@ impl Things {
                     }),
                     _ => None,
                 }
-                // match thing_def.thing_type {
-                //     ThingType::Enemy(direction, _difficulty, _enemy_type, _state) => {
-                //         Some(SpriteDef {
-                //             id: thing.sprite_index,
-                //             x: thing_def.x,
-                //             y: thing_def.y,
-                //             directionality: Directionality::Direction(direction),
-                //         })
-                //     }
-                //     ThingType::Prop(id)/*if !*collected */=> {
-                //         Some(SpriteDef {
-                //             id,
-                //             x: thing_def.x,
-                //             y: thing_def.y,
-                //             directionality: Directionality::Undirectional,
-                //         })
-                //     }
-                //     _ => None,
-                // }
             })
             .collect()
     }
 
     pub fn release(self) -> ThingDefs {
         self.thing_defs
+    }
+}
+
+#[derive(Debug)]
+pub enum Collectible {
+    DogFood,
+    Key(i32),
+    Food,
+    Medkit,
+    Ammo,
+    Machinegun,
+    Chaingun,
+    Treasure(i32),
+    LifeUp,
+}
+
+fn try_to_collectible(sprite_index: i32) -> Option<Collectible> {
+    Some(match sprite_index {
+        29 => Collectible::DogFood,
+        43 => Collectible::Key(0),
+        44 => Collectible::Key(1),
+        47 => Collectible::Food,
+        48 => Collectible::Medkit,
+        49 => Collectible::Ammo,
+        50 => Collectible::Machinegun,
+        51 => Collectible::Chaingun,
+        52..=55 => Collectible::Treasure(sprite_index - 52),
+        56 => Collectible::LifeUp,
+        _ => return None,
+    })
+}
+
+impl ms::Loadable for Collectible {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let id = r.read_u8()?;
+        try_to_collectible(id as i32).ok_or_else(|| anyhow!("unsupported discriminator for Collectible: {id}"))
+    }
+}
+
+impl ms::Writable for Collectible {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_u8(match self {
+            Collectible::DogFood => 29,
+            Collectible::Key(t) => 43 + *t as u8,
+            Collectible::Food => 47,
+            Collectible::Medkit => 48,
+            Collectible::Ammo => 49,
+            Collectible::Machinegun => 50,
+            Collectible::Chaingun => 51,
+            Collectible::Treasure(t) => 52 + *t as u8,
+            Collectible::LifeUp => 56,
+        })?;
+        Ok(())
     }
 }
