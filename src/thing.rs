@@ -1,4 +1,5 @@
 use core::num;
+use std::borrow::Cow;
 
 use crate::{ms::Loadable, prelude::*};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -335,7 +336,7 @@ impl ms::Loadable for Actor {
 }
 
 pub struct Thing {
-    pub animation_frames: Vec<i32>, // FIXME
+    pub animation_frames: Cow<'static, [i32]>,
     pub sprite_index: i32,
     pub anim_index: i32,
     pub actor: Actor,
@@ -345,7 +346,8 @@ pub struct Thing {
 impl ms::Writable for Thing {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         w.write_u32::<LittleEndian>(self.animation_frames.len() as u32)?;
-        for f in &self.animation_frames {
+
+        for f in self.animation_frames.iter() {
             w.write_i32::<LittleEndian>(*f)?;
         }
         w.write_i32::<LittleEndian>(self.sprite_index)?;
@@ -368,7 +370,7 @@ impl ms::Loadable for Thing {
         let static_index = r.read_i32::<LittleEndian>()? as usize;
         let actor = Actor::read_from(r)?;
         Ok(Self {
-            animation_frames,
+            animation_frames: animation_frames.into(),
             sprite_index,
             anim_index,
             actor,
@@ -421,7 +423,7 @@ impl Things {
                     actor: Actor::Guard,
                 }),
                 ThingType::Prop(sprite_index) => things.push(Thing {
-                    animation_frames: Vec::new(),
+                    animation_frames: Cow::Borrowed(&[]),
                     sprite_index,
                     anim_index: 0,
                     static_index: i,
