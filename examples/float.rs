@@ -8,8 +8,8 @@ use minifb::{Key, Window, WindowOptions};
 const WIDTH: usize = 320;
 const HEIGHT: usize = 200;
 const COLORS: [u32; 16] = [
-    0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFF8000, 0x808080,
-    0x800000, 0x008000, 0x000080, 0x808000, 0x008080, 0x800080, 0x804000,
+    0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFF8000, 0x808080, 0x800000, 0x008000,
+    0x000080, 0x808000, 0x008080, 0x800080, 0x804000,
 ];
 
 const MAP: [[i32; 8]; 8] = [
@@ -30,13 +30,7 @@ trait Draw {
 
 impl Draw for Vec<u32> {
     fn point(&mut self, x: i32, y: i32, c: i32) {
-        if x < 0
-            || y < 0
-            || (x as usize) >= WIDTH
-            || (y as usize) >= HEIGHT
-            || c < 0
-            || (c as usize) > COLORS.len()
-        {
+        if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT || c < 0 || (c as usize) > COLORS.len() {
             return;
         }
 
@@ -57,9 +51,7 @@ const FP16_F: f32 = 256.0 * 256.0;
 
 impl From<f32> for Fp16 {
     fn from(f: f32) -> Self {
-        Self {
-            v: (f * FP16_F) as i32,
-        }
+        Self { v: (f * FP16_F) as i32 }
     }
 }
 
@@ -210,10 +202,7 @@ impl Map {
                     sy = ty * ex;
                     hx = x + hstep_x;
                     hy = y + hstep_y;
-                    (
-                        Box::new(|a: f32, b: f32| a < b),
-                        Box::new(|a: f32, b: f32| a < b),
-                    )
+                    (Box::new(|a: f32, b: f32| a < b), Box::new(|a: f32, b: f32| a < b))
                 } else if (FRAC_PI_2..PI).contains(&alpha_full) {
                     quad_alpha = FRAC_PI_2;
                     alpha = alpha_full - quad_alpha;
@@ -227,10 +216,7 @@ impl Map {
                     hy = y + hstep_y;
                     xcor = -0.01;
 
-                    (
-                        Box::new(|a: f32, b: f32| a > b),
-                        Box::new(|a: f32, b: f32| a < b),
-                    )
+                    (Box::new(|a: f32, b: f32| a > b), Box::new(|a: f32, b: f32| a < b))
                 } else if (PI..(PI + FRAC_PI_2)).contains(&alpha_full) {
                     quad_alpha = PI;
                     alpha = alpha_full - quad_alpha;
@@ -244,10 +230,7 @@ impl Map {
                     hy = y;
                     xcor = -0.01;
                     ycor = -0.01;
-                    (
-                        Box::new(|a: f32, b: f32| a > b),
-                        Box::new(|a: f32, b: f32| a > b),
-                    )
+                    (Box::new(|a: f32, b: f32| a > b), Box::new(|a: f32, b: f32| a > b))
                 } else if ((PI + FRAC_PI_2)..(2.0 * PI)).contains(&alpha_full) {
                     quad_alpha = PI + FRAC_PI_2;
                     alpha = alpha_full - quad_alpha;
@@ -260,10 +243,7 @@ impl Map {
                     hx = x + hstep_x;
                     hy = y;
                     ycor = -0.01;
-                    (
-                        Box::new(|a: f32, b: f32| a < b),
-                        Box::new(|a: f32, b: f32| a > b),
-                    )
+                    (Box::new(|a: f32, b: f32| a < b), Box::new(|a: f32, b: f32| a > b))
                 } else {
                     continue;
                 };
@@ -350,10 +330,7 @@ fn main() {
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
-    let mut player_vel = PlayerVel {
-        forward: 0.0,
-        rot: 0.0,
-    };
+    let mut player_vel = PlayerVel { forward: 0.0, rot: 0.0 };
     let mut player = Player::default();
     let map = Map::default();
 

@@ -210,13 +210,7 @@ impl MapsFile {
         self.map_headers
             .iter()
             .enumerate()
-            .find_map(|(i, header)| {
-                if header.name == name {
-                    Some(i as i32)
-                } else {
-                    None
-                }
-            })
+            .find_map(|(i, header)| if header.name == name { Some(i as i32) } else { None })
             .unwrap()
     }
     pub fn get_map_plane_chunks(&mut self, id: i32) -> (Vec<u8>, Vec<u8>, Vec<u8>) {

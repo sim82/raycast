@@ -1,8 +1,8 @@
 use crate::prelude::*;
 
 pub const COLORS: [u32; 16] = [
-    0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFF8000, 0x808080,
-    0x800000, 0x008000, 0x000080, 0x808000, 0x008080, 0x800080, 0x804000,
+    0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0x00FFFF, 0xFF00FF, 0xFF8000, 0x808080, 0x800000, 0x008000,
+    0x000080, 0x808000, 0x008080, 0x800080, 0x804000,
 ];
 pub trait Draw {
     fn point(&mut self, x: i32, y: i32, c: i32);
@@ -12,13 +12,7 @@ pub trait Draw {
 
 impl Draw for Vec<u32> {
     fn point(&mut self, x: i32, y: i32, c: i32) {
-        if x < 0
-            || y < 0
-            || (x as usize) >= WIDTH
-            || (y as usize) >= HEIGHT
-            || c < 0
-            || (c as usize) > COLORS.len()
-        {
+        if x < 0 || y < 0 || (x as usize) >= WIDTH || (y as usize) >= HEIGHT || c < 0 || (c as usize) > COLORS.len() {
             return;
         }
 

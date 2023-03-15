@@ -64,13 +64,7 @@ impl Player {
         (self.x.fract(), self.y.fract())
     }
 
-    pub fn apply_vel(
-        &mut self,
-        player_vel: &PlayerVel,
-        dt: Fp16,
-        map_dynamic: &MapDynamic,
-        collisions: bool,
-    ) {
+    pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16, map_dynamic: &MapDynamic, collisions: bool) {
         self.rot += (dt * player_vel.rot).get_int();
         while self.rot < 0 {
             self.rot += FA_TAU;

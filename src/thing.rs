@@ -449,8 +449,7 @@ impl Things {
             thing.anim_index += 1;
 
             if !thing.animation_frames.is_empty() {
-                thing.sprite_index = thing.animation_frames
-                    [(thing.anim_index as usize) % thing.animation_frames.len()];
+                thing.sprite_index = thing.animation_frames[(thing.anim_index as usize) % thing.animation_frames.len()];
             }
 
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
@@ -476,22 +475,18 @@ impl Things {
                 let thing_def = &self.thing_defs.thing_defs[thing.static_index];
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match (thing_def.thing_type, &thing.actor) {
-                    (ThingType::Enemy(direction, _difficulty, _enemy_type, _state), _) => {
-                        Some(SpriteDef {
-                            id: thing.sprite_index,
-                            x: thing_def.x,
-                            y: thing_def.y,
-                            directionality: Directionality::Direction(direction),
-                        })
-                    }
-                    (ThingType::Prop(id), Actor::Item { collected }) if !*collected => {
-                        Some(SpriteDef {
-                            id,
-                            x: thing_def.x,
-                            y: thing_def.y,
-                            directionality: Directionality::Undirectional,
-                        })
-                    }
+                    (ThingType::Enemy(direction, _difficulty, _enemy_type, _state), _) => Some(SpriteDef {
+                        id: thing.sprite_index,
+                        x: thing_def.x,
+                        y: thing_def.y,
+                        directionality: Directionality::Direction(direction),
+                    }),
+                    (ThingType::Prop(id), Actor::Item { collected }) if !*collected => Some(SpriteDef {
+                        id,
+                        x: thing_def.x,
+                        y: thing_def.y,
+                        directionality: Directionality::Undirectional,
+                    }),
                     _ => None,
                 }
                 // match thing_def.thing_type {
