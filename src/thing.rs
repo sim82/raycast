@@ -155,25 +155,26 @@ pub enum Direction {
 }
 
 impl ms::Writable for Direction {
-    fn write(&self, w: &mut dyn std::io::Write) {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
-            Direction::N => w.write_u8(0).unwrap(),
-            Direction::E => w.write_u8(1).unwrap(),
-            Direction::S => w.write_u8(2).unwrap(),
-            Direction::W => w.write_u8(3).unwrap(),
+            Direction::N => w.write_u8(0)?,
+            Direction::E => w.write_u8(1)?,
+            Direction::S => w.write_u8(2)?,
+            Direction::W => w.write_u8(3)?,
         }
+        Ok(())
     }
 }
 
 impl ms::Loadable for Direction {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        match r.read_u8().unwrap() {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
             0 => Direction::N,
             1 => Direction::E,
             2 => Direction::S,
             3 => Direction::W,
             _ => panic!(),
-        }
+        })
     }
 }
 
@@ -307,28 +308,29 @@ pub enum Actor {
 }
 
 impl ms::Writable for Actor {
-    fn write(&self, w: &mut dyn std::io::Write) {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
             Actor::Item { collected } => {
-                w.write_u8(0).unwrap();
-                w.write_u8(if *collected { 1 } else { 0 }).unwrap();
+                w.write_u8(0)?;
+                w.write_u8(if *collected { 1 } else { 0 })?;
             }
             Actor::Guard => {
-                w.write_u8(1).unwrap();
+                w.write_u8(1)?;
             }
         }
+        Ok(())
     }
 }
 
 impl ms::Loadable for Actor {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        match r.read_u8().unwrap() {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
             0 => Actor::Item {
-                collected: r.read_u8().unwrap() != 0,
+                collected: r.read_u8()? != 0,
             },
             1 => Actor::Guard,
             _ => panic!(),
-        }
+        })
     }
 }
 
@@ -341,38 +343,37 @@ pub struct Thing {
 }
 
 impl ms::Writable for Thing {
-    fn write(&self, w: &mut dyn std::io::Write) {
-        w.write_u32::<LittleEndian>(self.animation_frames.len() as u32)
-            .unwrap();
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_u32::<LittleEndian>(self.animation_frames.len() as u32)?;
         for f in &self.animation_frames {
-            w.write_i32::<LittleEndian>(*f).unwrap();
+            w.write_i32::<LittleEndian>(*f)?;
         }
-        w.write_i32::<LittleEndian>(self.sprite_index).unwrap();
-        w.write_i32::<LittleEndian>(self.anim_index).unwrap();
-        w.write_i32::<LittleEndian>(self.static_index as i32)
-            .unwrap(); // FIXME
-        self.actor.write(w);
+        w.write_i32::<LittleEndian>(self.sprite_index)?;
+        w.write_i32::<LittleEndian>(self.anim_index)?;
+        w.write_i32::<LittleEndian>(self.static_index as i32)?; // FIXME
+        self.actor.write(w)?;
+        Ok(())
     }
 }
 
 impl ms::Loadable for Thing {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        let num_anim_frames = r.read_u32::<LittleEndian>().unwrap();
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let num_anim_frames = r.read_u32::<LittleEndian>()?;
         let mut animation_frames = Vec::new();
         for _ in 0..num_anim_frames {
-            animation_frames.push(r.read_i32::<LittleEndian>().unwrap());
+            animation_frames.push(r.read_i32::<LittleEndian>()?);
         }
-        let sprite_index = r.read_i32::<LittleEndian>().unwrap();
-        let anim_index = r.read_i32::<LittleEndian>().unwrap();
-        let static_index = r.read_i32::<LittleEndian>().unwrap() as usize;
-        let actor = Actor::read_from(r);
-        Self {
+        let sprite_index = r.read_i32::<LittleEndian>()?;
+        let anim_index = r.read_i32::<LittleEndian>()?;
+        let static_index = r.read_i32::<LittleEndian>()? as usize;
+        let actor = Actor::read_from(r)?;
+        Ok(Self {
             animation_frames,
             sprite_index,
             anim_index,
             actor,
             static_index,
-        }
+        })
     }
 }
 
@@ -383,29 +384,29 @@ pub struct Things {
 }
 
 impl ms::Writable for Things {
-    fn write(&self, w: &mut dyn std::io::Write) {
-        w.write_u32::<LittleEndian>(self.things.len() as u32)
-            .unwrap();
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_u32::<LittleEndian>(self.things.len() as u32)?;
         for thing in &self.things {
-            thing.write(w);
+            thing.write(w)?;
         }
-        w.write_i32::<LittleEndian>(self.anim_timeout).unwrap();
+        w.write_i32::<LittleEndian>(self.anim_timeout)?;
+        Ok(())
     }
 }
 
 impl Things {
-    pub fn read_from(r: &mut dyn std::io::Read, thing_defs: ThingDefs) -> Self {
-        let num_things = r.read_u32::<LittleEndian>().unwrap();
+    pub fn read_from(r: &mut dyn std::io::Read, thing_defs: ThingDefs) -> Result<Self> {
+        let num_things = r.read_u32::<LittleEndian>()?;
         let mut things = Vec::new();
         for _ in 0..num_things {
-            things.push(Thing::read_from(r));
+            things.push(Thing::read_from(r)?);
         }
-        let anim_timeout = r.read_i32::<LittleEndian>().unwrap();
-        Self {
+        let anim_timeout = r.read_i32::<LittleEndian>()?;
+        Ok(Self {
             thing_defs,
             things,
             anim_timeout,
-        }
+        })
     }
     pub fn from_thing_defs(thing_defs: ThingDefs) -> Self {
         let mut things = Vec::new();

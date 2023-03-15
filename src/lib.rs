@@ -1,3 +1,4 @@
+pub use anyhow::Result;
 use std::{
     fs::File,
     io::{BufRead, BufReader},
@@ -16,6 +17,7 @@ pub mod thing;
 pub mod wl6;
 
 pub mod prelude {
+
     pub use crate::{
         draw::Draw,
         fa::{
@@ -30,7 +32,7 @@ pub mod prelude {
         render,
         sprite::{self, Directionality, SpriteDef},
         thing::{Direction, ThingDef, ThingDefs, ThingType},
-        Resources, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
+        Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
 }
 

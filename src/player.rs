@@ -32,26 +32,27 @@ impl Default for Player {
 }
 
 impl Writable for Player {
-    fn write(&self, w: &mut dyn std::io::Write) {
-        w.write_i32::<LittleEndian>(self.x.v).unwrap();
-        w.write_i32::<LittleEndian>(self.y.v).unwrap();
-        w.write_i32::<LittleEndian>(self.rot).unwrap();
-        w.write_u8(if self.trigger { 1 } else { 0 }).unwrap();
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.x.v)?;
+        w.write_i32::<LittleEndian>(self.y.v)?;
+        w.write_i32::<LittleEndian>(self.rot)?;
+        w.write_u8(if self.trigger { 1 } else { 0 })?;
+        Ok(())
     }
 }
 
 impl Loadable for Player {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let x = Fp16 {
-            v: r.read_i32::<LittleEndian>().unwrap(),
+            v: r.read_i32::<LittleEndian>()?,
         };
         let y = Fp16 {
-            v: r.read_i32::<LittleEndian>().unwrap(),
+            v: r.read_i32::<LittleEndian>()?,
         };
-        let rot = r.read_i32::<LittleEndian>().unwrap();
-        let trigger = r.read_u8().unwrap() != 0;
+        let rot = r.read_i32::<LittleEndian>()?;
+        let trigger = r.read_u8()? != 0;
 
-        Self { x, y, rot, trigger }
+        Ok(Self { x, y, rot, trigger })
     }
 }
 

@@ -58,32 +58,33 @@ pub enum DoorAction {
 }
 
 impl ms::Writable for DoorAction {
-    fn write(&self, w: &mut dyn std::io::Write) {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
-            DoorAction::Closed => w.write_u8(0).unwrap(),
-            DoorAction::Opening => w.write_u8(1).unwrap(),
+            DoorAction::Closed => w.write_u8(0)?,
+            DoorAction::Opening => w.write_u8(1)?,
             DoorAction::Open(ticks) => {
-                w.write_u8(2).unwrap();
-                w.write_i32::<LittleEndian>(*ticks).unwrap();
+                w.write_u8(2)?;
+                w.write_i32::<LittleEndian>(*ticks)?;
             }
-            DoorAction::Closing => w.write_u8(3).unwrap(),
+            DoorAction::Closing => w.write_u8(3)?,
         }
+        Ok(())
     }
 }
 
 impl Loadable for DoorAction {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        let d = r.read_u8().unwrap();
-        match d {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let d = r.read_u8()?;
+        Ok(match d {
             0 => DoorAction::Closed,
             1 => DoorAction::Opening,
             2 => {
-                let ticks = r.read_i32::<LittleEndian>().unwrap();
+                let ticks = r.read_i32::<LittleEndian>()?;
                 DoorAction::Open(ticks)
             }
             3 => DoorAction::Closing,
-            _ => panic!(),
-        }
+            _ => return Err(anyhow::anyhow!("unhandled enum discriminator {}", d)),
+        })
     }
 }
 
@@ -94,20 +95,21 @@ pub struct DoorState {
 }
 
 impl ms::Writable for DoorState {
-    fn write(&self, w: &mut dyn std::io::Write) {
-        w.write_i32::<LittleEndian>(self.open_f.v).unwrap();
-        self.action.write(w);
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.open_f.v)?;
+        self.action.write(w)?;
+        Ok(())
     }
 }
 
 impl ms::Loadable for DoorState {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        let open = r.read_i32::<LittleEndian>().unwrap();
-        let action = DoorAction::read_from(r);
-        Self {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let open = r.read_i32::<LittleEndian>()?;
+        let action = DoorAction::read_from(r)?;
+        Ok(Self {
             open_f: Fp16 { v: open },
             action,
-        }
+        })
     }
 }
 
@@ -170,44 +172,45 @@ impl PushwallState {
 }
 
 impl ms::Writable for PushwallState {
-    fn write(&self, w: &mut dyn Write) {
-        w.write_i32::<LittleEndian>(self.x).unwrap();
-        w.write_i32::<LittleEndian>(self.y).unwrap();
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.x)?;
+        w.write_i32::<LittleEndian>(self.y)?;
         match self.action {
-            PushwallAction::Closed => w.write_u8(0).unwrap(),
+            PushwallAction::Closed => w.write_u8(0)?,
             PushwallAction::Sliding(direction, f) => {
-                w.write_u8(1).unwrap();
-                direction.write(w);
+                w.write_u8(1)?;
+                direction.write(w)?;
                 f.write(w);
             }
             PushwallAction::Open(x, y) => {
-                w.write_u8(2).unwrap();
-                w.write_i32::<LittleEndian>(x).unwrap();
-                w.write_i32::<LittleEndian>(y).unwrap();
+                w.write_u8(2)?;
+                w.write_i32::<LittleEndian>(x)?;
+                w.write_i32::<LittleEndian>(y)?;
             }
         }
+        Ok(())
     }
 }
 
 impl ms::Loadable for PushwallState {
-    fn read_from(r: &mut dyn std::io::Read) -> Self {
-        let x = r.read_i32::<LittleEndian>().unwrap();
-        let y = r.read_i32::<LittleEndian>().unwrap();
-        let action = match r.read_u8().unwrap() {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let x = r.read_i32::<LittleEndian>()?;
+        let y = r.read_i32::<LittleEndian>()?;
+        let action = match r.read_u8()? {
             0 => PushwallAction::Closed,
             1 => {
-                let direction = Direction::read_from(r);
-                let f = Fp16::read_from(r);
+                let direction = Direction::read_from(r)?;
+                let f = Fp16::read_from(r)?;
                 PushwallAction::Sliding(direction, f)
             }
             2 => {
-                let x = r.read_i32::<LittleEndian>().unwrap();
-                let y = r.read_i32::<LittleEndian>().unwrap();
+                let x = r.read_i32::<LittleEndian>()?;
+                let y = r.read_i32::<LittleEndian>()?;
                 PushwallAction::Open(x, y)
             }
             _ => panic!(),
         };
-        Self { x, y, action }
+        Ok(Self { x, y, action })
     }
 }
 
@@ -352,17 +355,17 @@ impl MapDynamic {
         }
     }
 
-    pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: Map) -> MapDynamic {
-        let s = r.read_i32::<LittleEndian>().unwrap();
+    pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: Map) -> Result<MapDynamic> {
+        let s = r.read_i32::<LittleEndian>()?;
         let mut door_states = Vec::new();
         for _ in 0..s {
-            door_states.push(DoorState::read_from(r));
+            door_states.push(DoorState::read_from(r)?);
         }
 
-        let s = r.read_i32::<LittleEndian>().unwrap();
+        let s = r.read_i32::<LittleEndian>()?;
         let mut pushwall_states = Vec::new();
         for _ in 0..s {
-            pushwall_states.push(PushwallState::read_from(r));
+            pushwall_states.push(PushwallState::read_from(r)?);
         }
 
         let mut door_count = 0;
@@ -382,12 +385,12 @@ impl MapDynamic {
         assert_eq!(door_count, door_states.len());
         assert_eq!(pushwall_count, pushwall_states.len());
 
-        MapDynamic {
+        Ok(MapDynamic {
             map,
             door_states,
             pushwall_states,
             pushwall_patch: Default::default(),
-        }
+        })
     }
 
     pub fn release(mut self) -> Map {
@@ -533,17 +536,16 @@ impl MapDynamic {
 }
 
 impl ms::Writable for MapDynamic {
-    fn write(&self, w: &mut dyn std::io::Write) {
-        w.write_i32::<LittleEndian>(self.door_states.len() as i32)
-            .unwrap();
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.door_states.len() as i32)?;
         for state in &self.door_states {
-            state.write(w);
+            state.write(w)?;
         }
 
-        w.write_i32::<LittleEndian>(self.pushwall_states.len() as i32)
-            .unwrap();
+        w.write_i32::<LittleEndian>(self.pushwall_states.len() as i32)?;
         for state in &self.pushwall_states {
-            state.write(w);
+            state.write(w)?;
         }
+        Ok(())
     }
 }

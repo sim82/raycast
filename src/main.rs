@@ -69,10 +69,7 @@ fn main() {
                         level_id = y;
                     }
                     _ => {
-                        println!(
-                            "starting level. load static map data {}",
-                            maps.get_map_name(id)
-                        );
+                        println!("starting level. load static map data {}", maps.get_map_name(id));
                         let (plane0, plane1) = maps.get_map_planes(id);
 
                         map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
@@ -97,7 +94,7 @@ fn main() {
                 let mut f = std::fs::File::open("save.bin").unwrap();
                 level_id = f.read_i32::<LittleEndian>().unwrap();
 
-                player = Player::read_from(&mut f);
+                player = Player::read_from(&mut f).expect("failed to load Player from savegame");
                 match existing_static_map_data {
                     Some(StaticMapData {
                         map,
@@ -105,21 +102,18 @@ fn main() {
                         level_id: y,
                     }) if level_id == y => {
                         println!("load savegame. re-using static map data");
-                        map_dynamic = MapDynamic::read_and_wrap(&mut f, map);
-                        things = Things::read_from(&mut f, thing_defs);
+                        map_dynamic =
+                            MapDynamic::read_and_wrap(&mut f, map).expect("failed to load MapDynamic from savegame");
+                        things = Things::read_from(&mut f, thing_defs).expect("failed to load Things from savegame");
                     }
                     _ => {
-                        println!(
-                            "load savegame. load static map data {}",
-                            maps.get_map_name(level_id)
-                        );
+                        println!("load savegame. load static map data {}", maps.get_map_name(level_id));
                         let (plane0, plane1) = maps.get_map_planes(level_id);
 
-                        map_dynamic = MapDynamic::read_and_wrap(
-                            &mut f,
-                            Map::from_map_planes(&plane0, &plane1),
-                        );
-                        things = Things::read_from(&mut f, ThingDefs::from_map_plane(&plane1));
+                        map_dynamic = MapDynamic::read_and_wrap(&mut f, Map::from_map_planes(&plane0, &plane1))
+                            .expect("failed to load MapDynamic from savegame");
+                        things = Things::read_from(&mut f, ThingDefs::from_map_plane(&plane1))
+                            .expect("failed to load Things from savegame");
                     }
                 }
             }
@@ -205,21 +199,13 @@ fn main() {
             let _start = Instant::now();
 
             // for _ in 0..1000 {
-            render::sweep_raycast(
-                &map_dynamic,
-                &mut buffer,
-                &mut zbuffer,
-                &player,
-                0..WIDTH,
-                &resources,
-            );
+            render::sweep_raycast(&map_dynamic, &mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
 
             let _sprite_start = Instant::now();
 
             // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
             // if frame % 4 == 0 {
-            let sprite_screen_setup =
-                sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
+            let sprite_screen_setup = sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
             sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);
 
             if automap {
@@ -272,9 +258,11 @@ fn main() {
             if window.is_key_pressed(Key::F5, KeyRepeat::No) {
                 let mut f = std::fs::File::create("save.bin").unwrap();
                 f.write_i32::<LittleEndian>(level_id).unwrap();
-                player.write(&mut f);
-                map_dynamic.write(&mut f);
-                things.write(&mut f);
+                player.write(&mut f).expect("failed to write Player to savegame");
+                map_dynamic
+                    .write(&mut f)
+                    .expect("failed to write MapDynamic to savegame");
+                things.write(&mut f).expect("failed to write Things to savegame");
             }
             if window.is_key_pressed(Key::F6, KeyRepeat::No) {
                 spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
