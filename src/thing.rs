@@ -227,7 +227,7 @@ impl ThingDefs {
                         20 => ThingType::PlayerStart(0),
                         21 => ThingType::PlayerStart(FA_FRAC_PI_2),
                         22 => ThingType::PlayerStart(FA_PI),
-                        23..=71 => ThingType::Prop((c - 22 + 2) as i32),
+                        23..=71 => ThingType::Prop((*c) as i32),
                         _ => continue,
                     }
                 };
@@ -450,27 +450,34 @@ impl Things {
 
     pub fn update(&mut self, player: &Player) {
         self.anim_timeout -= 1;
-        if self.anim_timeout > 0 {
-            return;
-        }
-        self.anim_timeout = 10;
+        let update_anims = if self.anim_timeout <= 0 {
+            self.anim_timeout = 10;
+
+            true
+        } else {
+            false
+        };
 
         for thing in &mut self.things {
-            thing.anim_index += 1;
+            if update_anims {
+                thing.anim_index += 1;
 
-            if !thing.animation_frames.is_empty() {
-                thing.sprite_index = thing.animation_frames[(thing.anim_index as usize) % thing.animation_frames.len()];
+                if !thing.animation_frames.is_empty() {
+                    thing.sprite_index =
+                        thing.animation_frames[(thing.anim_index as usize) % thing.animation_frames.len()];
+                }
             }
-
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
             match (thing_def.thing_type, &mut thing.actor) {
                 (ThingType::Prop(_id), Actor::Item { collected, collectible }) if !*collected => {
-                    let dx = player.x - thing_def.x;
-                    let dy = player.y - thing_def.y;
+                    // (ThingType::Prop(_id), _) => {
+                    let dx = player.x - thing_def.x + FP16_HALF;
+                    let dy = player.y - thing_def.y + FP16_HALF;
                     if dx.get_int().abs() == 0 && dy.get_int().abs() == 0 {
-                        println!("collected: {:?} {:?}", thing_def, collectible);
+                        println!("collected: {thing_def:?} {collectible:?}");
                         *collected = true;
+                        // println!("collected: {:?} ", thing_def);
                     }
                 }
                 _ => (),
@@ -498,7 +505,7 @@ impl Things {
                         },
                     )
                     | (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
-                        id,
+                        id: id - 22 + 2,
                         x: thing_def.x,
                         y: thing_def.y,
                         directionality: Directionality::Undirectional,
