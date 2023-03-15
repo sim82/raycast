@@ -178,7 +178,7 @@ impl ms::Writable for PushwallState {
             PushwallAction::Sliding(direction, f) => {
                 w.write_u8(1)?;
                 direction.write(w)?;
-                f.write(w);
+                f.write(w)?;
             }
             PushwallAction::Open(x, y) => {
                 w.write_u8(2)?;
