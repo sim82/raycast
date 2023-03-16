@@ -11,6 +11,7 @@ pub struct Player {
     pub y: Fp16,
     pub rot: i32,
     pub trigger: bool,
+    pub shoot: bool,
 }
 
 #[derive(Debug)]
@@ -27,6 +28,7 @@ impl Default for Player {
             y: 3.1.into(),
             rot: 0,
             trigger: false,
+            shoot: false,
         }
     }
 }
@@ -37,6 +39,7 @@ impl Writable for Player {
         w.write_i32::<LittleEndian>(self.y.v)?;
         w.write_i32::<LittleEndian>(self.rot)?;
         w.write_u8(if self.trigger { 1 } else { 0 })?;
+        w.write_u8(if self.shoot { 1 } else { 0 })?;
         Ok(())
     }
 }
@@ -51,8 +54,15 @@ impl Loadable for Player {
         };
         let rot = r.read_i32::<LittleEndian>()?;
         let trigger = r.read_u8()? != 0;
+        let shoot = r.read_u8()? != 0;
 
-        Ok(Self { x, y, rot, trigger })
+        Ok(Self {
+            x,
+            y,
+            rot,
+            trigger,
+            shoot,
+        })
     }
 }
 

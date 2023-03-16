@@ -329,6 +329,7 @@ fn raycast_test() {
         y: Fp16 { v: 72090 },
         rot: 0,
         trigger: false,
+        shoot: false,
     };
     let col = 10;
     sweep_raycast(

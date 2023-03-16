@@ -11,12 +11,14 @@ pub struct SpriteDef {
     pub y: Fp16,
     pub id: i32,
     pub directionality: Directionality,
+    pub owner: usize,
 }
 
 pub struct SpriteSceenSetup {
-    z: Fp16,
-    screen_x: i32,
+    pub z: Fp16,
+    pub screen_x: i32,
     id: i32,
+    pub owner: usize,
 }
 
 pub fn draw(
@@ -25,7 +27,13 @@ pub fn draw(
     zbuffer: &[Fp16],
     resources: &Resources,
 ) {
-    for SpriteSceenSetup { z, screen_x, id } in sprite_screen_setup.into_iter() {
+    for SpriteSceenSetup {
+        z,
+        screen_x,
+        id,
+        owner: _,
+    } in sprite_screen_setup.into_iter()
+    {
         render::draw_sprite(screen, zbuffer, resources, id, screen_x, z);
     }
 }
@@ -33,7 +41,7 @@ pub fn draw(
 pub fn setup_screen_pos_for_player(
     sprites: impl IntoIterator<Item = SpriteDef>,
     player: &Player,
-) -> impl IntoIterator<Item = SpriteSceenSetup> {
+) -> Vec<SpriteSceenSetup> {
     let inv_sin = fa_sin(fa_fix_angle(-player.rot));
     let inv_cos = fa_cos(fa_fix_angle(-player.rot));
 
@@ -77,7 +85,12 @@ pub fn setup_screen_pos_for_player(
                 sprite.id
             };
             // println!("viewangle: {viewangle}");
-            Some(SpriteSceenSetup { z, screen_x, id })
+            Some(SpriteSceenSetup {
+                z,
+                screen_x,
+                id,
+                owner: sprite.owner,
+            })
         })
         .collect::<Vec<_>>();
     screen_pos.sort_by_key(|SpriteSceenSetup { z, .. }| -(*z));

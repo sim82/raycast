@@ -43,7 +43,7 @@ impl EnemyType {
             EnemyType::Brown => match phase {
                 AnimationPhase::Stand => &*anim_def::BROWN_STAND,
                 AnimationPhase::Walk => &*anim_def::BROWN_WALK,
-                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Pain => &*anim_def::BROWN_PAIN,
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
@@ -51,7 +51,7 @@ impl EnemyType {
             EnemyType::White => match phase {
                 AnimationPhase::Stand => &*anim_def::WHITE_STAND,
                 AnimationPhase::Walk => &*anim_def::WHITE_WALK,
-                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Pain => &*anim_def::WHITE_PAIN,
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
@@ -59,7 +59,7 @@ impl EnemyType {
             EnemyType::Blue => match phase {
                 AnimationPhase::Stand => &*anim_def::BLUE_STAND,
                 AnimationPhase::Walk => &*anim_def::BLUE_WALK,
-                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Pain => &*anim_def::BLUE_PAIN,
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
@@ -67,15 +67,23 @@ impl EnemyType {
             EnemyType::Woof => match phase {
                 AnimationPhase::Stand => &*anim_def::WOOF_STAND,
                 AnimationPhase::Walk => &*anim_def::WOOF_WALK,
-                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Pain =>
+                /*&*anim_def::WOOF_PAIN*/
+                {
+                    todo!()
+                }
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
             EnemyType::Rotten => match phase {
                 AnimationPhase::Stand => &*anim_def::ROTTEN_STAND,
-                AnimationPhase::Walk => &*anim_def::ROTTEN_WALK,
-                AnimationPhase::Pain => todo!(),
+                AnimationPhase::Walk => &*anim_def::BLUE_PAIN,
+                AnimationPhase::Pain =>
+                /*&*anim_def::ROTTEN_PAIN*/
+                {
+                    todo!()
+                }
                 AnimationPhase::Die => todo!(),
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
@@ -301,9 +309,22 @@ pub enum Actor {
         collected: bool,
         collectible: Collectible,
     },
-    Guard,
+    Guard {
+        pain: bool,
+    },
     #[default]
     None,
+}
+
+impl Actor {
+    pub fn can_be_shot(&self) -> bool {
+        matches!(self, Actor::Guard { pain: _ })
+    }
+    pub fn shoot(&mut self) {
+        if let Actor::Guard { pain } = self {
+            *pain = true
+        }
+    }
 }
 
 impl ms::Writable for Actor {
@@ -314,7 +335,10 @@ impl ms::Writable for Actor {
                 w.write_u8(if *collected { 1 } else { 0 })?;
                 collectible.write(w)?;
             }
-            Actor::Guard => w.write_u8(1)?,
+            Actor::Guard { pain } => {
+                w.write_u8(1)?;
+                w.write_u8(if *pain { 1 } else { 0 })?;
+            }
             Actor::None => w.write_u8(2)?,
         }
         Ok(())
@@ -328,7 +352,9 @@ impl ms::Loadable for Actor {
                 collected: r.read_u8()? != 0,
                 collectible: Collectible::read_from(r)?,
             },
-            1 => Actor::Guard,
+            1 => Actor::Guard {
+                pain: r.read_u8()? != 0,
+            },
             2 => Actor::None,
             _ => panic!(),
         })
@@ -420,7 +446,7 @@ impl Things {
                     sprite_index: 0,
                     anim_index: 0,
                     static_index: i,
-                    actor: Actor::Guard,
+                    actor: Actor::Guard { pain: false },
                 }),
                 ThingType::Prop(sprite_index) => {
                     let actor = try_to_collectible(sprite_index)
@@ -459,6 +485,19 @@ impl Things {
         };
 
         for thing in &mut self.things {
+            match &mut thing.actor {
+                Actor::Guard { pain } if *pain => {
+                    if let ThingType::Enemy(_, _, enemy_type, _) =
+                        self.thing_defs.thing_defs[thing.static_index].thing_type
+                    {
+                        thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Pain).into();
+                        thing.anim_index = 0;
+                    }
+                    *pain = false;
+                }
+                _ => (),
+            }
+
             if update_anims {
                 thing.anim_index += 1;
 
@@ -487,7 +526,8 @@ impl Things {
     pub fn get_sprites(&self) -> Vec<SpriteDef> {
         self.things
             .iter()
-            .filter_map(|thing| {
+            .enumerate()
+            .filter_map(|(i, thing)| {
                 let thing_def = &self.thing_defs.thing_defs[thing.static_index];
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match (thing_def.thing_type, &thing.actor) {
@@ -496,6 +536,7 @@ impl Things {
                         x: thing_def.x,
                         y: thing_def.y,
                         directionality: Directionality::Direction(direction),
+                        owner: i,
                     }),
                     (
                         ThingType::Prop(id),
@@ -509,6 +550,7 @@ impl Things {
                         x: thing_def.x,
                         y: thing_def.y,
                         directionality: Directionality::Undirectional,
+                        owner: i,
                     }),
                     _ => None,
                 }

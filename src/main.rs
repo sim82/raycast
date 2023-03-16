@@ -86,6 +86,7 @@ fn main() {
                         y,
                         rot,
                         trigger: false,
+                        shoot: false,
                     })
                     .unwrap_or_default();
             }
@@ -148,6 +149,7 @@ fn main() {
             player_vel.right = 0;
             player_vel.rot = 0;
             player.trigger = false;
+            player.shoot = false;
             let (fwd_speed, rot_speed) = if window.is_key_down(Key::LeftShift) {
                 (2, 360)
             } else {
@@ -184,6 +186,7 @@ fn main() {
             if window.is_key_down(Key::Space) {
                 player.trigger = true;
             }
+            player.shoot = window.is_key_down(Key::LeftCtrl);
 
             if !stop_the_world_mode {
                 map_dynamic.update(&player);
@@ -206,10 +209,55 @@ fn main() {
             // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
             // if frame % 4 == 0 {
             let sprite_screen_setup = sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
+
+            let mut hit_thing = None;
+            if player.shoot {
+                for sprite in &sprite_screen_setup {
+                    const WIDTH_HALF: i32 = (WIDTH as i32) / 2;
+
+                    let zbound = zbuffer[WIDTH_HALF as usize];
+                    if !(things.things[sprite.owner].actor.can_be_shot() && sprite.z < zbound) {
+                        continue;
+                    }
+                    // FIXME: this is quite redundant with the calculations in sprite drawings. Maybe store the bounds in the screenspace setup struct.
+                    const C: i32 = MID;
+                    let offs = if sprite.z > FP16_ZERO {
+                        (C << FP16_SCALE) / sprite.z.v
+                    } else {
+                        C
+                    };
+                    if !((sprite.screen_x + offs >= 0) && (sprite.screen_x - offs < WIDTH as i32)) {
+                        continue;
+                    }
+
+                    println!(
+                        "offs: {offs} {} {:?}",
+                        sprite.screen_x, things.things[sprite.owner].actor
+                    );
+                    let offs_scale = 2; // fixme: general fettgesicht is probably wider...
+                    let min = (WIDTH as i32 / 2) - offs / offs_scale;
+                    let max = (WIDTH as i32 / 2) + offs / offs_scale;
+                    if (min..max).contains(&sprite.screen_x) {
+                        hit_thing = Some(sprite.owner);
+                    }
+                }
+            }
+
             sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);
 
             if automap {
                 map_dynamic.map.draw_automap(&mut buffer);
+            }
+
+            buffer.point(320 / 2, 80, 1);
+
+            if player.shoot {
+                if let Some(hit_thing) = hit_thing {
+                    println!("hit: {:?}", things.things[hit_thing].actor);
+                    things.things[hit_thing].actor.shoot();
+                } else {
+                    println!("miss");
+                }
             }
 
             // }
