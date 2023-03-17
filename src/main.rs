@@ -2,12 +2,11 @@ use std::time::Instant;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use minifb::{Key, KeyRepeat, Window, WindowOptions};
-use raycast::map::MapDynamic;
-use raycast::ms::{Loadable, Writable};
-use raycast::thing::Things;
-use raycast::{wl6, Resources};
-
-use raycast::prelude::*;
+use raycast::{
+    ms::{Loadable, Writable},
+    prelude::*,
+    wl6, Resources,
+};
 
 struct StaticMapData {
     level_id: i32,

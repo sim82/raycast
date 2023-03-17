@@ -10,6 +10,7 @@ pub mod player;
 pub mod render;
 pub mod sprite;
 pub mod thing;
+pub mod thing_def;
 pub mod wl6;
 
 pub mod prelude {
@@ -26,7 +27,8 @@ pub mod prelude {
         player::{Player, PlayerVel},
         render,
         sprite::{self, Directionality, SpriteDef},
-        thing::{Direction, ThingDef, ThingDefs, ThingType},
+        thing::Things,
+        thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
         Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
 }

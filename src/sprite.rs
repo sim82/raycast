@@ -40,8 +40,6 @@ pub enum SpriteIndex {
 pub struct SpriteDef {
     pub x: Fp16,
     pub y: Fp16,
-    // pub id: i32,
-    // pub directionality: Directionality,
     pub id: SpriteIndex,
     pub owner: usize,
 }
