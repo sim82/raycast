@@ -12,6 +12,7 @@ pub struct Player {
     pub rot: i32,
     pub trigger: bool,
     pub shoot: bool,
+    pub shoot_timeout: i32,
 }
 
 #[derive(Debug)]
@@ -29,6 +30,7 @@ impl Default for Player {
             rot: 0,
             trigger: false,
             shoot: false,
+            shoot_timeout: 0,
         }
     }
 }
@@ -40,6 +42,7 @@ impl Writable for Player {
         w.write_i32::<LittleEndian>(self.rot)?;
         w.write_u8(if self.trigger { 1 } else { 0 })?;
         w.write_u8(if self.shoot { 1 } else { 0 })?;
+        w.write_i32::<LittleEndian>(self.shoot_timeout)?;
         Ok(())
     }
 }
@@ -55,6 +58,7 @@ impl Loadable for Player {
         let rot = r.read_i32::<LittleEndian>()?;
         let trigger = r.read_u8()? != 0;
         let shoot = r.read_u8()? != 0;
+        let shoot_timeout = r.read_i32::<LittleEndian>()?;
 
         Ok(Self {
             x,
@@ -62,6 +66,7 @@ impl Loadable for Player {
             rot,
             trigger,
             shoot,
+            shoot_timeout,
         })
     }
 }

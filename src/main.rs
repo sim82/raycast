@@ -48,7 +48,6 @@ fn main() {
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut spawn = SpawnInfo::StartLevel(0, None);
-
     'outer: loop {
         let mut map_dynamic;
         let level_id;
@@ -87,6 +86,7 @@ fn main() {
                         rot,
                         trigger: false,
                         shoot: false,
+                        shoot_timeout: 0,
                     })
                     .unwrap_or_default();
             }
@@ -211,7 +211,9 @@ fn main() {
             let sprite_screen_setup = sprite::setup_screen_pos_for_player(things.get_sprites(), &player);
 
             let mut hit_thing = None;
-            if player.shoot {
+            if player.shoot && player.shoot_timeout <= 0 {
+                player.shoot_timeout = 30;
+
                 for sprite in &sprite_screen_setup {
                     const WIDTH_HALF: i32 = (WIDTH as i32) / 2;
 
@@ -241,6 +243,9 @@ fn main() {
                         hit_thing = Some(sprite.owner);
                     }
                 }
+            }
+            if player.shoot_timeout > 0 {
+                player.shoot_timeout -= 1;
             }
 
             sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);

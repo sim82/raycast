@@ -330,6 +330,7 @@ fn raycast_test() {
         rot: 0,
         trigger: false,
         shoot: false,
+        shoot_timeout: 0,
     };
     let col = 10;
     sweep_raycast(

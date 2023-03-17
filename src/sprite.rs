@@ -1,3 +1,6 @@
+use anyhow::anyhow;
+use byteorder::{ReadBytesExt, WriteBytesExt};
+
 pub use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -6,11 +9,40 @@ pub enum Directionality {
     Undirectional,
 }
 
+impl ms::Writable for Directionality {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        match self {
+            Directionality::Direction(d) => {
+                w.write_u8(0)?;
+                d.write(w)?;
+            }
+            Directionality::Undirectional => w.write_u8(1)?,
+        }
+        Ok(())
+    }
+}
+
+impl ms::Loadable for Directionality {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => Directionality::Direction(Direction::read_from(r)?),
+            1 => Directionality::Undirectional,
+            x => return Err(anyhow!("unhandled Directionality discriminator {x}")),
+        })
+    }
+}
+
+pub enum SpriteIndex {
+    Directional(i32, Direction),
+    Undirectional(i32),
+}
+
 pub struct SpriteDef {
     pub x: Fp16,
     pub y: Fp16,
-    pub id: i32,
-    pub directionality: Directionality,
+    // pub id: i32,
+    // pub directionality: Directionality,
+    pub id: SpriteIndex,
     pub owner: usize,
 }
 
@@ -62,27 +94,28 @@ pub fn setup_screen_pos_for_player(
             // let screen_x = (WIDTH as i32 / 2) + (ty * (WIDTH as i32 / 2)).get_int();
             let screen_x = ((FP16_ONE + (ty / z)) * (WIDTH as i32 / 2)).get_int();
 
-            let id = if let Directionality::Direction(direction) = sprite.directionality {
-                // calculate sprite orientation from player view angle
-                // 1. rotate sprite by inverse of camera rotation
-                // 2. turn by 'half an octant' to align steps to expected position
-                let mut viewangle = -player.rot + (FA_STEPS as i32) / 16;
-                // 3. approximate angle offset according to screen x position (who needs trigonometry whan you can fake it...)
-                // 4. turn by 180 deg to look along x axis
-                let cor = (160 - screen_x) * 2;
-                viewangle += cor + 1800;
+            let id = match sprite.id {
+                SpriteIndex::Directional(id, direction) => {
+                    // calculate sprite orientation from player view angle
+                    // 1. rotate sprite by inverse of camera rotation
+                    // 2. turn by 'half an octant' to align steps to expected position
+                    let mut viewangle = -player.rot + (FA_STEPS as i32) / 16;
+                    // 3. approximate angle offset according to screen x position (who needs trigonometry whan you can fake it...)
+                    // 4. turn by 180 deg to look along x axis
+                    let cor = (160 - screen_x) * 2;
+                    viewangle += cor + 1800;
 
-                while viewangle < 0 {
-                    viewangle += FA_STEPS as i32;
+                    while viewangle < 0 {
+                        viewangle += FA_STEPS as i32;
+                    }
+                    while viewangle >= FA_STEPS as i32 {
+                        viewangle -= FA_STEPS as i32;
+                    }
+                    viewangle /= FA_STEPS as i32 / 8;
+                    viewangle += direction.sprite_offset();
+                    id + viewangle % 8
                 }
-                while viewangle >= FA_STEPS as i32 {
-                    viewangle -= FA_STEPS as i32;
-                }
-                viewangle /= FA_STEPS as i32 / 8;
-                viewangle += direction.sprite_offset();
-                sprite.id + viewangle % 8
-            } else {
-                sprite.id
+                SpriteIndex::Undirectional(id) => id,
             };
             // println!("viewangle: {viewangle}");
             Some(SpriteSceenSetup {
