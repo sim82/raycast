@@ -263,47 +263,49 @@ fn think_nil(thing: &mut Thing) {}
 fn action_nil(thing: &mut Thing) {}
 
 pub struct Enemy {
-    states: &'static [State],
-    cur: usize,
-    timeout: i32,
+    // states: &'static [State],
+    exec_ctx: ExecCtx,
+    // cur: usize,
+    // timeout: i32,
     direction: Direction,
     health: i32,
 }
 
 impl Enemy {
-    pub fn set_state(&mut self, states: &'static [State]) {
-        self.states = states;
-        self.cur = 0;
-        self.timeout = self.states[0].1;
+    // pub fn set_state(&mut self, states: &'static [State]) {
+    //     self.states = states;
+    //     self.cur = 0;
+    //     self.timeout = self.states[0].1;
+    // }
+    pub fn set_state(&mut self, name: &str) {
+        self.exec_ctx.jump_label(name).unwrap();
+        println!("state: {self:?}");
     }
     pub fn update(&mut self) {
-        if self.timeout <= 0 {
-            self.cur = self.states[self.cur].4;
-            self.timeout = self.states[self.cur].1;
+        if self.exec_ctx.state.ticks <= 0 {
+            self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
 
         // self.states[self.cur].2();
 
-        self.timeout -= 1;
+        self.exec_ctx.state.ticks -= 1;
     }
     pub fn hit(&mut self) {
         self.health -= 7;
 
         if self.health > 10 {
-            self.cur = 7;
+            self.set_state("pain1");
         } else if self.health > 0 {
-            self.cur = 8;
+            self.set_state("pain2");
         } else {
-            self.cur = 15;
+            self.set_state("die");
         }
-        self.timeout = self.states[self.cur].1;
     }
     pub fn get_sprite(&self, enemy_type: &EnemyType) -> SpriteIndex {
-        let (id, _, _, _, _, dir) = self.states[self.cur];
-        if dir {
-            SpriteIndex::Directional(id + enemy_type.sprite_offset(), self.direction)
+        if self.exec_ctx.state.directional {
+            SpriteIndex::Directional(self.exec_ctx.state.id + enemy_type.sprite_offset(), self.direction)
         } else {
-            SpriteIndex::Undirectional(id + enemy_type.sprite_offset())
+            SpriteIndex::Undirectional(self.exec_ctx.state.id + enemy_type.sprite_offset())
         }
     }
 
@@ -313,15 +315,15 @@ impl Enemy {
         enemy_type: EnemyType,
         state: crate::thing_def::EnemyState,
     ) -> Enemy {
-        let cur = match state {
-            crate::thing_def::EnemyState::Standing => 0,
-            crate::thing_def::EnemyState::Patrolling => 1,
+        let start_label = match state {
+            crate::thing_def::EnemyState::Standing => "stand",
+            crate::thing_def::EnemyState::Patrolling => "path",
         };
+        let mut exec_ctx = ExecCtx::load("brown.bc").unwrap();
+        exec_ctx.jump_label(start_label).unwrap();
         Enemy {
             direction,
-            states: &HUMANOID_FRAMES,
-            cur,
-            timeout: HUMANOID_FRAMES[cur].1,
+            exec_ctx,
             health: 25,
         }
     }
@@ -330,7 +332,9 @@ impl Enemy {
 impl std::fmt::Debug for Enemy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Enemy")
-            .field("cur", &self.cur) /*.field("states", &self.states)*/
+            .field("state", &self.exec_ctx.state)
+            .field("direction", &self.direction)
+            .field("health", &self.health)
             .finish()
     }
 }
