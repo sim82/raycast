@@ -7,10 +7,11 @@ edition = "2021"
 
 [dependencies]
 # image = { version = "0.24", default-features = false, features = ["png"] }
-minifb = { version = "0.24", default-features = false, features = ["x11"] }
+# minifb = { version = "0.24", default-features = false, features = ["x11"] }
 lazy_static = "1.4"
 byteorder = "1"
 anyhow = "1"
+sdl2 = "0.35.2"
 
 [profile.release]
 opt-level = 3     # Optimize for size

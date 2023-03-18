@@ -1,12 +1,13 @@
 use std::time::Instant;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use minifb::{Key, KeyRepeat, Window, WindowOptions};
+// use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::{
     ms::{Loadable, Writable},
     prelude::*,
     wl6, Resources,
 };
+use sdl2::event::Event;
 
 struct StaticMapData {
     level_id: i32,
@@ -19,7 +20,7 @@ enum SpawnInfo {
     LoadSavegame(Option<StaticMapData>),
 }
 
-fn main() {
+fn main() -> raycast::prelude::Result<()> {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
 
@@ -27,24 +28,35 @@ fn main() {
     let resources = Resources::load_wl6("vswap.wl6");
     let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
-    let mut window = Window::new(
-        "Test - ESC to exit",
-        WIDTH,
-        HEIGHT,
-        WindowOptions {
-            scale: minifb::Scale::X4,
-            ..Default::default()
-        },
-    )
-    .unwrap_or_else(|e| {
-        panic!("{}", e);
-    });
+    // let mut window = Window::new(
+    //     "Test - ESC to exit",
+    //     WIDTH,
+    //     HEIGHT,
+    //     WindowOptions {
+    //         scale: minifb::Scale::X4,
+    //         ..Default::default()
+    //     },
+    // )
+    // .unwrap_or_else(|e| {
+    //     panic!("{}", e);
+    // });
+    let sdl_context = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
+    let window = video_subsystem
+        .window("rust-sdl2_gfx: draw line & FPSManager", WIDTH as u32, HEIGHT as u32)
+        .position_centered()
+        .opengl()
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+    let mut events = sdl_context.event_pump()?;
 
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
     let mut automap = false;
     let mut stop_the_world_mode = false;
     // Limit to max ~60 fps update rate
-    window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
+    // window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
     let mut spawn = SpawnInfo::StartLevel(0, None);
     'outer: loop {
@@ -126,8 +138,10 @@ fn main() {
         };
 
         loop {
-            if !window.is_open() || window.is_key_down(Key::Escape) {
-                break 'outer;
+            for event in events.poll_iter() {
+                if let Event::Quit { .. } = event {
+                    break 'outer;
+                };
             }
 
             for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
@@ -326,4 +340,5 @@ fn main() {
             }
         }
     }
+    Ok(())
 }
