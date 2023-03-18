@@ -23,11 +23,13 @@ pub enum Actor {
 
 impl Actor {
     pub fn can_be_shot(&self) -> bool {
-        matches!(self, Actor::Guard { pain: _, health: _ })
+        matches!(self, Actor::Guard { pain: _, health: _ } | Actor::Enemy { enemy: _ })
     }
     pub fn shoot(&mut self) {
-        if let Actor::Guard { pain, health: _ } = self {
-            *pain = true
+        match self {
+            Actor::Guard { pain, health: _ } => *pain = true,
+            Actor::Enemy { enemy } => enemy.hit(),
+            _ => (),
         }
     }
 }
