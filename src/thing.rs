@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::{ms::Loadable, prelude::*};
+use crate::{enemy::Enemy, ms::Loadable, prelude::*, sprite::SpriteIndex};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -13,6 +13,9 @@ pub enum Actor {
     Guard {
         pain: bool,
         health: i32,
+    },
+    Enemy {
+        enemy: Enemy,
     },
     #[default]
     None,
@@ -42,6 +45,7 @@ impl ms::Writable for Actor {
                 w.write_u8(if *pain { 1 } else { 0 })?;
                 w.write_i32::<LittleEndian>(*health)?;
             }
+            Actor::Enemy { enemy } => todo!(),
             Actor::None => w.write_u8(2)?,
         }
         Ok(())
@@ -183,15 +187,25 @@ impl Things {
 
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
             match thing_def.thing_type {
-                ThingType::Enemy(direction, _, enemy_type, _) => things.push(Thing {
+                // ThingType::Enemy(direction, _, enemy_type, _) => things.push(Thing {
+                //     animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
+                //     directionality: Directionality::Direction(direction),
+                //     // sprite_index: 0,
+                //     anim_mode: AnimMode::Loop(0),
+                //     static_index: i,
+                //     actor: Actor::Guard {
+                //         pain: false,
+                //         health: 20,
+                //     },
+                // }),
+                ThingType::Enemy(direction, difficulty, enemy_type, state) => things.push(Thing {
                     animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
                     directionality: Directionality::Direction(direction),
                     // sprite_index: 0,
                     anim_mode: AnimMode::Loop(0),
                     static_index: i,
-                    actor: Actor::Guard {
-                        pain: false,
-                        health: 20,
+                    actor: Actor::Enemy {
+                        enemy: Enemy::spawn(direction, difficulty, enemy_type, state),
                     },
                 }),
                 ThingType::Prop(sprite_index) => {
@@ -263,6 +277,9 @@ impl Things {
                         thing.directionality = Directionality::Direction(direction);
                     }
                 }
+                Actor::Enemy { enemy } => {
+                    enemy.update();
+                }
                 _ => (),
             }
 
@@ -308,6 +325,15 @@ impl Things {
                 let thing_def = &self.thing_defs.thing_defs[thing.static_index];
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match (thing_def.thing_type, &thing.actor) {
+                    (ThingType::Enemy(direction, _difficulty, enemy_type, _state), Actor::Enemy { enemy }) => {
+                        let id = enemy.get_sprite(&enemy_type); // + enemy_type.sprite_offset();
+                        Some(SpriteDef {
+                            id,
+                            x: thing_def.x,
+                            y: thing_def.y,
+                            owner: i,
+                        })
+                    }
                     (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), _) => {
                         let id = match thing.anim_mode {
                             AnimMode::Oneshot(i) => thing.animation_frames[i],

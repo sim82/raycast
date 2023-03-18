@@ -2,6 +2,7 @@ pub use anyhow::Result;
 use std::path::Path;
 
 pub mod draw;
+pub mod enemy;
 pub mod fa;
 pub mod fp16;
 pub mod map;
@@ -26,8 +27,8 @@ pub mod prelude {
         ms,
         player::{Player, PlayerVel},
         render,
-        sprite::{self, Directionality, SpriteDef},
-        thing::Things,
+        sprite::{self, Directionality, SpriteDef, SpriteIndex},
+        thing::{Thing, Things},
         thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
         Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
