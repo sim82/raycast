@@ -105,7 +105,7 @@ impl ms::Writable for AnimMode {
 
 pub struct Thing {
     pub animation_frames: Cow<'static, [i32]>,
-    pub anim_directionality: Directionality,
+    pub directionality: Directionality,
     pub anim_mode: AnimMode,
     pub actor: Actor,
     pub static_index: usize,
@@ -119,7 +119,7 @@ impl ms::Writable for Thing {
             w.write_i32::<LittleEndian>(*f)?;
         }
         self.anim_mode.write(w)?;
-        self.anim_directionality.write(w)?;
+        self.directionality.write(w)?;
         w.write_i32::<LittleEndian>(self.static_index as i32)?; // FIXME
         self.actor.write(w)?;
         Ok(())
@@ -140,7 +140,7 @@ impl ms::Loadable for Thing {
         Ok(Self {
             animation_frames: animation_frames.into(),
             anim_mode,
-            anim_directionality,
+            directionality: anim_directionality,
             actor,
             static_index,
         })
@@ -185,7 +185,7 @@ impl Things {
             match thing_def.thing_type {
                 ThingType::Enemy(direction, _, enemy_type, _) => things.push(Thing {
                     animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
-                    anim_directionality: Directionality::Direction(direction),
+                    directionality: Directionality::Direction(direction),
                     // sprite_index: 0,
                     anim_mode: AnimMode::Loop(0),
                     static_index: i,
@@ -203,7 +203,7 @@ impl Things {
                         .unwrap_or_default();
                     things.push(Thing {
                         animation_frames: Cow::Borrowed(&[]),
-                        anim_directionality: Directionality::Undirectional,
+                        directionality: Directionality::Undirectional,
                         // sprite_index,
                         // anim_index: 0,
                         anim_mode: AnimMode::Singleframe,
@@ -242,11 +242,11 @@ impl Things {
                         if *health > 0 {
                             thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Pain).into();
                             thing.anim_mode = AnimMode::Oneshot(0);
-                            thing.anim_directionality = Directionality::Undirectional;
+                            thing.directionality = Directionality::Undirectional;
                         } else {
                             thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Die).into();
                             thing.anim_mode = AnimMode::Oneshot(0);
-                            thing.anim_directionality = Directionality::Undirectional;
+                            thing.directionality = Directionality::Undirectional;
                         }
                     }
                     *pain = false;
@@ -260,7 +260,7 @@ impl Things {
                         thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Walk).into();
                         // thing.anim_index = 0;
                         thing.anim_mode = AnimMode::Loop(0);
-                        thing.anim_directionality = Directionality::Direction(direction);
+                        thing.directionality = Directionality::Direction(direction);
                     }
                 }
                 _ => (),
@@ -315,7 +315,7 @@ impl Things {
                             AnimMode::Singleframe => *thing.animation_frames.first().unwrap(),
                             AnimMode::Finished => *thing.animation_frames.last().unwrap(),
                         };
-                        let id = match thing.anim_directionality {
+                        let id = match thing.directionality {
                             Directionality::Direction(d) => sprite::SpriteIndex::Directional(id, d),
                             Directionality::Undirectional => sprite::SpriteIndex::Undirectional(id),
                         };
