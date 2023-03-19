@@ -14,11 +14,23 @@ use crate::{
 };
 
 #[derive(Debug)]
-enum Think {
+pub enum Think {
     None,
     Stand,
     Path,
     Chase,
+}
+
+impl Think {
+    pub fn from_identifier(name: &str) -> Self {
+        match name {
+            "None" => Think::None,
+            "Stand" => Think::Stand,
+            "Path" => Think::Path,
+            "Chase" => Think::Chase,
+            _ => panic!("unhandled Think identifier {name}"),
+        }
+    }
 }
 
 impl ms::Loadable for Think {
@@ -47,8 +59,17 @@ impl ms::Writable for Think {
 }
 
 #[derive(Debug)]
-enum Action {
+pub enum Action {
     None,
+}
+
+impl Action {
+    pub fn from_identifier(name: &str) -> Self {
+        match name {
+            "None" => Action::None,
+            _ => panic!("unhandled Action identifier {name}"),
+        }
+    }
 }
 
 impl ms::Loadable for Action {
@@ -64,16 +85,16 @@ impl ms::Writable for Action {
 }
 
 #[derive(Debug)]
-struct StateBc {
-    id: i32,
-    ticks: i32,
-    directional: bool,
-    think: Think,
-    action: Action,
-    next: i32,
+pub struct StateBc {
+    pub id: i32,
+    pub ticks: i32,
+    pub directional: bool,
+    pub think: Think,
+    pub action: Action,
+    pub next: i32,
 }
 
-const STATE_BC_SIZE: i32 = 14;
+pub const STATE_BC_SIZE: i32 = 14;
 
 impl ms::Loadable for StateBc {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
@@ -303,9 +324,9 @@ impl Enemy {
     }
     pub fn get_sprite(&self, enemy_type: &EnemyType) -> SpriteIndex {
         if self.exec_ctx.state.directional {
-            SpriteIndex::Directional(self.exec_ctx.state.id + enemy_type.sprite_offset(), self.direction)
+            SpriteIndex::Directional(self.exec_ctx.state.id, self.direction)
         } else {
-            SpriteIndex::Undirectional(self.exec_ctx.state.id + enemy_type.sprite_offset())
+            SpriteIndex::Undirectional(self.exec_ctx.state.id)
         }
     }
 
@@ -319,7 +340,14 @@ impl Enemy {
             crate::thing_def::EnemyState::Standing => "stand",
             crate::thing_def::EnemyState::Patrolling => "path",
         };
-        let mut exec_ctx = ExecCtx::load("brown.bc").unwrap();
+        let bc_name = match enemy_type {
+            EnemyType::Brown => "brown_gen.bc",
+            EnemyType::White => "white_gen.bc",
+            EnemyType::Blue => "blue_gen.bc",
+            EnemyType::Woof => "woof_gen.bc",
+            EnemyType::Rotten => "rotten_gen.bc",
+        };
+        let mut exec_ctx = ExecCtx::load(bc_name).unwrap();
         exec_ctx.jump_label(start_label).unwrap();
         Enemy {
             direction,

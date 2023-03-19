@@ -18,6 +18,7 @@ pub mod prelude {
 
     pub use crate::{
         draw::Draw,
+        enemy::{Action, Enemy, StateBc, Think},
         fa::{
             fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF,
             FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,

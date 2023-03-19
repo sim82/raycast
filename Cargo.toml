@@ -12,6 +12,9 @@ lazy_static = "1.4"
 byteorder = "1"
 anyhow = "1"
 
+[dev-dependencies]
+nom = "7"
+
 [profile.release]
 opt-level = 3     # Optimize for size
 lto = true        # Enable link-time optimization
