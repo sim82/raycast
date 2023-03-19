@@ -4,14 +4,14 @@ use std::{
     path::Path,
 };
 
-use anyhow::anyhow;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-
 use crate::{
     ms::{Loadable, Writable},
     prelude::*,
     thing_def::EnemyType,
 };
+use anyhow::anyhow;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use lazy_static::lazy_static;
 
 #[derive(Debug)]
 pub enum Think {
@@ -191,27 +191,65 @@ fn write_state_bc() {
     }
 }
 
-#[test]
-fn test_exec_ctx() {
-    let mut exec_ctx = ExecCtx::load("brown.bc").unwrap();
-    println!("{exec_ctx:?}");
-    exec_ctx.jump_label("path").unwrap();
+// #[test]
+// fn test_exec_ctx() {
+//     let mut exec_ctx = ExecCtx::load("brown.bc").unwrap();
+//     println!("{exec_ctx:?}");
+//     exec_ctx.jump_label("path").unwrap();
 
-    for i in 0..10 {
-        println!("state {i}: {:?}", exec_ctx.state);
-        exec_ctx.jump(exec_ctx.state.next).unwrap();
+//     for i in 0..10 {
+//         println!("state {i}: {:?}", exec_ctx.state);
+//         exec_ctx.jump(exec_ctx.state.next).unwrap();
+//     }
+// }
+
+lazy_static! {
+    static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
+    static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
+    static ref IMG_WHITE: ExecImage = ExecImage::load("white_gen.bc").unwrap();
+    static ref IMG_ROTTEN: ExecImage = ExecImage::load("rotten_gen.bc").unwrap();
+    static ref IMG_FURRY: ExecImage = ExecImage::load("furry_gen.bc").unwrap();
+}
+
+fn get_exec_image(enemy_type: EnemyType) -> &'static ExecImage {
+    match enemy_type {
+        EnemyType::Brown => &IMG_BROWN,
+        EnemyType::White => &IMG_WHITE,
+        EnemyType::Blue => &IMG_BLUE,
+        EnemyType::Woof => &IMG_FURRY,
+        EnemyType::Rotten => &IMG_ROTTEN,
     }
 }
 
 #[derive(Debug)]
-struct ExecCtx {
+struct ExecImage {
     pub code: Vec<u8>,
-    pub state: StateBc,
     pub labels: HashMap<String, i32>,
 }
 
+#[derive(Debug)]
+struct ExecCtx {
+    pub image: &'static ExecImage,
+    pub state: StateBc,
+}
+
 impl ExecCtx {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<ExecCtx> {
+    pub fn new(image: &'static ExecImage) -> Result<Self> {
+        let state = StateBc::read_from(&mut std::io::Cursor::new(&image.code[..]))?;
+        Ok(ExecCtx { image, state })
+    }
+    pub fn jump(&mut self, ptr: i32) -> Result<()> {
+        self.state = StateBc::read_from(&mut std::io::Cursor::new(&self.image.code[(ptr as usize)..]))?;
+        Ok(())
+    }
+    pub fn jump_label(&mut self, name: &str) -> Result<()> {
+        let ptr = self.image.labels.get(name).ok_or(anyhow!("unknown label {name}"))?;
+        self.jump(*ptr)
+    }
+}
+
+impl ExecImage {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<ExecImage> {
         let mut lb_path = path.as_ref().to_path_buf();
 
         let code = std::fs::read(path)?;
@@ -233,46 +271,9 @@ impl ExecCtx {
 
             labels.insert(String::from_utf8(name)?, ptr);
         }
-        Ok(ExecCtx { code, state, labels })
-    }
-    pub fn jump(&mut self, ptr: i32) -> Result<()> {
-        self.state = StateBc::read_from(&mut std::io::Cursor::new(&self.code[(ptr as usize)..]))?;
-        Ok(())
-    }
-    pub fn jump_label(&mut self, name: &str) -> Result<()> {
-        let ptr = self.labels.get(name).ok_or(anyhow!("unknown label {name}"))?;
-        self.jump(*ptr)
+        Ok(ExecImage { code, labels })
     }
 }
-
-type State = (i32, i32, fn(&mut Thing), fn(&mut Thing) -> (), usize, bool);
-const HUMANOID_FRAMES: [State; 19] = [
-    // 0
-    (0, 0, think_stand, action_nil, 0, true),
-    // 1
-    (8, 20, think_path, action_nil, 2, true),
-    (8, 5, think_nil, action_nil, 3, true),
-    (16, 15, think_path, action_nil, 4, true),
-    (24, 20, think_path, action_nil, 5, true),
-    (24, 5, think_nil, action_nil, 6, true),
-    (32, 15, think_path, action_nil, 1, true),
-    // 7
-    (40, 10, think_nil, action_nil, 9, false),
-    // 8
-    (44, 10, think_nil, action_nil, 9, false),
-    // 9
-    (8, 10, think_chase, action_nil, 10, true),
-    (8, 3, think_nil, action_nil, 11, true),
-    (16, 8, think_chase, action_nil, 12, true),
-    (24, 10, think_chase, action_nil, 13, true),
-    (24, 3, think_nil, action_nil, 14, true),
-    (32, 8, think_chase, action_nil, 9, true),
-    // 15
-    (41, 15, think_nil, action_nil, 16, false),
-    (42, 15, think_nil, action_nil, 17, false),
-    (43, 15, think_nil, action_nil, 18, false),
-    (45, 0, think_nil, action_nil, 18, false),
-];
 
 fn think_stand(thing: &mut Thing) {}
 fn think_chase(thing: &mut Thing) {}
@@ -284,10 +285,7 @@ fn think_nil(thing: &mut Thing) {}
 fn action_nil(thing: &mut Thing) {}
 
 pub struct Enemy {
-    // states: &'static [State],
     exec_ctx: ExecCtx,
-    // cur: usize,
-    // timeout: i32,
     direction: Direction,
     health: i32,
 }
@@ -340,14 +338,8 @@ impl Enemy {
             crate::thing_def::EnemyState::Standing => "stand",
             crate::thing_def::EnemyState::Patrolling => "path",
         };
-        let bc_name = match enemy_type {
-            EnemyType::Brown => "brown_gen.bc",
-            EnemyType::White => "white_gen.bc",
-            EnemyType::Blue => "blue_gen.bc",
-            EnemyType::Woof => "woof_gen.bc",
-            EnemyType::Rotten => "rotten_gen.bc",
-        };
-        let mut exec_ctx = ExecCtx::load(bc_name).unwrap();
+
+        let mut exec_ctx = ExecCtx::new(get_exec_image(enemy_type)).unwrap();
         exec_ctx.jump_label(start_label).unwrap();
         Enemy {
             direction,
