@@ -1,6 +1,6 @@
-use byteorder::{ReadBytesExt, WriteBytesExt};
-
 use crate::prelude::*;
+use anyhow::anyhow;
+use byteorder::{ReadBytesExt, WriteBytesExt};
 
 pub mod anim_def;
 
@@ -14,10 +14,36 @@ pub enum Difficulty {
 #[derive(Clone, Copy, Debug)]
 pub enum EnemyType {
     Brown,
-    White,
     Blue,
-    Woof,
+    White,
     Rotten,
+    Woof,
+}
+
+impl ms::Loadable for EnemyType {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => EnemyType::Brown,
+            1 => EnemyType::Blue,
+            2 => EnemyType::White,
+            3 => EnemyType::Rotten,
+            4 => EnemyType::Woof,
+            x => return Err(anyhow!("unhandled EnemyType discriminator {x}")),
+        })
+    }
+}
+
+impl ms::Writable for EnemyType {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_u8(match self {
+            EnemyType::Brown => 0,
+            EnemyType::Blue => 1,
+            EnemyType::White => 2,
+            EnemyType::Rotten => 3,
+            EnemyType::Woof => 4,
+        })?;
+        Ok(())
+    }
 }
 
 const START_BROWN: i32 = 51;

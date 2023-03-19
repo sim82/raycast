@@ -10,10 +10,6 @@ pub enum Actor {
         collected: bool,
         collectible: Collectible,
     },
-    Guard {
-        pain: bool,
-        health: i32,
-    },
     Enemy {
         enemy: Enemy,
     },
@@ -23,11 +19,11 @@ pub enum Actor {
 
 impl Actor {
     pub fn can_be_shot(&self) -> bool {
-        matches!(self, Actor::Guard { pain: _, health: _ } | Actor::Enemy { enemy: _ })
+        matches!(self, Actor::Enemy { enemy: _ })
     }
     pub fn shoot(&mut self) {
         match self {
-            Actor::Guard { pain, health: _ } => *pain = true,
+            // Actor::Guard { pain, health: _ } => *pain = true,
             Actor::Enemy { enemy } => enemy.hit(),
             _ => (),
         }
@@ -42,12 +38,15 @@ impl ms::Writable for Actor {
                 w.write_u8(if *collected { 1 } else { 0 })?;
                 collectible.write(w)?;
             }
-            Actor::Guard { pain, health } => {
+            // Actor::Guard { pain, health } => {
+            //     w.write_u8(1)?;
+            //     w.write_u8(if *pain { 1 } else { 0 })?;
+            //     w.write_i32::<LittleEndian>(*health)?;
+            // }
+            Actor::Enemy { enemy } => {
                 w.write_u8(1)?;
-                w.write_u8(if *pain { 1 } else { 0 })?;
-                w.write_i32::<LittleEndian>(*health)?;
+                enemy.write(w)?;
             }
-            Actor::Enemy { enemy } => todo!(),
             Actor::None => w.write_u8(2)?,
         }
         Ok(())
@@ -61,9 +60,8 @@ impl ms::Loadable for Actor {
                 collected: r.read_u8()? != 0,
                 collectible: Collectible::read_from(r)?,
             },
-            1 => Actor::Guard {
-                pain: r.read_u8()? != 0,
-                health: r.read_i32::<LittleEndian>()?,
+            1 => Actor::Enemy {
+                enemy: Enemy::read_from(r)?,
             },
             2 => Actor::None,
             _ => panic!(),
@@ -250,35 +248,35 @@ impl Things {
 
         for thing in &mut self.things {
             match &mut thing.actor {
-                Actor::Guard { pain, health } if *pain => {
-                    *health -= 7;
-                    if let ThingType::Enemy(_, _, enemy_type, _) =
-                        self.thing_defs.thing_defs[thing.static_index].thing_type
-                    {
-                        if *health > 0 {
-                            thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Pain).into();
-                            thing.anim_mode = AnimMode::Oneshot(0);
-                            thing.directionality = Directionality::Undirectional;
-                        } else {
-                            thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Die).into();
-                            thing.anim_mode = AnimMode::Oneshot(0);
-                            thing.directionality = Directionality::Undirectional;
-                        }
-                    }
-                    *pain = false;
-                }
-                Actor::Guard { pain: _, health } if thing.anim_mode == AnimMode::Finished => {
-                    if *health <= 0 {
-                        thing.actor = Actor::None;
-                    } else if let ThingType::Enemy(direction, _, enemy_type, _) =
-                        self.thing_defs.thing_defs[thing.static_index].thing_type
-                    {
-                        thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Walk).into();
-                        // thing.anim_index = 0;
-                        thing.anim_mode = AnimMode::Loop(0);
-                        thing.directionality = Directionality::Direction(direction);
-                    }
-                }
+                // Actor::Guard { pain, health } if *pain => {
+                //     *health -= 7;
+                //     if let ThingType::Enemy(_, _, enemy_type, _) =
+                //         self.thing_defs.thing_defs[thing.static_index].thing_type
+                //     {
+                //         if *health > 0 {
+                //             thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Pain).into();
+                //             thing.anim_mode = AnimMode::Oneshot(0);
+                //             thing.directionality = Directionality::Undirectional;
+                //         } else {
+                //             thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Die).into();
+                //             thing.anim_mode = AnimMode::Oneshot(0);
+                //             thing.directionality = Directionality::Undirectional;
+                //         }
+                //     }
+                //     *pain = false;
+                // }
+                // Actor::Guard { pain: _, health } if thing.anim_mode == AnimMode::Finished => {
+                //     if *health <= 0 {
+                //         thing.actor = Actor::None;
+                //     } else if let ThingType::Enemy(direction, _, enemy_type, _) =
+                //         self.thing_defs.thing_defs[thing.static_index].thing_type
+                //     {
+                //         thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Walk).into();
+                //         // thing.anim_index = 0;
+                //         thing.anim_mode = AnimMode::Loop(0);
+                //         thing.directionality = Directionality::Direction(direction);
+                //     }
+                // }
                 Actor::Enemy { enemy } => {
                     enemy.update();
                 }

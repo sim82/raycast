@@ -191,18 +191,6 @@ fn write_state_bc() {
     }
 }
 
-// #[test]
-// fn test_exec_ctx() {
-//     let mut exec_ctx = ExecCtx::load("brown.bc").unwrap();
-//     println!("{exec_ctx:?}");
-//     exec_ctx.jump_label("path").unwrap();
-
-//     for i in 0..10 {
-//         println!("state {i}: {:?}", exec_ctx.state);
-//         exec_ctx.jump(exec_ctx.state.next).unwrap();
-//     }
-// }
-
 lazy_static! {
     static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
     static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
@@ -286,8 +274,37 @@ fn action_nil(thing: &mut Thing) {}
 
 pub struct Enemy {
     exec_ctx: ExecCtx,
+    enemy_type: EnemyType,
     direction: Direction,
     health: i32,
+}
+
+impl ms::Loadable for Enemy {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        let enemy_type = EnemyType::read_from(r)?;
+        let state = StateBc::read_from(r)?;
+        let direction = Direction::read_from(r)?;
+        let health = r.read_i32::<LittleEndian>()?;
+        Ok(Enemy {
+            exec_ctx: ExecCtx {
+                image: get_exec_image(enemy_type),
+                state,
+            },
+            enemy_type,
+            direction,
+            health,
+        })
+    }
+}
+
+impl ms::Writable for Enemy {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        self.enemy_type.write(w)?;
+        self.exec_ctx.state.write(w)?;
+        self.direction.write(w)?;
+        w.write_i32::<LittleEndian>(self.health)?;
+        Ok(())
+    }
 }
 
 impl Enemy {
@@ -344,6 +361,7 @@ impl Enemy {
         Enemy {
             direction,
             exec_ctx,
+            enemy_type,
             health: 25,
         }
     }
