@@ -25,7 +25,6 @@ die:
     state BROWN_DIE_3, false, 15, None, None, next
 dead:
     state BROWN_DEAD, false, 0, None, None, dead
-
 }
 
 states blue_gen.bc blue_gen.lb {

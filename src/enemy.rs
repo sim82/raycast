@@ -4,11 +4,7 @@ use std::{
     path::Path,
 };
 
-use crate::{
-    ms::{Loadable, Writable},
-    prelude::*,
-    thing_def::EnemyType,
-};
+use crate::{ms::Loadable, prelude::*, thing_def::EnemyType};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
@@ -73,13 +69,13 @@ impl Action {
 }
 
 impl ms::Loadable for Action {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+    fn read_from(_r: &mut dyn std::io::Read) -> Result<Self> {
         Ok(Action::None)
     }
 }
 
 impl ms::Writable for Action {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+    fn write(&self, _w: &mut dyn std::io::Write) -> Result<()> {
         Ok(())
     }
 }
@@ -140,57 +136,6 @@ impl StateBc {
     }
 }
 
-#[test]
-fn write_state_bc() {
-    let states = [
-        // 0
-        StateBc::new(0, 0, Think::Stand, Action::None, 0, true),
-        // 1
-        StateBc::new(8, 20, Think::Path, Action::None, 2, true),
-        StateBc::new(8, 5, Think::None, Action::None, 3, true),
-        StateBc::new(16, 15, Think::Path, Action::None, 4, true),
-        StateBc::new(24, 20, Think::Path, Action::None, 5, true),
-        StateBc::new(24, 5, Think::None, Action::None, 6, true),
-        StateBc::new(32, 15, Think::Path, Action::None, 1, true),
-        // 7
-        StateBc::new(40, 10, Think::None, Action::None, 9, false),
-        // 8
-        StateBc::new(44, 10, Think::None, Action::None, 9, false),
-        // 9
-        StateBc::new(8, 10, Think::Chase, Action::None, 10, true),
-        StateBc::new(8, 3, Think::None, Action::None, 11, true),
-        StateBc::new(16, 8, Think::Chase, Action::None, 12, true),
-        StateBc::new(24, 10, Think::Chase, Action::None, 13, true),
-        StateBc::new(24, 3, Think::None, Action::None, 14, true),
-        StateBc::new(32, 8, Think::Chase, Action::None, 9, true),
-        // 15
-        StateBc::new(41, 15, Think::None, Action::None, 16, false),
-        StateBc::new(42, 15, Think::None, Action::None, 17, false),
-        StateBc::new(43, 15, Think::None, Action::None, 18, false),
-        StateBc::new(45, 0, Think::None, Action::None, 18, false),
-    ];
-    let mut f = std::fs::File::create("brown.bc").unwrap();
-    for state in &states[..] {
-        state.write(&mut f).unwrap();
-    }
-    let mut f = std::fs::File::create("brown.lb").unwrap();
-    let labels = [
-        ("stand", 0),
-        ("path", STATE_BC_SIZE * 1),
-        ("pain1", STATE_BC_SIZE * 7),
-        ("pain2", STATE_BC_SIZE * 8),
-        ("chase", STATE_BC_SIZE * 9),
-        ("die", STATE_BC_SIZE * 15),
-    ];
-    f.write_i32::<LittleEndian>(labels.len() as i32).unwrap();
-    for (name, ptr) in &labels {
-        let b = name.as_bytes();
-        f.write_u8(b.len() as u8).unwrap();
-        let _ = f.write(b).unwrap();
-        f.write_i32::<LittleEndian>(*ptr).unwrap();
-    }
-}
-
 lazy_static! {
     static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
     static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
@@ -218,13 +163,20 @@ struct ExecImage {
 #[derive(Debug)]
 struct ExecCtx {
     pub image: &'static ExecImage,
+    pub enemy_type: EnemyType,
     pub state: StateBc,
 }
 
 impl ExecCtx {
-    pub fn new(image: &'static ExecImage) -> Result<Self> {
+    pub fn new(enemy_type: EnemyType) -> Result<Self> {
+        let image = get_exec_image(enemy_type);
+
         let state = StateBc::read_from(&mut std::io::Cursor::new(&image.code[..]))?;
-        Ok(ExecCtx { image, state })
+        Ok(ExecCtx {
+            image,
+            enemy_type,
+            state,
+        })
     }
     pub fn jump(&mut self, ptr: i32) -> Result<()> {
         self.state = StateBc::read_from(&mut std::io::Cursor::new(&self.image.code[(ptr as usize)..]))?;
@@ -236,14 +188,34 @@ impl ExecCtx {
     }
 }
 
+impl ms::Loadable for ExecCtx {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        let enemy_type = EnemyType::read_from(r)?;
+        let state = StateBc::read_from(r)?;
+        Ok(ExecCtx {
+            image: get_exec_image(enemy_type),
+            enemy_type,
+            state,
+        })
+    }
+}
+
+impl ms::Writable for ExecCtx {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        self.enemy_type.write(w)?;
+        self.state.write(w)?;
+        Ok(())
+    }
+}
+
 impl ExecImage {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<ExecImage> {
         let mut lb_path = path.as_ref().to_path_buf();
 
         let code = std::fs::read(path)?;
 
-        let mut c = std::io::Cursor::new(&code);
-        let state = StateBc::read_from(&mut c)?;
+        // let mut c = std::io::Cursor::new(&code);
+        // let state = StateBc::read_from(&mut c)?;
 
         lb_path.set_extension("lb");
         println!("{lb_path:?}");
@@ -274,23 +246,17 @@ fn action_nil(thing: &mut Thing) {}
 
 pub struct Enemy {
     exec_ctx: ExecCtx,
-    enemy_type: EnemyType,
     direction: Direction,
     health: i32,
 }
 
 impl ms::Loadable for Enemy {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        let enemy_type = EnemyType::read_from(r)?;
-        let state = StateBc::read_from(r)?;
+        let exec_ctx = ExecCtx::read_from(r)?;
         let direction = Direction::read_from(r)?;
         let health = r.read_i32::<LittleEndian>()?;
         Ok(Enemy {
-            exec_ctx: ExecCtx {
-                image: get_exec_image(enemy_type),
-                state,
-            },
-            enemy_type,
+            exec_ctx,
             direction,
             health,
         })
@@ -299,8 +265,7 @@ impl ms::Loadable for Enemy {
 
 impl ms::Writable for Enemy {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
-        self.enemy_type.write(w)?;
-        self.exec_ctx.state.write(w)?;
+        self.exec_ctx.write(w)?;
         self.direction.write(w)?;
         w.write_i32::<LittleEndian>(self.health)?;
         Ok(())
@@ -337,7 +302,7 @@ impl Enemy {
             self.set_state("die");
         }
     }
-    pub fn get_sprite(&self, enemy_type: &EnemyType) -> SpriteIndex {
+    pub fn get_sprite(&self) -> SpriteIndex {
         if self.exec_ctx.state.directional {
             SpriteIndex::Directional(self.exec_ctx.state.id, self.direction)
         } else {
@@ -347,7 +312,7 @@ impl Enemy {
 
     pub fn spawn(
         direction: Direction,
-        difficulty: crate::thing_def::Difficulty,
+        _difficulty: crate::thing_def::Difficulty,
         enemy_type: EnemyType,
         state: crate::thing_def::EnemyState,
     ) -> Enemy {
@@ -356,12 +321,11 @@ impl Enemy {
             crate::thing_def::EnemyState::Patrolling => "path",
         };
 
-        let mut exec_ctx = ExecCtx::new(get_exec_image(enemy_type)).unwrap();
+        let mut exec_ctx = ExecCtx::new(enemy_type).unwrap();
         exec_ctx.jump_label(start_label).unwrap();
         Enemy {
             direction,
             exec_ctx,
-            enemy_type,
             health: 25,
         }
     }

@@ -4,11 +4,10 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while},
-    character::complete::{char, digit1, multispace0, multispace1, space0},
-    error::ParseError,
+    character::complete::{char, digit1, multispace0, multispace1},
     multi::{many0, many1, separated_list0},
-    sequence::{delimited, terminated, tuple},
-    IResult, Parser,
+    sequence::{delimited, terminated},
+    IResult,
 };
 use raycast::{enemy, ms::Writable, prelude::*};
 
@@ -226,7 +225,7 @@ fn main() {
 
     let input = std::fs::read_to_string(filename).expect("failed to read input file");
 
-    let (input, toplevel_elements) = many1(parse_toplevel)(&input).expect("failed to parse toplevel elements");
+    let (_input, toplevel_elements) = many1(parse_toplevel)(&input).expect("failed to parse toplevel elements");
     println!("elements: {toplevel_elements:?}");
 
     let mut enums = HashMap::new();
