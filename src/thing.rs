@@ -36,11 +36,6 @@ impl ms::Writable for Actor {
                 w.write_u8(if *collected { 1 } else { 0 })?;
                 collectible.write(w)?;
             }
-            // Actor::Guard { pain, health } => {
-            //     w.write_u8(1)?;
-            //     w.write_u8(if *pain { 1 } else { 0 })?;
-            //     w.write_i32::<LittleEndian>(*health)?;
-            // }
             Actor::Enemy { enemy } => {
                 w.write_u8(1)?;
                 enemy.write(w)?;
@@ -67,61 +62,13 @@ impl ms::Loadable for Actor {
     }
 }
 
-#[derive(PartialEq, Eq)]
-pub enum AnimMode {
-    Oneshot(usize),
-    Loop(usize),
-    Singleframe,
-    Finished,
-}
-
-impl ms::Loadable for AnimMode {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
-            0 => AnimMode::Oneshot(r.read_u32::<LittleEndian>()? as usize),
-            1 => AnimMode::Loop(r.read_u32::<LittleEndian>()? as usize),
-            2 => AnimMode::Singleframe,
-            3 => AnimMode::Finished,
-            x => return Err(anyhow!("unhandled AnimMode discriminator {x}")),
-        })
-    }
-}
-
-impl ms::Writable for AnimMode {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        match self {
-            AnimMode::Oneshot(i) => {
-                w.write_u8(0)?;
-                w.write_u32::<LittleEndian>(*i as u32)?;
-            }
-            AnimMode::Loop(i) => {
-                w.write_u8(1)?;
-                w.write_u32::<LittleEndian>(*i as u32)?;
-            }
-            AnimMode::Singleframe => w.write_u8(2)?,
-            AnimMode::Finished => w.write_u8(3)?,
-        }
-        Ok(())
-    }
-}
-
 pub struct Thing {
-    pub animation_frames: Cow<'static, [i32]>,
-    pub directionality: Directionality,
-    pub anim_mode: AnimMode,
     pub actor: Actor,
     pub static_index: usize,
 }
 
 impl ms::Writable for Thing {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_u32::<LittleEndian>(self.animation_frames.len() as u32)?;
-
-        for f in self.animation_frames.iter() {
-            w.write_i32::<LittleEndian>(*f)?;
-        }
-        self.anim_mode.write(w)?;
-        self.directionality.write(w)?;
         w.write_i32::<LittleEndian>(self.static_index as i32)?; // FIXME
         self.actor.write(w)?;
         Ok(())
@@ -130,22 +77,9 @@ impl ms::Writable for Thing {
 
 impl ms::Loadable for Thing {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let num_anim_frames = r.read_u32::<LittleEndian>()?;
-        let mut animation_frames = Vec::new();
-        for _ in 0..num_anim_frames {
-            animation_frames.push(r.read_i32::<LittleEndian>()?);
-        }
-        let anim_mode = AnimMode::read_from(r)?;
-        let anim_directionality = Directionality::read_from(r)?;
         let static_index = r.read_i32::<LittleEndian>()? as usize;
         let actor = Actor::read_from(r)?;
-        Ok(Self {
-            animation_frames: animation_frames.into(),
-            anim_mode,
-            directionality: anim_directionality,
-            actor,
-            static_index,
-        })
+        Ok(Self { actor, static_index })
     }
 }
 
@@ -185,22 +119,7 @@ impl Things {
 
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
             match thing_def.thing_type {
-                // ThingType::Enemy(direction, _, enemy_type, _) => things.push(Thing {
-                //     animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
-                //     directionality: Directionality::Direction(direction),
-                //     // sprite_index: 0,
-                //     anim_mode: AnimMode::Loop(0),
-                //     static_index: i,
-                //     actor: Actor::Guard {
-                //         pain: false,
-                //         health: 20,
-                //     },
-                // }),
                 ThingType::Enemy(direction, difficulty, enemy_type, state) => things.push(Thing {
-                    animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
-                    directionality: Directionality::Direction(direction),
-                    // sprite_index: 0,
-                    anim_mode: AnimMode::Loop(0),
                     static_index: i,
                     actor: Actor::Enemy {
                         enemy: Enemy::spawn(direction, difficulty, enemy_type, state),
@@ -213,15 +132,7 @@ impl Things {
                             collectible,
                         })
                         .unwrap_or_default();
-                    things.push(Thing {
-                        animation_frames: Cow::Borrowed(&[]),
-                        directionality: Directionality::Undirectional,
-                        // sprite_index,
-                        // anim_index: 0,
-                        anim_mode: AnimMode::Singleframe,
-                        static_index: i,
-                        actor,
-                    });
+                    things.push(Thing { static_index: i, actor });
                 }
                 ThingType::PlayerStart(_) => (),
             }
@@ -235,37 +146,11 @@ impl Things {
     }
 
     pub fn update(&mut self, player: &Player) {
-        self.anim_timeout -= 1;
-        let update_anims = if self.anim_timeout <= 0 {
-            self.anim_timeout = 10;
-
-            true
-        } else {
-            false
-        };
-
         for thing in &mut self.things {
             if let Actor::Enemy { enemy } = &mut thing.actor {
                 enemy.update();
             }
 
-            if update_anims {
-                match &mut thing.anim_mode {
-                    AnimMode::Oneshot(i) => {
-                        if *i < thing.animation_frames.len() - 1 {
-                            // thing.sprite_index = thing.animation_frames[*i];
-                            *i += 1;
-                        } else {
-                            thing.anim_mode = AnimMode::Finished;
-                        }
-                    }
-                    AnimMode::Loop(i) => {
-                        // thing.sprite_index = thing.animation_frames[*i];
-                        *i = (*i + 1) % thing.animation_frames.len();
-                    }
-                    _ => (),
-                }
-            }
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
             match (thing_def.thing_type, &mut thing.actor) {
@@ -300,32 +185,7 @@ impl Things {
                             owner: i,
                         })
                     }
-                    (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), _) => {
-                        let id = match thing.anim_mode {
-                            AnimMode::Oneshot(i) => thing.animation_frames[i],
-                            AnimMode::Loop(i) => thing.animation_frames[i],
-                            AnimMode::Singleframe => *thing.animation_frames.first().unwrap(),
-                            AnimMode::Finished => *thing.animation_frames.last().unwrap(),
-                        };
-                        let id = match thing.directionality {
-                            Directionality::Direction(d) => sprite::SpriteIndex::Directional(id, d),
-                            Directionality::Undirectional => sprite::SpriteIndex::Undirectional(id),
-                        };
-                        Some(SpriteDef {
-                            id,
-                            x: thing_def.x,
-                            y: thing_def.y,
-                            owner: i,
-                        })
-                    }
-                    (
-                        ThingType::Prop(id),
-                        Actor::Item {
-                            collected: false,
-                            collectible: _,
-                        },
-                    )
-                    | (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
+                    (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
                         id: sprite::SpriteIndex::Undirectional(id - 22 + 2),
                         x: thing_def.x,
                         y: thing_def.y,
