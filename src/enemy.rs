@@ -226,38 +226,23 @@ impl ExecImage {
         let ptr = self.labels.get(label).ok_or(anyhow!("unknown label {label}"))?;
         self.read_state(*ptr)
     }
-
-    // pub fn load<P: AsRef<Path>>(path: P) -> Result<ExecImage> {
-    //     let mut lb_path = path.as_ref().to_path_buf();
-
-    //     let code = std::fs::read(path)?;
-
-    //     // let mut c = std::io::Cursor::new(&code);
-    //     // let state = StateBc::read_from(&mut c)?;
-
-    //     lb_path.set_extension("lb");
-    //     println!("{lb_path:?}");
-    //     let mut f = std::fs::File::open(lb_path)?;
-    //     let num_labels = f.read_i32::<LittleEndian>()?;
-    //     let mut labels = HashMap::new();
-    //     // let mut tmp = [0u8; 16];
-    //     for _ in 0..num_labels {
-    //         let len = f.read_u8()? as usize;
-    //         let mut name = vec![0u8; len];
-    //         f.read_exact(&mut name)?;
-    //         let ptr = f.read_i32::<LittleEndian>()?;
-
-    //         labels.insert(String::from_utf8(name)?, ptr);
-    //     }
-    //     Ok(ExecImage { code, labels })
-    // }
 }
 
 fn think_stand(thing: &mut Thing) {}
-fn think_chase(thing: &mut Thing) {}
+fn think_chase(thing: &mut Enemy) {
+    // if let Actor::Enemy(enemy) = &mut thing.actor {}
+    let (dx, dy) = thing.direction.tile_offset();
+    thing.x += crate::fp16::FP16_FRAC_64 * dx;
+    thing.y += crate::fp16::FP16_FRAC_64 * dy;
+}
 
 // fn think_path(thing: &mut Thing) {}
-fn think_path(thing: &mut Thing) {}
+fn think_path(thing: &mut Enemy) {
+    // if let Actor::Enemy(enemy) = &mut thing.actor {}
+    // let (dx, dy) = thing.direction.tile_offset();
+    // thing.x += crate::fp16::FP16_FRAC_64 * dx;
+    // thing.y += crate::fp16::FP16_FRAC_64 * dy;
+}
 
 fn think_nil(thing: &mut Thing) {}
 fn action_nil(thing: &mut Thing) {}
@@ -267,6 +252,8 @@ pub struct Enemy {
     enemy_type: EnemyType,
     direction: Direction,
     health: i32,
+    x: Fp16,
+    y: Fp16,
 }
 
 impl ms::Loadable for Enemy {
@@ -275,11 +262,15 @@ impl ms::Loadable for Enemy {
         let enemy_type = EnemyType::read_from(r)?;
         let direction = Direction::read_from(r)?;
         let health = r.read_i32::<LittleEndian>()?;
+        let x = Fp16::read_from(r)?;
+        let y = Fp16::read_from(r)?;
         Ok(Enemy {
             exec_ctx,
             enemy_type,
             direction,
             health,
+            x,
+            y,
         })
     }
 }
@@ -290,6 +281,8 @@ impl ms::Writable for Enemy {
         self.enemy_type.write(w)?;
         self.direction.write(w)?;
         w.write_i32::<LittleEndian>(self.health)?;
+        self.x.write(w)?;
+        self.y.write(w)?;
         Ok(())
     }
 }
@@ -328,6 +321,12 @@ impl Enemy {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
 
+        match self.exec_ctx.state.think {
+            Think::None => (),
+            Think::Stand => (),
+            Think::Path => think_path(self),
+            Think::Chase => think_chase(self),
+        }
         // self.states[self.cur].2();
 
         self.exec_ctx.state.ticks -= 1;
@@ -343,12 +342,13 @@ impl Enemy {
             self.set_state("die");
         }
     }
-    pub fn get_sprite(&self) -> SpriteIndex {
-        if self.exec_ctx.state.directional {
+    pub fn get_sprite(&self) -> (SpriteIndex, Fp16, Fp16) {
+        let id = if self.exec_ctx.state.directional {
             SpriteIndex::Directional(self.exec_ctx.state.id, self.direction)
         } else {
             SpriteIndex::Undirectional(self.exec_ctx.state.id)
-        }
+        };
+        (id, self.x, self.y)
     }
 
     pub fn spawn(
@@ -356,17 +356,21 @@ impl Enemy {
         _difficulty: crate::thing_def::Difficulty,
         enemy_type: EnemyType,
         state: crate::thing_def::EnemyState,
+        thing_def: &ThingDef,
     ) -> Enemy {
         let start_label = match state {
             crate::thing_def::EnemyState::Standing => "stand",
             crate::thing_def::EnemyState::Patrolling => "path",
         };
         let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
+
         Enemy {
             direction,
             exec_ctx,
             enemy_type,
             health: 25,
+            x: thing_def.x,
+            y: thing_def.y,
         }
     }
 }

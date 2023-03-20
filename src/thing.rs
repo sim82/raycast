@@ -57,7 +57,7 @@ impl ms::Loadable for Actor {
                 enemy: Enemy::read_from(r)?,
             },
             2 => Actor::None,
-            _ => panic!(),
+            x => return Err(anyhow!("unhandled Actor discriminator {x}")),
         })
     }
 }
@@ -122,7 +122,7 @@ impl Things {
                 ThingType::Enemy(direction, difficulty, enemy_type, state) => things.push(Thing {
                     static_index: i,
                     actor: Actor::Enemy {
-                        enemy: Enemy::spawn(direction, difficulty, enemy_type, state),
+                        enemy: Enemy::spawn(direction, difficulty, enemy_type, state, thing_def),
                     },
                 }),
                 ThingType::Prop(sprite_index) => {
@@ -177,13 +177,8 @@ impl Things {
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match (thing_def.thing_type, &thing.actor) {
                     (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), Actor::Enemy { enemy }) => {
-                        let id = enemy.get_sprite(); // + enemy_type.sprite_offset();
-                        Some(SpriteDef {
-                            id,
-                            x: thing_def.x,
-                            y: thing_def.y,
-                            owner: i,
-                        })
+                        let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
+                        Some(SpriteDef { id, x, y, owner: i })
                     }
                     (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
                         id: sprite::SpriteIndex::Undirectional(id - 22 + 2),
