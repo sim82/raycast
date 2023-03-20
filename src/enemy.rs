@@ -1,16 +1,17 @@
 use std::{
     collections::HashMap,
-    io::{Read, Write},
+    io::{Cursor, Read, Write},
     path::Path,
 };
 
 use crate::{ms::Loadable, prelude::*, thing_def::EnemyType};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Think {
+    #[default]
     None,
     Stand,
     Path,
@@ -54,8 +55,9 @@ impl ms::Writable for Think {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Action {
+    #[default]
     None,
 }
 
@@ -80,7 +82,7 @@ impl ms::Writable for Action {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct StateBc {
     pub id: i32,
     pub ticks: i32,
@@ -136,13 +138,15 @@ impl StateBc {
     }
 }
 
+const WL6_IMAGE: &[u8] = include_bytes!("out.img");
+
 lazy_static! {
     // static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
     // static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
     // static ref IMG_WHITE: ExecImage = ExecImage::load("white_gen.bc").unwrap();
     // static ref IMG_ROTTEN: ExecImage = ExecImage::load("rotten_gen.bc").unwrap();
     // static ref IMG_FURRY: ExecImage = ExecImage::load("furry_gen.bc").unwrap();
-    static ref IMG_WL6: ExecImage = ExecImage::load("out.bc").unwrap();
+    static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
 }
 
 // fn get_exec_image(enemy_type: EnemyType) -> &'static ExecImage {
@@ -157,7 +161,7 @@ lazy_static! {
 
 #[derive(Debug)]
 struct ExecImage {
-    pub code: Vec<u8>,
+    pub code: &'static [u8],
     pub labels: HashMap<String, i32>,
 }
 
@@ -168,19 +172,18 @@ struct ExecCtx {
 }
 
 impl ExecCtx {
-    pub fn new() -> Result<Self> {
+    pub fn new(initial_label: &str) -> Result<Self> {
         let image = &IMG_WL6; //get_exec_image(enemy_type);
-
-        let state = StateBc::read_from(&mut std::io::Cursor::new(&image.code[..]))?;
+        let state = image.read_state_by_label(initial_label)?;
         Ok(ExecCtx { image, state })
     }
     pub fn jump(&mut self, ptr: i32) -> Result<()> {
-        self.state = StateBc::read_from(&mut std::io::Cursor::new(&self.image.code[(ptr as usize)..]))?;
+        self.state = self.image.read_state(ptr)?;
         Ok(())
     }
     pub fn jump_label(&mut self, name: &str) -> Result<()> {
-        let ptr = self.image.labels.get(name).ok_or(anyhow!("unknown label {name}"))?;
-        self.jump(*ptr)
+        self.state = self.image.read_state_by_label(name)?;
+        Ok(())
     }
 }
 
@@ -199,17 +202,8 @@ impl ms::Writable for ExecCtx {
 }
 
 impl ExecImage {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<ExecImage> {
-        let mut lb_path = path.as_ref().to_path_buf();
-
-        let code = std::fs::read(path)?;
-
-        // let mut c = std::io::Cursor::new(&code);
-        // let state = StateBc::read_from(&mut c)?;
-
-        lb_path.set_extension("lb");
-        println!("{lb_path:?}");
-        let mut f = std::fs::File::open(lb_path)?;
+    pub fn from_bytes(code: &'static [u8]) -> Result<ExecImage> {
+        let mut f = Cursor::new(code);
         let num_labels = f.read_i32::<LittleEndian>()?;
         let mut labels = HashMap::new();
         // let mut tmp = [0u8; 16];
@@ -221,8 +215,42 @@ impl ExecImage {
 
             labels.insert(String::from_utf8(name)?, ptr);
         }
+        // println!("labels: {labels:?}");
         Ok(ExecImage { code, labels })
     }
+    pub fn read_state(&self, ptr: i32) -> Result<StateBc> {
+        StateBc::read_from(&mut std::io::Cursor::new(&self.code[(ptr as usize)..]))
+    }
+
+    pub fn read_state_by_label(&self, label: &str) -> Result<StateBc> {
+        let ptr = self.labels.get(label).ok_or(anyhow!("unknown label {label}"))?;
+        self.read_state(*ptr)
+    }
+
+    // pub fn load<P: AsRef<Path>>(path: P) -> Result<ExecImage> {
+    //     let mut lb_path = path.as_ref().to_path_buf();
+
+    //     let code = std::fs::read(path)?;
+
+    //     // let mut c = std::io::Cursor::new(&code);
+    //     // let state = StateBc::read_from(&mut c)?;
+
+    //     lb_path.set_extension("lb");
+    //     println!("{lb_path:?}");
+    //     let mut f = std::fs::File::open(lb_path)?;
+    //     let num_labels = f.read_i32::<LittleEndian>()?;
+    //     let mut labels = HashMap::new();
+    //     // let mut tmp = [0u8; 16];
+    //     for _ in 0..num_labels {
+    //         let len = f.read_u8()? as usize;
+    //         let mut name = vec![0u8; len];
+    //         f.read_exact(&mut name)?;
+    //         let ptr = f.read_i32::<LittleEndian>()?;
+
+    //         labels.insert(String::from_utf8(name)?, ptr);
+    //     }
+    //     Ok(ExecImage { code, labels })
+    // }
 }
 
 fn think_stand(thing: &mut Thing) {}
@@ -266,6 +294,22 @@ impl ms::Writable for Enemy {
     }
 }
 
+trait LabelMapper {
+    fn map_label(&self, label: &str) -> String;
+}
+
+impl LabelMapper for EnemyType {
+    fn map_label(&self, name: &str) -> String {
+        match self {
+            EnemyType::Brown => format!("brown::{name}"),
+            EnemyType::Blue => format!("blue::{name}"),
+            EnemyType::White => format!("white::{name}"),
+            EnemyType::Rotten => format!("rotten::{name}"),
+            EnemyType::Woof => format!("furry::{name}"),
+        }
+    }
+}
+
 impl Enemy {
     // pub fn set_state(&mut self, states: &'static [State]) {
     //     self.states = states;
@@ -273,14 +317,10 @@ impl Enemy {
     //     self.timeout = self.states[0].1;
     // }
     pub fn set_state(&mut self, name: &str) {
-        let label = match self.enemy_type {
-            EnemyType::Brown => format!("brown::{name}"),
-            EnemyType::Blue => format!("blue::{name}"),
-            EnemyType::White => format!("white::{name}"),
-            EnemyType::Rotten => format!("rotten::{name}"),
-            EnemyType::Woof => format!("furry::{name}"),
-        };
-        self.exec_ctx.jump_label(&label).unwrap();
+        let label = self.enemy_type.map_label(name);
+        self.exec_ctx
+            .jump_label(&label)
+            .unwrap_or_else(|err| panic!("failed to jump to state {label}: {err:?}"));
         println!("state: {self:?}");
     }
     pub fn update(&mut self) {
@@ -321,16 +361,13 @@ impl Enemy {
             crate::thing_def::EnemyState::Standing => "stand",
             crate::thing_def::EnemyState::Patrolling => "path",
         };
-
-        let exec_ctx = ExecCtx::new().unwrap();
-        let mut e = Enemy {
+        let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
+        Enemy {
             direction,
             exec_ctx,
             enemy_type,
             health: 25,
-        };
-        e.set_state(start_label);
-        e
+        }
     }
 }
 

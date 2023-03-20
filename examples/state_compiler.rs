@@ -1,4 +1,7 @@
-use std::{collections::HashMap, io::Write};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::Write,
+};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
@@ -112,7 +115,8 @@ struct StatesBlock {
 
 fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, usize>) {
     let mut states = Vec::new();
-    let mut label_ptrs = HashMap::new();
+    let mut label_ptrs = BTreeMap::new(); // keep them sorted in the output file
+
     // pass 1: resolve label offsets
     let mut ip = 0;
     for state_block in state_blocks {
@@ -132,8 +136,14 @@ fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String,
             }
         }
     }
+
     // pass2: generate code
-    let mut ip = 0;
+    // calculate size of labels section
+    let mut ip = label_ptrs.keys().map(|k| k.len() as i32 + 1 + 4).sum::<i32>() + 4;
+    // 're-locate' label pointers to point after the labels section
+    println!("bc offset: {ip}");
+    label_ptrs.values_mut().for_each(|i| *i += ip);
+
     for state_block in state_blocks {
         for element in &state_block.elements {
             if let StatesBlockElement::State {
@@ -167,7 +177,7 @@ fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String,
         }
     }
 
-    let mut f = std::fs::File::create("out.lb").expect("failed to open lb file");
+    let mut f = std::fs::File::create("out.img").expect("failed to open img file");
     f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
     for (name, ptr) in &label_ptrs {
         let b = name.as_bytes();
@@ -175,7 +185,6 @@ fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String,
         let _ = f.write(b).unwrap();
         f.write_i32::<LittleEndian>(*ptr).unwrap();
     }
-    let mut f = std::fs::File::create("out.bc").expect("failed to open bc file");
     for state in states {
         state.write(&mut f).unwrap();
     }
