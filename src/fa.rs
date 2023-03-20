@@ -7,6 +7,7 @@ pub const PIS_IN_180: f32 = 57.295_78_f32;
 pub const FA_TAU: i32 = (std::f32::consts::TAU * PIS_IN_180 * FA_SCALEF) as i32; // .to_degrees() method is not constexpr
 pub const FA_PI: i32 = (std::f32::consts::PI * PIS_IN_180 * FA_SCALEF) as i32;
 pub const FA_FRAC_PI_2: i32 = (std::f32::consts::FRAC_PI_2 * PIS_IN_180 * FA_SCALEF) as i32;
+pub const FA_FRAC_PI_4: i32 = (std::f32::consts::FRAC_PI_4 * PIS_IN_180 * FA_SCALEF) as i32;
 pub const FA_PI_FRAC_PI_2: i32 = ((std::f32::consts::PI + std::f32::consts::FRAC_PI_2) * PIS_IN_180 * FA_SCALEF) as i32;
 pub const QUADRANT_1: std::ops::Range<i32> = 0..FA_FRAC_PI_2;
 pub const QUADRANT_2: std::ops::Range<i32> = FA_FRAC_PI_2..FA_PI;

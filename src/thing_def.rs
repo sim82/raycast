@@ -271,10 +271,10 @@ impl ThingDefs {
 
     fn oa(o: u16) -> Direction {
         match o % 4 {
-            0 => Direction::N,
-            1 => Direction::E,
-            2 => Direction::S,
-            3 => Direction::W,
+            0 => Direction::E,
+            1 => Direction::S,
+            2 => Direction::W,
+            3 => Direction::N,
             _ => panic!(),
         }
     }

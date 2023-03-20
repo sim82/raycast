@@ -101,7 +101,7 @@ pub fn setup_screen_pos_for_player(
                     // 3. approximate angle offset according to screen x position (who needs trigonometry whan you can fake it...)
                     // 4. turn by 180 deg to look along x axis
                     let cor = (160 - screen_x) * 2;
-                    viewangle += cor + 1800;
+                    viewangle += cor + 900; // TODO: check again why this is necessary
 
                     while viewangle < 0 {
                         viewangle += FA_STEPS as i32;

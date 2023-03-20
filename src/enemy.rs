@@ -234,6 +234,8 @@ fn think_chase(thing: &mut Enemy) {
     let (dx, dy) = thing.direction.tile_offset();
     thing.x += crate::fp16::FP16_FRAC_64 * dx;
     thing.y += crate::fp16::FP16_FRAC_64 * dy;
+    // println!("chase {:?} {} {}", thing.direction, dx, dy);
+    // thing.direction
 }
 
 // fn think_path(thing: &mut Thing) {}
