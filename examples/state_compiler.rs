@@ -37,20 +37,89 @@ enum StatesBlockElement {
 
 #[derive(Debug)]
 struct StatesBlock {
-    bc_name: String,
-    lb_name: String,
+    // bc_name: String,
+    // lb_name: String,
+    name: String,
     elements: Vec<StatesBlockElement>,
 }
-impl StatesBlock {
-    fn codegen(&self, enums: &HashMap<String, usize>) {
-        let mut states = Vec::new();
-        let mut label_ptrs = HashMap::new();
-        // pass 1: resolve label offsets
-        let mut ip = 0;
-        for element in &self.elements {
+// impl StatesBlock {
+//     fn codegen(&self, enums: &HashMap<String, usize>) {
+//         let mut states = Vec::new();
+//         let mut label_ptrs = HashMap::new();
+//         // pass 1: resolve label offsets
+//         let mut ip = 0;
+//         for element in &self.elements {
+//             match element {
+//                 StatesBlockElement::Label(name) => {
+//                     label_ptrs.insert(name, ip);
+//                 }
+//                 StatesBlockElement::State {
+//                     id: _,
+//                     directional: _,
+//                     ticks: _,
+//                     think: _,
+//                     action: _,
+//                     next: _,
+//                 } => ip += enemy::STATE_BC_SIZE,
+//             }
+//         }
+//         // pass2: generate code
+//         let mut ip = 0;
+//         for element in &self.elements {
+//             if let StatesBlockElement::State {
+//                 id,
+//                 directional,
+//                 ticks,
+//                 think,
+//                 action,
+//                 next,
+//             } = element
+//             {
+//                 let id = *enums.get(id).unwrap_or_else(|| panic!("unknown identifier {id}")) as i32;
+//                 let next_ptr = if next == "next" {
+//                     ip + enemy::STATE_BC_SIZE
+//                 } else {
+//                     *label_ptrs
+//                         .get(next)
+//                         .unwrap_or_else(|| panic!("unknown label name {next}"))
+//                 };
+//                 states.push(StateBc {
+//                     id,
+//                     ticks: *ticks,
+//                     directional: *directional,
+//                     think: Think::from_identifier(think),
+//                     action: Action::from_identifier(action),
+//                     next: next_ptr,
+//                 });
+//                 ip += enemy::STATE_BC_SIZE;
+//             }
+//         }
+
+//         let mut f = std::fs::File::create(&self.lb_name).expect("failed to open lb file");
+//         f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
+//         for (name, ptr) in &label_ptrs {
+//             let b = name.as_bytes();
+//             f.write_u8(b.len() as u8).unwrap();
+//             let _ = f.write(b).unwrap();
+//             f.write_i32::<LittleEndian>(*ptr).unwrap();
+//         }
+//         let mut f = std::fs::File::create(&self.bc_name).expect("failed to open bc file");
+//         for state in states {
+//             state.write(&mut f).unwrap();
+//         }
+//     }
+// }
+
+fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, usize>) {
+    let mut states = Vec::new();
+    let mut label_ptrs = HashMap::new();
+    // pass 1: resolve label offsets
+    let mut ip = 0;
+    for state_block in state_blocks {
+        for element in &state_block.elements {
             match element {
                 StatesBlockElement::Label(name) => {
-                    label_ptrs.insert(name, ip);
+                    label_ptrs.insert(format!("{}::{}", state_block.name, name), ip);
                 }
                 StatesBlockElement::State {
                     id: _,
@@ -62,9 +131,11 @@ impl StatesBlock {
                 } => ip += enemy::STATE_BC_SIZE,
             }
         }
-        // pass2: generate code
-        let mut ip = 0;
-        for element in &self.elements {
+    }
+    // pass2: generate code
+    let mut ip = 0;
+    for state_block in state_blocks {
+        for element in &state_block.elements {
             if let StatesBlockElement::State {
                 id,
                 directional,
@@ -78,9 +149,10 @@ impl StatesBlock {
                 let next_ptr = if next == "next" {
                     ip + enemy::STATE_BC_SIZE
                 } else {
+                    let label = format!("{}::{}", state_block.name, next);
                     *label_ptrs
-                        .get(next)
-                        .unwrap_or_else(|| panic!("unknown label name {next}"))
+                        .get(&label)
+                        .unwrap_or_else(|| panic!("unknown label name {label}"))
                 };
                 states.push(StateBc {
                     id,
@@ -93,19 +165,19 @@ impl StatesBlock {
                 ip += enemy::STATE_BC_SIZE;
             }
         }
+    }
 
-        let mut f = std::fs::File::create(&self.lb_name).expect("failed to open lb file");
-        f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
-        for (name, ptr) in &label_ptrs {
-            let b = name.as_bytes();
-            f.write_u8(b.len() as u8).unwrap();
-            let _ = f.write(b).unwrap();
-            f.write_i32::<LittleEndian>(*ptr).unwrap();
-        }
-        let mut f = std::fs::File::create(&self.bc_name).expect("failed to open bc file");
-        for state in states {
-            state.write(&mut f).unwrap();
-        }
+    let mut f = std::fs::File::create("out.lb").expect("failed to open lb file");
+    f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
+    for (name, ptr) in &label_ptrs {
+        let b = name.as_bytes();
+        f.write_u8(b.len() as u8).unwrap();
+        let _ = f.write(b).unwrap();
+        f.write_i32::<LittleEndian>(*ptr).unwrap();
+    }
+    let mut f = std::fs::File::create("out.bc").expect("failed to open bc file");
+    for state in states {
+        state.write(&mut f).unwrap();
     }
 }
 
@@ -198,8 +270,7 @@ fn states_block_element(input: &str) -> IResult<&str, StatesBlockElement> {
 
 fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
     let (input, _) = delimited(multispace0, tag("states"), multispace0)(input)?;
-    let (input, bc_name) = delimited(multispace0, take_while(is_filename), multispace0)(input)?;
-    let (input, lb_name) = delimited(multispace0, take_while(is_filename), multispace0)(input)?;
+    let (input, name) = delimited(multispace0, take_while(is_identifier), multispace0)(input)?;
     let (input, elements) = delimited(
         delimited(multispace0, char('{'), multispace0),
         many0(states_block_element),
@@ -209,8 +280,7 @@ fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
     Ok((
         input,
         ToplevelElement::StatesBlock(StatesBlock {
-            bc_name: bc_name.to_string(),
-            lb_name: lb_name.to_string(),
+            name: name.to_string(),
             elements,
         }),
     ))
@@ -240,9 +310,11 @@ fn main() {
             ToplevelElement::StatesBlock(state_block) => state_blocks.push(state_block),
         }
     }
-    for states_block in state_blocks {
-        states_block.codegen(&enums);
-    }
+    //     for states_block in state_blocks {
+    //         states_block.codegen(&enums);
+    //     }
+
+    codegen("out", &state_blocks, &enums);
 }
 
 #[test]

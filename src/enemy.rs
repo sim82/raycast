@@ -137,22 +137,23 @@ impl StateBc {
 }
 
 lazy_static! {
-    static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
-    static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
-    static ref IMG_WHITE: ExecImage = ExecImage::load("white_gen.bc").unwrap();
-    static ref IMG_ROTTEN: ExecImage = ExecImage::load("rotten_gen.bc").unwrap();
-    static ref IMG_FURRY: ExecImage = ExecImage::load("furry_gen.bc").unwrap();
+    // static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
+    // static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
+    // static ref IMG_WHITE: ExecImage = ExecImage::load("white_gen.bc").unwrap();
+    // static ref IMG_ROTTEN: ExecImage = ExecImage::load("rotten_gen.bc").unwrap();
+    // static ref IMG_FURRY: ExecImage = ExecImage::load("furry_gen.bc").unwrap();
+    static ref IMG_WL6: ExecImage = ExecImage::load("out.bc").unwrap();
 }
 
-fn get_exec_image(enemy_type: EnemyType) -> &'static ExecImage {
-    match enemy_type {
-        EnemyType::Brown => &IMG_BROWN,
-        EnemyType::White => &IMG_WHITE,
-        EnemyType::Blue => &IMG_BLUE,
-        EnemyType::Woof => &IMG_FURRY,
-        EnemyType::Rotten => &IMG_ROTTEN,
-    }
-}
+// fn get_exec_image(enemy_type: EnemyType) -> &'static ExecImage {
+//     match enemy_type {
+//         EnemyType::Brown => &IMG_BROWN,
+//         EnemyType::White => &IMG_WHITE,
+//         EnemyType::Blue => &IMG_BLUE,
+//         EnemyType::Woof => &IMG_FURRY,
+//         EnemyType::Rotten => &IMG_ROTTEN,
+//     }
+// }
 
 #[derive(Debug)]
 struct ExecImage {
@@ -163,20 +164,15 @@ struct ExecImage {
 #[derive(Debug)]
 struct ExecCtx {
     pub image: &'static ExecImage,
-    pub enemy_type: EnemyType,
     pub state: StateBc,
 }
 
 impl ExecCtx {
-    pub fn new(enemy_type: EnemyType) -> Result<Self> {
-        let image = get_exec_image(enemy_type);
+    pub fn new() -> Result<Self> {
+        let image = &IMG_WL6; //get_exec_image(enemy_type);
 
         let state = StateBc::read_from(&mut std::io::Cursor::new(&image.code[..]))?;
-        Ok(ExecCtx {
-            image,
-            enemy_type,
-            state,
-        })
+        Ok(ExecCtx { image, state })
     }
     pub fn jump(&mut self, ptr: i32) -> Result<()> {
         self.state = StateBc::read_from(&mut std::io::Cursor::new(&self.image.code[(ptr as usize)..]))?;
@@ -190,19 +186,13 @@ impl ExecCtx {
 
 impl ms::Loadable for ExecCtx {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        let enemy_type = EnemyType::read_from(r)?;
         let state = StateBc::read_from(r)?;
-        Ok(ExecCtx {
-            image: get_exec_image(enemy_type),
-            enemy_type,
-            state,
-        })
+        Ok(ExecCtx { image: &IMG_WL6, state })
     }
 }
 
 impl ms::Writable for ExecCtx {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
-        self.enemy_type.write(w)?;
         self.state.write(w)?;
         Ok(())
     }
@@ -246,6 +236,7 @@ fn action_nil(thing: &mut Thing) {}
 
 pub struct Enemy {
     exec_ctx: ExecCtx,
+    enemy_type: EnemyType,
     direction: Direction,
     health: i32,
 }
@@ -253,10 +244,12 @@ pub struct Enemy {
 impl ms::Loadable for Enemy {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
         let exec_ctx = ExecCtx::read_from(r)?;
+        let enemy_type = EnemyType::read_from(r)?;
         let direction = Direction::read_from(r)?;
         let health = r.read_i32::<LittleEndian>()?;
         Ok(Enemy {
             exec_ctx,
+            enemy_type,
             direction,
             health,
         })
@@ -266,6 +259,7 @@ impl ms::Loadable for Enemy {
 impl ms::Writable for Enemy {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         self.exec_ctx.write(w)?;
+        self.enemy_type.write(w)?;
         self.direction.write(w)?;
         w.write_i32::<LittleEndian>(self.health)?;
         Ok(())
@@ -279,7 +273,14 @@ impl Enemy {
     //     self.timeout = self.states[0].1;
     // }
     pub fn set_state(&mut self, name: &str) {
-        self.exec_ctx.jump_label(name).unwrap();
+        let label = match self.enemy_type {
+            EnemyType::Brown => format!("brown::{name}"),
+            EnemyType::Blue => format!("blue::{name}"),
+            EnemyType::White => format!("white::{name}"),
+            EnemyType::Rotten => format!("rotten::{name}"),
+            EnemyType::Woof => format!("furry::{name}"),
+        };
+        self.exec_ctx.jump_label(&label).unwrap();
         println!("state: {self:?}");
     }
     pub fn update(&mut self) {
@@ -321,13 +322,15 @@ impl Enemy {
             crate::thing_def::EnemyState::Patrolling => "path",
         };
 
-        let mut exec_ctx = ExecCtx::new(enemy_type).unwrap();
-        exec_ctx.jump_label(start_label).unwrap();
-        Enemy {
+        let exec_ctx = ExecCtx::new().unwrap();
+        let mut e = Enemy {
             direction,
             exec_ctx,
+            enemy_type,
             health: 25,
-        }
+        };
+        e.set_state(start_label);
+        e
     }
 }
 

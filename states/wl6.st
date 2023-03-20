@@ -1,4 +1,4 @@
-states brown_gen.bc brown_gen.lb {
+states brown {
 stand:
     state BROWN_S_1, true, 0, Stand, None, stand
 path:
@@ -27,7 +27,7 @@ dead:
     state BROWN_DEAD, false, 0, None, None, dead
 }
 
-states blue_gen.bc blue_gen.lb {
+states blue {
 stand:
     state BLUE_S_1, true, 0, Stand, None, stand
 path:
@@ -56,7 +56,7 @@ dead:
     state BLUE_DEAD, false, 0, None, None, dead
 }
 
-states white_gen.bc white_gen.lb {
+states white {
 stand:
     state WHITE_S_1, true, 0, Stand, None, stand
 path:
@@ -85,7 +85,7 @@ dead:
     state WHITE_DEAD, false, 0, None, None, dead
 }
 
-states rotten_gen.bc rotten_gen.lb {
+states rotten {
 stand:
     state ROTTEN_S_1, true, 0, Stand, None, stand
 path:
@@ -114,7 +114,7 @@ dead:
     state ROTTEN_DEAD, false, 0, None, None, dead
 }
 
-states furry_gen.bc furry_gen.lb {
+states furry {
 stand:
     state FURRY_W1_1, true, 20, Path, None, stand
 path:
