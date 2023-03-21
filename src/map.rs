@@ -3,9 +3,9 @@ use std::{
     io::Write,
 };
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-
 use crate::{fp16::FP16_FRAC_64, ms::Loadable, prelude::*};
+use anyhow::anyhow;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 const MAP_SIZE: usize = 64;
 
@@ -37,11 +37,117 @@ impl DoorType {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum PathDirection {
+    None,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+    North,
+    NorthEast,
+}
+
+impl ms::Loadable for PathDirection {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => PathDirection::North, // TEMP: keep backward compatible with serialized Direction enum
+            1 => PathDirection::East,
+            2 => PathDirection::South,
+            3 => PathDirection::West,
+            4 => PathDirection::NorthEast,
+            5 => PathDirection::NorthWest,
+            6 => PathDirection::SouthWest,
+            7 => PathDirection::SouthEast,
+            8 => PathDirection::None,
+            x => return Err(anyhow!("unrecognized PathDirection discriminator {x}")),
+        })
+    }
+}
+
+impl ms::Writable for PathDirection {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        match self {
+            PathDirection::North => w.write_u8(0)?,
+            PathDirection::East => w.write_u8(1)?,
+            PathDirection::South => w.write_u8(2)?,
+            PathDirection::West => w.write_u8(3)?,
+            PathDirection::NorthEast => w.write_u8(4)?,
+            PathDirection::NorthWest => w.write_u8(5)?,
+            PathDirection::SouthWest => w.write_u8(6)?,
+            PathDirection::SouthEast => w.write_u8(7)?,
+            PathDirection::None => w.write_u8(8)?,
+        }
+
+        Ok(())
+    }
+}
+
+impl PathDirection {
+    fn from_prop_id(p: i32) -> PathDirection {
+        match p {
+            0x5a => PathDirection::East,
+            0x5b => PathDirection::NorthEast,
+            0x5c => PathDirection::North,
+            0x5d => PathDirection::NorthWest,
+            0x5e => PathDirection::West,
+            0x5f => PathDirection::SouthWest,
+            0x60 => PathDirection::South,
+            0x61 => PathDirection::SouthEast,
+            _ => PathDirection::None,
+        }
+    }
+}
+
+impl From<Direction> for PathDirection {
+    fn from(value: Direction) -> Self {
+        match value {
+            Direction::N => PathDirection::North,
+            Direction::E => PathDirection::East,
+            Direction::S => PathDirection::South,
+            Direction::W => PathDirection::West,
+        }
+    }
+}
+
+impl From<PathDirection> for Direction {
+    fn from(value: PathDirection) -> Self {
+        // FIXME: hack... get rid of Direction
+        match value {
+            PathDirection::None => Direction::E,
+            PathDirection::East => Direction::E,
+            PathDirection::SouthEast => Direction::E,
+            PathDirection::South => Direction::S,
+            PathDirection::SouthWest => Direction::S,
+            PathDirection::West => Direction::W,
+            PathDirection::NorthWest => Direction::W,
+            PathDirection::North => Direction::N,
+            PathDirection::NorthEast => Direction::N,
+        }
+    }
+}
+impl PathDirection {
+    pub fn tile_offset(&self) -> (i32, i32) {
+        match self {
+            PathDirection::NorthWest => (-1, -1),
+            PathDirection::North => (0, -1),
+            PathDirection::NorthEast => (1, -1),
+            PathDirection::East => (1, 0),
+            PathDirection::SouthEast => (1, 1),
+            PathDirection::South => (0, 1),
+            PathDirection::SouthWest => (-1, 1),
+            PathDirection::West => (-1, 0),
+            PathDirection::None => (0, 0),
+        }
+    }
+}
 // TODO: model this better
 #[derive(Debug, Clone, Copy)]
 pub enum MapTile {
     Wall(i32),
-    Walkable(i32),
+    Walkable(i32, PathDirection),
     Blocked(i32),
     Door(PlaneOrientation, DoorType, usize),
     PushWall(i32, usize),
@@ -225,7 +331,7 @@ pub struct MapDynamic {
 
 impl Default for Map {
     fn default() -> Self {
-        let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
+        let mut map = [[MapTile::Walkable(0, PathDirection::None); MAP_SIZE]; MAP_SIZE];
 
         for (in_line, out_line) in MAP.iter().zip(map.iter_mut()) {
             for (c, out) in in_line.iter().zip(out_line.iter_mut()) {
@@ -252,7 +358,7 @@ impl Map {
         assert_eq!(prop_plane.len(), 64 * 64);
         let mut plane_iter = plane.iter();
         let mut prop_plane_iter = prop_plane.iter();
-        let mut map = [[MapTile::Walkable(0); MAP_SIZE]; MAP_SIZE];
+        let mut map = [[MapTile::Walkable(0, PathDirection::None); MAP_SIZE]; MAP_SIZE];
 
         let mut dump_f = std::fs::File::create("map.txt").unwrap();
         for line in &mut map {
@@ -275,7 +381,7 @@ impl Map {
                     100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator, 0),
                     101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator, 0),
                     _ if BLOCKING_PROPS.binary_search(&p).is_ok() => *out = MapTile::Blocked(p as i32),
-                    _ => (),
+                    _ => *out = MapTile::Walkable(c as i32, PathDirection::from_prop_id(p as i32)),
                 }
             }
             writeln!(dump_f).unwrap();
@@ -291,7 +397,7 @@ impl Map {
     pub fn draw_automap(&self, screen: &mut Vec<u32>) {
         let wall_color = |x: usize, y: usize| match self.map[y][x] {
             MapTile::Wall(wall) => Some(wall % 16),
-            MapTile::Walkable(_) => None,
+            MapTile::Walkable(_, _) => None,
             MapTile::Blocked(_) => None,
             MapTile::Door(_, _, _) => None,
             MapTile::PushWall(_, _) => None,
@@ -411,7 +517,7 @@ impl MapDynamic {
         };
 
         match tile {
-            MapTile::Walkable(_) => true,
+            MapTile::Walkable(_, _) => true,
             MapTile::Door(_, _, state_index) => {
                 matches!(self.door_states[*state_index].action, DoorAction::Open(_))
             }
@@ -436,7 +542,7 @@ impl MapDynamic {
         if let MapTile::PushWall(id, state_index) = tile {
             match self.pushwall_states[*state_index].action {
                 PushwallAction::Closed => MapTile::Wall(*id),
-                _ => MapTile::Walkable(0),
+                _ => MapTile::Walkable(0, PathDirection::None),
             }
         } else {
             *tile

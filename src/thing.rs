@@ -145,10 +145,10 @@ impl Things {
         }
     }
 
-    pub fn update(&mut self, player: &Player) {
+    pub fn update(&mut self, player: &Player, map_dynamic: &MapDynamic) {
         for thing in &mut self.things {
             if let Actor::Enemy { enemy } = &mut thing.actor {
-                enemy.update();
+                enemy.update(map_dynamic);
             }
 
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];

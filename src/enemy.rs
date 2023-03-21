@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use crate::{ms::Loadable, prelude::*, thing_def::EnemyType};
+use crate::{fp16::FP16_FRAC_64, ms::Loadable, prelude::*, thing_def::EnemyType};
 use anyhow::{anyhow, Context};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
@@ -229,21 +229,26 @@ impl ExecImage {
 }
 
 fn think_stand(thing: &mut Thing) {}
-fn think_chase(thing: &mut Enemy) {
-    // if let Actor::Enemy(enemy) = &mut thing.actor {}
-    let (dx, dy) = thing.direction.tile_offset();
-    thing.x += crate::fp16::FP16_FRAC_64 * dx;
-    thing.y += crate::fp16::FP16_FRAC_64 * dy;
-    // println!("chase {:?} {} {}", thing.direction, dx, dy);
+fn think_chase(thing: &mut Enemy, _map_dynamic: &MapDynamic) {
+
     // thing.direction
 }
 
 // fn think_path(thing: &mut Thing) {}
-fn think_path(thing: &mut Enemy) {
-    // if let Actor::Enemy(enemy) = &mut thing.actor {}
-    // let (dx, dy) = thing.direction.tile_offset();
-    // thing.x += crate::fp16::FP16_FRAC_64 * dx;
-    // thing.y += crate::fp16::FP16_FRAC_64 * dy;
+fn think_path(thing: &mut Enemy, map_dynamic: &MapDynamic) {
+    let (dx, dy) = thing.direction.tile_offset();
+    thing.x += crate::fp16::FP16_FRAC_64 * dx;
+    thing.y += crate::fp16::FP16_FRAC_64 * dy;
+    let xaligned = thing.x.fract() == FP16_HALF;
+    let yaligned = thing.y.fract() == FP16_HALF;
+    println!("chase {:?} {:?}", xaligned, yaligned);
+    if xaligned && yaligned {
+        if let MapTile::Walkable(_, path_direction) = map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int()) {
+            if !matches!(path_direction, PathDirection::None) {
+                thing.direction = path_direction;
+            }
+        }
+    }
 }
 
 fn think_nil(thing: &mut Thing) {}
@@ -252,7 +257,8 @@ fn action_nil(thing: &mut Thing) {}
 pub struct Enemy {
     exec_ctx: ExecCtx,
     enemy_type: EnemyType,
-    direction: Direction,
+    // direction: Direction,
+    direction: PathDirection,
     health: i32,
     x: Fp16,
     y: Fp16,
@@ -262,7 +268,7 @@ impl ms::Loadable for Enemy {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
         let exec_ctx = ExecCtx::read_from(r)?;
         let enemy_type = EnemyType::read_from(r)?;
-        let direction = Direction::read_from(r)?;
+        let direction = PathDirection::read_from(r)?;
         let health = r.read_i32::<LittleEndian>()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
@@ -318,7 +324,7 @@ impl Enemy {
             .unwrap_or_else(|err| panic!("failed to jump to state {label}: {err:?}"));
         println!("state: {self:?}");
     }
-    pub fn update(&mut self) {
+    pub fn update(&mut self, map_dynamic: &MapDynamic) {
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
@@ -326,8 +332,8 @@ impl Enemy {
         match self.exec_ctx.state.think {
             Think::None => (),
             Think::Stand => (),
-            Think::Path => think_path(self),
-            Think::Chase => think_chase(self),
+            Think::Path => think_path(self, map_dynamic),
+            Think::Chase => think_chase(self, map_dynamic),
         }
         // self.states[self.cur].2();
 
@@ -346,7 +352,7 @@ impl Enemy {
     }
     pub fn get_sprite(&self) -> (SpriteIndex, Fp16, Fp16) {
         let id = if self.exec_ctx.state.directional {
-            SpriteIndex::Directional(self.exec_ctx.state.id, self.direction)
+            SpriteIndex::Directional(self.exec_ctx.state.id, self.direction.into())
         } else {
             SpriteIndex::Undirectional(self.exec_ctx.state.id)
         };
@@ -367,7 +373,7 @@ impl Enemy {
         let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
 
         Enemy {
-            direction,
+            direction: direction.into(),
             exec_ctx,
             enemy_type,
             health: 25,

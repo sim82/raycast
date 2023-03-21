@@ -189,7 +189,7 @@ fn main() {
 
             if !stop_the_world_mode {
                 map_dynamic.update(&player);
-                things.update(&player);
+                things.update(&player, &map_dynamic);
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
 
