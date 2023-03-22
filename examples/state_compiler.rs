@@ -7,9 +7,14 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while},
-    character::complete::{char, digit1, multispace0, multispace1},
-    multi::{many0, many1, separated_list0},
-    sequence::{delimited, terminated},
+    character::{
+        complete::{alphanumeric1, char, digit1, multispace0, multispace1, one_of},
+        streaming::alpha1,
+    },
+    combinator::recognize,
+    error::ParseError,
+    multi::{many0, many0_count, many1, separated_list0},
+    sequence::{delimited, pair, terminated},
     IResult,
 };
 use raycast::{enemy, ms::Writable, prelude::*};
@@ -190,12 +195,19 @@ fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, 
     }
 }
 
+fn ws<'a, F, O, E: ParseError<&'a str>>(inner: F) -> impl FnMut(&'a str) -> IResult<&'a str, O, E>
+where
+    F: FnMut(&'a str) -> IResult<&'a str, O, E>,
+{
+    delimited(multispace0, inner, multispace0)
+}
+
 fn is_identifier(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
 fn parse_enum_name(input: &str) -> IResult<&str, &str> {
-    delimited(multispace0, take_while(is_identifier), multispace0)(input)
+    ws(take_while(is_identifier))(input)
 }
 
 fn parse_enum_body(input: &str) -> IResult<&str, Vec<&str>> {
@@ -203,7 +215,7 @@ fn parse_enum_body(input: &str) -> IResult<&str, Vec<&str>> {
 }
 
 fn parse_enum_decl(input: &str) -> IResult<&str, ToplevelElement> {
-    let (input, _) = delimited(multispace0, tag("enum"), multispace0)(input)?;
+    let (input, _) = ws(tag("enum"))(input)?;
     let (input, enum_names) = delimited(char('{'), parse_enum_body, char('}'))(input)?;
     Ok((
         input,
@@ -214,30 +226,29 @@ fn parse_enum_decl(input: &str) -> IResult<&str, ToplevelElement> {
 }
 
 fn parse_label(input: &str) -> IResult<&str, StatesBlockElement> {
-    let (input, label_name) = delimited(
-        multispace0,
-        terminated(take_while(is_identifier), char(':')),
-        multispace0,
-    )(input)?;
+    let (input, label_name) = ws(terminated(take_while(is_identifier), char(':')))(input)?;
     Ok((input, StatesBlockElement::Label(label_name.to_string())))
 }
 
-fn parse_wd_identifier(input: &str) -> IResult<&str, String> {
-    delimited(multispace0, take_while(is_identifier), multispace0)(input).map(|(i, v)| (i, v.to_string()))
+pub fn identifier(input: &str) -> IResult<&str, String> {
+    recognize(pair(
+        alt((alpha1, tag("_"))),
+        many0_count(alt((alphanumeric1, tag("_")))),
+    ))(input)
+    .map(|(i, s)| (i, s.to_string()))
 }
 
-fn parse_wd_integer(input: &str) -> IResult<&str, i32> {
-    let (input, v) = delimited(multispace0, digit1, multispace0)(input)?;
-    Ok((input, v.parse::<i32>().unwrap())) // parse cannot fail
+fn decimal(input: &str) -> IResult<&str, i32> {
+    recognize(many1(terminated(one_of("0123456789"), many0(char('_')))))(input)
+        .map(|(i, s)| (i, s.parse::<i32>().expect("failed to parse integer {s}")))
 }
 
-fn parse_wd_bool(input: &str) -> IResult<&str, bool> {
-    let (input, v) = delimited(multispace0, alt((tag("true"), tag("false"))), multispace0)(input)?;
-    Ok((input, v == "true"))
+fn boolean(input: &str) -> IResult<&str, bool> {
+    alt((tag("true"), tag("false")))(input).map(|(i, s)| (i, s == "true"))
 }
 
 fn parse_state(input: &str) -> IResult<&str, StatesBlockElement> {
-    let (input, _) = delimited(multispace0, tag("state"), multispace1)(input)?;
+    let (input, _) = ws(tag("state"))(input)?;
     let (input, (id, directional, ticks, think, action, next)) = parse_state_body(input)?;
 
     Ok((
@@ -254,17 +265,17 @@ fn parse_state(input: &str) -> IResult<&str, StatesBlockElement> {
 }
 
 fn parse_state_body(input: &str) -> IResult<&str, (String, bool, i32, String, String, String)> {
-    let (input, id) = parse_wd_identifier(input)?;
+    let (input, id) = ws(identifier)(input)?;
     let (input, _) = char(',')(input)?;
-    let (input, directional) = parse_wd_bool(input)?;
+    let (input, directional) = ws(boolean)(input)?;
     let (input, _) = char(',')(input)?;
-    let (input, ticks) = parse_wd_integer(input)?;
+    let (input, ticks) = ws(decimal)(input)?;
     let (input, _) = char(',')(input)?;
-    let (input, think) = parse_wd_identifier(input)?;
+    let (input, think) = ws(identifier)(input)?;
     let (input, _) = char(',')(input)?;
-    let (input, action) = parse_wd_identifier(input)?;
+    let (input, action) = ws(identifier)(input)?;
     let (input, _) = char(',')(input)?;
-    let (input, next) = parse_wd_identifier(input)?;
+    let (input, next) = ws(identifier)(input)?;
 
     Ok((input, (id, directional, ticks, think, action, next)))
 }
@@ -274,13 +285,9 @@ fn states_block_element(input: &str) -> IResult<&str, StatesBlockElement> {
 }
 
 fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
-    let (input, _) = delimited(multispace0, tag("states"), multispace0)(input)?;
-    let (input, name) = delimited(multispace0, take_while(is_identifier), multispace0)(input)?;
-    let (input, elements) = delimited(
-        delimited(multispace0, char('{'), multispace0),
-        many0(states_block_element),
-        delimited(multispace0, char('}'), multispace0),
-    )(input)?;
+    let (input, _) = ws(tag("states"))(input)?;
+    let (input, name) = ws(take_while(is_identifier))(input)?;
+    let (input, elements) = delimited(ws(char('{')), many0(states_block_element), ws(char('}')))(input)?;
 
     Ok((
         input,
