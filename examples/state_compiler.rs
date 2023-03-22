@@ -194,10 +194,6 @@ fn is_identifier(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
-fn is_filename(c: char) -> bool {
-    is_identifier(c) || c == '.'
-}
-
 fn parse_enum_name(input: &str) -> IResult<&str, &str> {
     delimited(multispace0, take_while(is_identifier), multispace0)(input)
 }
