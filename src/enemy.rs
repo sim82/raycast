@@ -237,8 +237,8 @@ fn think_chase(thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 // fn think_path(thing: &mut Thing) {}
 fn think_path(thing: &mut Enemy, map_dynamic: &MapDynamic) {
     let (dx, dy) = thing.direction.tile_offset();
-    thing.x += crate::fp16::FP16_FRAC_64 * dx;
-    thing.y += crate::fp16::FP16_FRAC_64 * dy;
+    thing.x += crate::fp16::FP16_FRAC_128 * dx;
+    thing.y += crate::fp16::FP16_FRAC_128 * dy;
     let xaligned = thing.x.fract() == FP16_HALF;
     let yaligned = thing.y.fract() == FP16_HALF;
     println!("chase {:?} {:?}", xaligned, yaligned);
@@ -257,7 +257,6 @@ fn action_nil(thing: &mut Thing) {}
 pub struct Enemy {
     exec_ctx: ExecCtx,
     enemy_type: EnemyType,
-    // direction: Direction,
     direction: PathDirection,
     health: i32,
     x: Fp16,

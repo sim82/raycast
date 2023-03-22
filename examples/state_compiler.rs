@@ -113,7 +113,7 @@ struct StatesBlock {
 //     }
 // }
 
-fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, usize>) {
+fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, usize>) {
     let mut states = Vec::new();
     let mut label_ptrs = BTreeMap::new(); // keep them sorted in the output file
 
@@ -177,7 +177,7 @@ fn codegen(basename: &str, state_blocks: &[StatesBlock], enums: &HashMap<String,
         }
     }
 
-    let mut f = std::fs::File::create("out.img").expect("failed to open img file");
+    let mut f = std::fs::File::create(outname).expect("failed to open img file");
     f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
     for (name, ptr) in &label_ptrs {
         let b = name.as_bytes();
@@ -301,6 +301,7 @@ fn parse_toplevel(input: &str) -> IResult<&str, ToplevelElement> {
 
 fn main() {
     let filename = std::env::args().nth(1).expect("missing input file");
+    let outname = std::env::args().nth(2).expect("missing output file");
 
     let input = std::fs::read_to_string(filename).expect("failed to read input file");
 
@@ -323,7 +324,7 @@ fn main() {
     //         states_block.codegen(&enums);
     //     }
 
-    codegen("out", &state_blocks, &enums);
+    codegen(&outname, &state_blocks, &enums);
 }
 
 #[test]
