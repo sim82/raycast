@@ -7,10 +7,7 @@ use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while},
-    character::{
-        complete::{alphanumeric1, char, digit1, multispace0, multispace1, one_of},
-        streaming::alpha1,
-    },
+    character::complete::{alpha1, alphanumeric1, char, multispace0, one_of},
     combinator::recognize,
     error::ParseError,
     multi::{many0, many0_count, many1, separated_list0},
@@ -309,7 +306,7 @@ fn main() {
     let input = std::fs::read_to_string(filename).expect("failed to read input file");
 
     let (_input, toplevel_elements) = many1(parse_toplevel)(&input).expect("failed to parse toplevel elements");
-    println!("elements: {toplevel_elements:?}");
+    // println!("elements: {toplevel_elements:?}");
 
     let mut enums = HashMap::new();
     let mut state_blocks = Vec::new();
