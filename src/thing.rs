@@ -178,7 +178,14 @@ impl Things {
                         let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
                         Some(SpriteDef { id, x, y, owner: i })
                     }
-                    (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
+                    (
+                        ThingType::Prop(id),
+                        Actor::Item {
+                            collected: false,
+                            collectible: _,
+                        },
+                    )
+                    | (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
                         id: sprite::SpriteIndex::Undirectional(id - 22 + 2),
                         x: thing_def.x,
                         y: thing_def.y,

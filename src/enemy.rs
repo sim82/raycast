@@ -238,7 +238,7 @@ fn think_path(thing: &mut Enemy, map_dynamic: &MapDynamic) {
     thing.y += crate::fp16::FP16_FRAC_128 * dy;
     let xaligned = thing.x.fract() == FP16_HALF;
     let yaligned = thing.y.fract() == FP16_HALF;
-    println!("chase {:?} {:?}", xaligned, yaligned);
+    // println!("chase {:?} {:?}", xaligned, yaligned);
     if xaligned && yaligned {
         if let MapTile::Walkable(_, Some(path_direction)) =
             map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int())
