@@ -1,11 +1,7 @@
-use crate::{ms::Loadable, prelude::*, thing_def::EnemyType};
+use crate::{prelude::*, thing_def::EnemyType};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use lazy_static::lazy_static;
-use std::{
-    collections::HashMap,
-    io::{Cursor, Read, Write},
-};
+use std::io::{Read, Write};
 
 fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 
@@ -14,18 +10,62 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 
 // fn think_path(thing: &mut Thing) {}
 fn think_path(thing: &mut Enemy, map_dynamic: &MapDynamic) {
-    let (dx, dy) = thing.direction.tile_offset();
-    thing.x += crate::fp16::FP16_FRAC_128 * dx;
-    thing.y += crate::fp16::FP16_FRAC_128 * dy;
-    let xaligned = thing.x.fract() == FP16_HALF;
-    let yaligned = thing.y.fract() == FP16_HALF;
-    // println!("chase {:?} {:?}", xaligned, yaligned);
-    if xaligned && yaligned {
-        if let MapTile::Walkable(_, Some(path_direction)) =
-            map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int())
-        {
-            thing.direction = path_direction;
+    match &mut thing.path_action {
+        Some(PathAction::Move { dist }) if *dist > FP16_ZERO => {
+            // still some way to go on old action
+            *dist -= crate::fp16::FP16_FRAC_128;
+            let (dx, dy) = thing.direction.tile_offset();
+            thing.x += crate::fp16::FP16_FRAC_128 * dx;
+            thing.y += crate::fp16::FP16_FRAC_128 * dy;
         }
+        Some(PathAction::Move { dist: _ }) => {
+            // check how to continue
+            let xaligned = thing.x.fract() == FP16_HALF;
+            let yaligned = thing.y.fract() == FP16_HALF;
+            if !(xaligned && yaligned) {
+                // TODO: recover, e.g. teleport to next tile center. This should not happen in a fixedpoint world, but who knows...
+                println!("PathAction::Move ended not on tile center. Aborting.");
+                thing.path_action = None;
+            }
+            if let MapTile::Walkable(_, Some(path_direction)) =
+                map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int())
+            {
+                // change direction
+                println!("change path direction");
+                thing.direction = path_direction;
+            }
+            thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
+        }
+        None => {
+            println!("no PathAction.")
+        }
+    }
+}
+
+pub enum PathAction {
+    Move { dist: Fp16 },
+}
+
+impl ms::Loadable for PathAction {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => PathAction::Move {
+                dist: Fp16::read_from(r)?,
+            },
+            x => return Err(anyhow!("unhandled PathAction discriminator: {x}")),
+        })
+    }
+}
+
+impl ms::Writable for PathAction {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        match self {
+            PathAction::Move { dist } => {
+                w.write_u8(0)?;
+                dist.write(w)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -33,6 +73,7 @@ pub struct Enemy {
     exec_ctx: ExecCtx,
     enemy_type: EnemyType,
     direction: Direction,
+    path_action: Option<PathAction>,
     health: i32,
     x: Fp16,
     y: Fp16,
@@ -43,6 +84,7 @@ impl ms::Loadable for Enemy {
         let exec_ctx = ExecCtx::read_from(r)?;
         let enemy_type = EnemyType::read_from(r)?;
         let direction = Direction::read_from(r)?;
+        let path_action = Option::<PathAction>::read_from(r)?;
         let health = r.read_i32::<LittleEndian>()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
@@ -50,6 +92,7 @@ impl ms::Loadable for Enemy {
             exec_ctx,
             enemy_type,
             direction,
+            path_action,
             health,
             x,
             y,
@@ -62,6 +105,7 @@ impl ms::Writable for Enemy {
         self.exec_ctx.write(w)?;
         self.enemy_type.write(w)?;
         self.direction.write(w)?;
+        self.path_action.write(w)?;
         w.write_i32::<LittleEndian>(self.health)?;
         self.x.write(w)?;
         self.y.write(w)?;
@@ -140,14 +184,15 @@ impl Enemy {
         state: crate::thing_def::EnemyState,
         thing_def: &ThingDef,
     ) -> Enemy {
-        let start_label = match state {
-            crate::thing_def::EnemyState::Standing => "stand",
-            crate::thing_def::EnemyState::Patrolling => "path",
+        let (start_label, path_action) = match state {
+            crate::thing_def::EnemyState::Standing => ("stand", None),
+            crate::thing_def::EnemyState::Patrolling => ("path", Some(PathAction::Move { dist: FP16_ONE })),
         };
         let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
 
         Enemy {
             direction,
+            path_action,
             exec_ctx,
             enemy_type,
             health: 25,

@@ -1,4 +1,4 @@
-use crate::{ms::Loadable, prelude::*, thing_def::EnemyType};
+use crate::{ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
