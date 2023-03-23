@@ -94,6 +94,13 @@ impl ms::Loadable for PathAction {
             0 => PathAction::Move {
                 dist: Fp16::read_from(r)?,
             },
+            1 => PathAction::WaitForDoor {
+                door_id: r.read_u32::<LittleEndian>()? as usize,
+            },
+            2 => PathAction::MoveThroughDoor {
+                dist: Fp16::read_from(r)?,
+                door_id: r.read_u32::<LittleEndian>()? as usize,
+            },
             x => return Err(anyhow!("unhandled PathAction discriminator: {x}")),
         })
     }
@@ -106,8 +113,15 @@ impl ms::Writable for PathAction {
                 w.write_u8(0)?;
                 dist.write(w)?;
             }
-            PathAction::WaitForDoor { door_id } => todo!(),
-            PathAction::MoveThroughDoor { dist, door_id } => todo!(),
+            PathAction::WaitForDoor { door_id } => {
+                w.write_u8(1)?;
+                w.write_u32::<LittleEndian>(*door_id as u32)?
+            }
+            PathAction::MoveThroughDoor { dist, door_id } => {
+                w.write_u8(2)?;
+                dist.write(w)?;
+                w.write_u32::<LittleEndian>(*door_id as u32)?
+            }
         }
         Ok(())
     }

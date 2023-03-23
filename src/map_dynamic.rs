@@ -178,7 +178,10 @@ impl MapDynamic {
         }
 
         for (i, door_state) in self.door_states.iter_mut().enumerate() {
-            door_state.update(trigger_doors.contains(&i), blocked_doors.contains(&i));
+            door_state.update(
+                trigger_doors.contains(&i),
+                blocked_doors.contains(&i) || !door_state.blockers.is_empty(),
+            );
         }
 
         for (i, pushwall_state) in self.pushwall_states.iter_mut().enumerate() {
