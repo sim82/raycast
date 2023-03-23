@@ -268,6 +268,18 @@ impl Direction {
             Direction::West => (-1, 0),
         }
     }
+    pub fn opposite(&self) -> Direction {
+        match self {
+            Direction::East => Direction::West,
+            Direction::SouthEast => Direction::NorthWest,
+            Direction::South => Direction::North,
+            Direction::SouthWest => Direction::NorthEast,
+            Direction::West => Direction::East,
+            Direction::NorthWest => Direction::SouthEast,
+            Direction::North => Direction::South,
+            Direction::NorthEast => Direction::SouthWest,
+        }
+    }
 }
 #[derive(Debug)]
 pub struct ThingDef {

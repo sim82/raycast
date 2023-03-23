@@ -16,12 +16,17 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usi
 
             if *dist == FP16_ONE {
                 // check if we would bump into door
-                if let MapTile::Door(_, _, door_id) =
-                    map_dynamic.lookup_tile(thing.x.get_int() + dx, thing.y.get_int() + dy)
-                {
-                    thing.path_action = Some(PathAction::WaitForDoor { door_id });
-                    // FIXME: maybe directly continue with next state
-                    return;
+                match map_dynamic.lookup_tile(thing.x.get_int() + dx, thing.y.get_int() + dy) {
+                    MapTile::Door(_, _, door_id) => {
+                        thing.path_action = Some(PathAction::WaitForDoor { door_id });
+                        // FIXME: maybe directly continue with next state
+                        return;
+                    }
+                    MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => {
+                        println!("path blocked. turning around");
+                        thing.direction = thing.direction.opposite();
+                    }
+                    _ => (),
                 }
             }
 
@@ -42,7 +47,7 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usi
             match map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int()) {
                 MapTile::Walkable(_, Some(path_direction)) => {
                     // change direction
-                    println!("change path direction");
+                    println!("change path direction {path_direction:?}");
                     thing.direction = path_direction;
                     thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
                 }
