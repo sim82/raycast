@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -143,10 +145,10 @@ impl Things {
         }
     }
 
-    pub fn update(&mut self, player: &Player, map_dynamic: &MapDynamic) {
+    pub fn update(&mut self, player: &Player, map_dynamic: &mut MapDynamic) {
         for thing in &mut self.things {
             if let Actor::Enemy { enemy } = &mut thing.actor {
-                enemy.update(map_dynamic);
+                enemy.update(map_dynamic, thing.static_index);
             }
 
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];

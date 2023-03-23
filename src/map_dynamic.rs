@@ -10,6 +10,7 @@ pub struct MapDynamic {
     pub door_states: Vec<DoorState>,
     pub pushwall_states: Vec<PushwallState>,
     pub pushwall_patch: HashMap<(i32, i32), MapTile>,
+    pub tmp_door_triggers: HashSet<usize>, // not persistent. accumulated door triggers during thing update and applies them in same frame
 }
 
 impl MapDynamic {
@@ -38,6 +39,7 @@ impl MapDynamic {
             door_states,
             pushwall_states,
             pushwall_patch: Default::default(),
+            tmp_door_triggers: HashSet::new(),
         }
     }
 
@@ -76,6 +78,7 @@ impl MapDynamic {
             door_states,
             pushwall_states,
             pushwall_patch: Default::default(),
+            tmp_door_triggers: HashSet::new(),
         })
     }
 
@@ -138,13 +141,14 @@ impl MapDynamic {
     }
 
     pub fn update(&mut self, player: &Player) {
-        let mut trigger_doors = HashSet::new();
+        // use (and consume) door triggers accumulated since last update
+        let mut trigger_doors = std::mem::take(&mut self.tmp_door_triggers);
         let mut trigger_pushwalls = HashMap::new();
         if player.trigger {
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                 match self.map.lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy) {
                     MapTile::Door(_, _, state_index) => {
-                        trigger_doors.insert(state_index);
+                        trigger_doors.insert(*state_index);
                     }
                     MapTile::PushWall(_, state_index) => {
                         // FIXME: quick-n-dirty calc push direction
@@ -209,6 +213,27 @@ impl MapDynamic {
             }
         }
     }
+
+    pub fn try_open_and_block_door(&mut self, door_id: usize, blocker: i32) -> bool {
+        let door_state = &mut self.door_states[door_id];
+        match door_state.action {
+            DoorAction::Closed => {
+                self.tmp_door_triggers.insert(door_id);
+                false
+            }
+            // only use open door if it is not about to close (is this necessary?)
+            DoorAction::Open(timeout) if timeout > 30 => {
+                door_state.blockers.insert(blocker);
+                true
+            }
+            _ => false,
+        }
+
+        // return false;
+    }
+    pub fn unblock_door(&mut self, door_id: usize, blocker: i32) {
+        self.door_states[door_id].blockers.remove(&blocker);
+    }
 }
 
 impl ms::Writable for MapDynamic {
@@ -269,12 +294,17 @@ impl Loadable for DoorAction {
 pub struct DoorState {
     pub open_f: Fp16,
     pub action: DoorAction,
+    pub blockers: HashSet<i32>,
 }
 
 impl ms::Writable for DoorState {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         w.write_i32::<LittleEndian>(self.open_f.v)?;
         self.action.write(w)?;
+        w.write_u32::<LittleEndian>(self.blockers.len() as u32)?;
+        for blocker in &self.blockers {
+            w.write_i32::<LittleEndian>(*blocker)?;
+        }
         Ok(())
     }
 }
@@ -283,9 +313,16 @@ impl ms::Loadable for DoorState {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let open = r.read_i32::<LittleEndian>()?;
         let action = DoorAction::read_from(r)?;
+        let num_blockers = r.read_u32::<LittleEndian>()?;
+        let mut blockers = HashSet::new();
+        for _ in 0..num_blockers {
+            blockers.insert(r.read_i32::<LittleEndian>()?);
+        }
+
         Ok(Self {
             open_f: Fp16 { v: open },
             action,
+            blockers,
         })
     }
 }

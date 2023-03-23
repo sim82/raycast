@@ -188,8 +188,8 @@ fn main() {
             player.shoot = window.is_key_down(Key::LeftCtrl);
 
             if !stop_the_world_mode {
+                things.update(&player, &mut map_dynamic);
                 map_dynamic.update(&player);
-                things.update(&player, &map_dynamic);
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
 

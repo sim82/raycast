@@ -9,12 +9,24 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 }
 
 // fn think_path(thing: &mut Thing) {}
-fn think_path(thing: &mut Enemy, map_dynamic: &MapDynamic) {
+fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize) {
     match &mut thing.path_action {
         Some(PathAction::Move { dist }) if *dist > FP16_ZERO => {
+            let (dx, dy) = thing.direction.tile_offset();
+
+            if *dist == FP16_ONE {
+                // check if we would bump into door
+                if let MapTile::Door(_, _, door_id) =
+                    map_dynamic.lookup_tile(thing.x.get_int() + dx, thing.y.get_int() + dy)
+                {
+                    thing.path_action = Some(PathAction::WaitForDoor { door_id });
+                    // FIXME: maybe directly continue with next state
+                    return;
+                }
+            }
+
             // still some way to go on old action
             *dist -= crate::fp16::FP16_FRAC_128;
-            let (dx, dy) = thing.direction.tile_offset();
             thing.x += crate::fp16::FP16_FRAC_128 * dx;
             thing.y += crate::fp16::FP16_FRAC_128 * dy;
         }
@@ -27,23 +39,53 @@ fn think_path(thing: &mut Enemy, map_dynamic: &MapDynamic) {
                 println!("PathAction::Move ended not on tile center. Aborting.");
                 thing.path_action = None;
             }
-            if let MapTile::Walkable(_, Some(path_direction)) =
-                map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int())
-            {
-                // change direction
-                println!("change path direction");
-                thing.direction = path_direction;
+            match map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int()) {
+                MapTile::Walkable(_, Some(path_direction)) => {
+                    // change direction
+                    println!("change path direction");
+                    thing.direction = path_direction;
+                    thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
+                }
+                MapTile::Walkable(_, None) => {
+                    // continue in same direction
+                    thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
+                }
+                x => {
+                    println!("hit non-walkable {x:?}");
+                    thing.path_action = None;
+                }
             }
-            thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
+        }
+        Some(PathAction::WaitForDoor { door_id }) => {
+            if map_dynamic.try_open_and_block_door(*door_id, static_index as i32) {
+                thing.path_action = Some(PathAction::MoveThroughDoor {
+                    dist: FP16_ONE,
+                    door_id: *door_id,
+                })
+            }
+        }
+        Some(PathAction::MoveThroughDoor { dist, door_id }) => {
+            if *dist > FP16_ZERO {
+                *dist -= crate::fp16::FP16_FRAC_128;
+                let (dx, dy) = thing.direction.tile_offset();
+                thing.x += crate::fp16::FP16_FRAC_128 * dx;
+                thing.y += crate::fp16::FP16_FRAC_128 * dy;
+            } else {
+                // unblock door and keep moving in same direction
+                map_dynamic.unblock_door(*door_id, static_index as i32);
+                thing.path_action = Some(PathAction::Move { dist: FP16_ONE });
+            }
         }
         None => {
-            println!("no PathAction.")
+            // println!("no PathAction.")
         }
     }
 }
 
 pub enum PathAction {
     Move { dist: Fp16 },
+    WaitForDoor { door_id: usize },
+    MoveThroughDoor { dist: Fp16, door_id: usize },
 }
 
 impl ms::Loadable for PathAction {
@@ -64,6 +106,8 @@ impl ms::Writable for PathAction {
                 w.write_u8(0)?;
                 dist.write(w)?;
             }
+            PathAction::WaitForDoor { door_id } => todo!(),
+            PathAction::MoveThroughDoor { dist, door_id } => todo!(),
         }
         Ok(())
     }
@@ -142,7 +186,7 @@ impl Enemy {
             .unwrap_or_else(|err| panic!("failed to jump to state {label}: {err:?}"));
         println!("state: {self:?}");
     }
-    pub fn update(&mut self, map_dynamic: &MapDynamic) {
+    pub fn update(&mut self, map_dynamic: &mut MapDynamic, static_index: usize) {
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
@@ -150,7 +194,7 @@ impl Enemy {
         match self.exec_ctx.state.think {
             Think::None => (),
             Think::Stand => (),
-            Think::Path => think_path(self, map_dynamic),
+            Think::Path => think_path(self, map_dynamic, static_index),
             Think::Chase => think_chase(self, map_dynamic),
         }
         // self.states[self.cur].2();
