@@ -14,7 +14,7 @@ use nom::{
     sequence::{delimited, pair, terminated},
     IResult,
 };
-use raycast::{enemy, ms::Writable, prelude::*};
+use raycast::{ms::Writable, prelude::*, state_bc};
 
 #[derive(Debug)]
 enum ToplevelElement {
@@ -134,7 +134,7 @@ fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, 
                     think: _,
                     action: _,
                     next: _,
-                } => ip += enemy::STATE_BC_SIZE,
+                } => ip += state_bc::STATE_BC_SIZE,
             }
         }
     }
@@ -159,7 +159,7 @@ fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, 
             {
                 let id = *enums.get(id).unwrap_or_else(|| panic!("unknown identifier {id}")) as i32;
                 let next_ptr = if next == "next" {
-                    ip + enemy::STATE_BC_SIZE
+                    ip + state_bc::STATE_BC_SIZE
                 } else {
                     let label = format!("{}::{}", state_block.name, next);
                     *label_ptrs
@@ -174,7 +174,7 @@ fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, 
                     action: Action::from_identifier(action),
                     next: next_ptr,
                 });
-                ip += enemy::STATE_BC_SIZE;
+                ip += state_bc::STATE_BC_SIZE;
             }
         }
     }

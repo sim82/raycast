@@ -10,6 +10,7 @@ pub mod ms;
 pub mod player;
 pub mod render;
 pub mod sprite;
+pub mod state_bc;
 pub mod thing;
 pub mod thing_def;
 pub mod wl6;
@@ -18,7 +19,7 @@ pub mod prelude {
 
     pub use crate::{
         draw::Draw,
-        enemy::{Action, Enemy, StateBc, Think},
+        enemy::Enemy,
         fa::{
             fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF,
             FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
@@ -29,6 +30,7 @@ pub mod prelude {
         player::{Player, PlayerVel},
         render,
         sprite::{self, Directionality, SpriteDef, SpriteIndex},
+        state_bc::{Action, ExecCtx, StateBc, Think},
         thing::{Actor, Thing, Things},
         thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
         Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
