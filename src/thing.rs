@@ -87,6 +87,7 @@ pub struct Things {
     pub thing_defs: ThingDefs,
     pub things: Vec<Thing>,
     pub anim_timeout: i32,
+    pub blockmap: BlockMap,
 }
 
 impl ms::Writable for Things {
@@ -96,6 +97,7 @@ impl ms::Writable for Things {
             thing.write(w)?;
         }
         w.write_i32::<LittleEndian>(self.anim_timeout)?;
+        self.blockmap.write(w)?;
         Ok(())
     }
 }
@@ -108,23 +110,29 @@ impl Things {
             things.push(Thing::read_from(r)?);
         }
         let anim_timeout = r.read_i32::<LittleEndian>()?;
+        let blockmap = BlockMap::read_from(r)?;
+
         Ok(Self {
             thing_defs,
             things,
             anim_timeout,
+            blockmap,
         })
     }
     pub fn from_thing_defs(thing_defs: ThingDefs) -> Self {
         let mut things = Vec::new();
-
+        let mut blockmap = BlockMap::default();
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
-            match thing_def.thing_type {
-                ThingType::Enemy(direction, difficulty, enemy_type, state) => things.push(Thing {
-                    static_index: i,
-                    actor: Actor::Enemy {
-                        enemy: Enemy::spawn(direction, difficulty, enemy_type, state, thing_def),
-                    },
-                }),
+            let thing = match thing_def.thing_type {
+                ThingType::Enemy(direction, difficulty, enemy_type, state) => {
+                    let enemy = Enemy::spawn(direction, difficulty, enemy_type, state, thing_def);
+
+                    blockmap.insert(i, enemy.x, enemy.y);
+                    Thing {
+                        static_index: i,
+                        actor: Actor::Enemy { enemy },
+                    }
+                }
                 ThingType::Prop(sprite_index) => {
                     let actor = try_to_collectible(sprite_index)
                         .map(|collectible| Actor::Item {
@@ -132,25 +140,26 @@ impl Things {
                             collectible,
                         })
                         .unwrap_or_default();
-                    things.push(Thing { static_index: i, actor });
+                    Thing { static_index: i, actor }
                 }
-                ThingType::PlayerStart(_) => (),
-            }
+                ThingType::PlayerStart(_) => continue,
+            };
+
+            things.push(thing);
         }
 
         Things {
             thing_defs,
             things,
             anim_timeout: 0,
+            blockmap,
         }
     }
 
     pub fn update(&mut self, player: &Player, map_dynamic: &mut MapDynamic) {
-        for thing in &mut self.things {
-            if let Actor::Enemy { enemy } = &mut thing.actor {
-                enemy.update(map_dynamic, thing.static_index);
-            }
-
+        // temporarily take out things during mutation
+        let mut things = std::mem::take(&mut self.things);
+        for thing in &mut things {
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
             match (thing_def.thing_type, &mut thing.actor) {
@@ -164,9 +173,17 @@ impl Things {
                         // println!("collected: {:?} ", thing_def);
                     }
                 }
+                (_, Actor::Enemy { enemy }) => {
+                    let old_x = enemy.x;
+                    let old_y = enemy.y;
+                    enemy.update(map_dynamic, self, thing.static_index);
+
+                    self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+                }
                 _ => (),
             }
         }
+        self.things = things;
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {
         self.things
@@ -197,6 +214,14 @@ impl Things {
                 }
             })
             .collect()
+    }
+
+    pub fn draw_automap(&self, screen: &mut Vec<u32>) {
+        for thing in &self.things {
+            if let Actor::Enemy { enemy } = &thing.actor {
+                screen.point_world(enemy.x, enemy.y, 1);
+            }
+        }
     }
 
     pub fn release(self) -> ThingDefs {

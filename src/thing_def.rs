@@ -326,10 +326,14 @@ impl ThingDefs {
 
     fn oa(o: u16) -> Direction {
         match o % 4 {
+            // 0 => Direction::East,
+            // 1 => Direction::South,
+            // 2 => Direction::West,
+            // 3 => Direction::North,
             0 => Direction::East,
-            1 => Direction::South,
+            1 => Direction::North,
             2 => Direction::West,
-            3 => Direction::North,
+            3 => Direction::South,
             _ => panic!(),
         }
     }

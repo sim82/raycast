@@ -258,6 +258,7 @@ fn main() {
 
             if automap {
                 map_dynamic.map.draw_automap(&mut buffer);
+                things.draw_automap(&mut buffer);
             }
 
             buffer.point(320 / 2, 80, 1);

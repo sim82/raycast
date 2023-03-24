@@ -9,22 +9,38 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 }
 
 // fn think_path(thing: &mut Thing) {}
-fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize) {
+fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     match &mut thing.path_action {
         Some(PathAction::Move { dist }) if *dist > FP16_ZERO => {
             let (dx, dy) = thing.direction.tile_offset();
 
             if *dist == FP16_ONE {
                 // check if we would bump into door
-                match map_dynamic.lookup_tile(thing.x.get_int() + dx, thing.y.get_int() + dy) {
+                let enter_x = thing.x.get_int() + dx;
+                let enter_y = thing.y.get_int() + dy;
+                match map_dynamic.lookup_tile(enter_x, enter_y) {
                     MapTile::Door(_, _, door_id) => {
                         thing.path_action = Some(PathAction::WaitForDoor { door_id });
                         // FIXME: maybe directly continue with next state
                         return;
                     }
                     MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => {
-                        println!("path blocked. turning around");
-                        thing.direction = thing.direction.opposite();
+                        println!("path blocked. waiting");
+                        // thing.set_state("stand");
+                        // return;
+                        // thing.direction = thing.direction.opposite();
+                        *dist = FP16_ZERO;
+                        return;
+                    }
+                    MapTile::Walkable(_, _) => {
+                        if things.blockmap.is_occupied(enter_x, enter_y) {
+                            println!("path occupied in blockmap. waiting");
+                            // thing.set_state("stand");
+                            // return;
+                            // thing.direction = thing.direction.opposite();
+                            *dist = FP16_ZERO;
+                            return;
+                        }
                     }
                     _ => (),
                 }
@@ -138,8 +154,8 @@ pub struct Enemy {
     direction: Direction,
     path_action: Option<PathAction>,
     health: i32,
-    x: Fp16,
-    y: Fp16,
+    pub x: Fp16,
+    pub y: Fp16,
 }
 
 impl ms::Loadable for Enemy {
@@ -205,7 +221,7 @@ impl Enemy {
             .unwrap_or_else(|err| panic!("failed to jump to state {label}: {err:?}"));
         println!("state: {self:?}");
     }
-    pub fn update(&mut self, map_dynamic: &mut MapDynamic, static_index: usize) {
+    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
@@ -213,7 +229,7 @@ impl Enemy {
         match self.exec_ctx.state.think {
             Think::None => (),
             Think::Stand => (),
-            Think::Path => think_path(self, map_dynamic, static_index),
+            Think::Path => think_path(self, map_dynamic, things, static_index),
             Think::Chase => think_chase(self, map_dynamic),
         }
         // self.states[self.cur].2();

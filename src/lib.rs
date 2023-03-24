@@ -1,6 +1,7 @@
 pub use anyhow::Result;
 use std::path::Path;
 
+pub mod block_map;
 pub mod draw;
 pub mod enemy;
 pub mod fa;
@@ -19,6 +20,7 @@ pub mod wl6;
 pub mod prelude {
 
     pub use crate::{
+        block_map::BlockMap,
         draw::Draw,
         enemy::Enemy,
         fa::{
