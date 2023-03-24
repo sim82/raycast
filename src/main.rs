@@ -178,16 +178,23 @@ fn main() {
             if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
                 automap = !automap;
             }
-            if window.is_key_pressed(Key::F7, KeyRepeat::No) {
-                stop_the_world_mode = !stop_the_world_mode;
-            }
-
             if window.is_key_down(Key::Space) {
                 player.trigger = true;
             }
+
+            stop_the_world_mode ^= window.is_key_pressed(Key::F7, KeyRepeat::No);
+            let fast_forward = window.is_key_down(Key::F8);
+
             player.shoot = window.is_key_down(Key::LeftCtrl);
 
-            if !stop_the_world_mode {
+            let num_ticks = if stop_the_world_mode {
+                0
+            } else if fast_forward {
+                10
+            } else {
+                1
+            };
+            for _ in 0..num_ticks {
                 things.update(&player, &mut map_dynamic);
                 map_dynamic.update(&player);
             }
