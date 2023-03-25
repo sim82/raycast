@@ -195,6 +195,8 @@ fn main() {
                 1
             };
             for _ in 0..num_ticks {
+                things.player_x = player.x.get_int();
+                things.player_y = player.y.get_int();
                 things.update(&player, &mut map_dynamic);
                 map_dynamic.update(&player);
             }

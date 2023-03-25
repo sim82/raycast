@@ -88,6 +88,8 @@ pub struct Things {
     pub things: Vec<Thing>,
     pub anim_timeout: i32,
     pub blockmap: BlockMap,
+    pub player_x: i32,
+    pub player_y: i32,
 }
 
 impl ms::Writable for Things {
@@ -117,6 +119,8 @@ impl Things {
             things,
             anim_timeout,
             blockmap,
+            player_x: 0,
+            player_y: 0,
         })
     }
     pub fn from_thing_defs(thing_defs: ThingDefs) -> Self {
@@ -153,6 +157,8 @@ impl Things {
             things,
             anim_timeout: 0,
             blockmap,
+            player_x: 0,
+            player_y: 0,
         }
     }
 
