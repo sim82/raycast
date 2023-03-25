@@ -33,7 +33,7 @@ impl BlockMap {
 
         let old_xi = old_xi as usize;
         let old_yi = old_yi as usize;
-        println!("blockmap update: {static_index} {old_xi} {old_yi} -> {xi} {yi}");
+        // println!("blockmap update: {static_index} {old_xi} {old_yi} -> {xi} {yi}");
 
         let old_size = self.map[old_yi][old_xi].len();
         self.map[old_yi][old_xi].retain(|i| *i != static_index);
