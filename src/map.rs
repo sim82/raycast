@@ -82,7 +82,8 @@ impl Map {
             for out in line.iter_mut() {
                 let c = *plane_iter.next().unwrap();
                 let p = *prop_plane_iter.next().unwrap();
-                write!(dump_f, "{c:2x}:{p:2x} ").unwrap();
+                // write!(dump_f, "{c:2x}:{p:2x} ").unwrap();
+                write!(dump_f, "{p:2x} ").unwrap();
 
                 let pushwall = p == 98;
 

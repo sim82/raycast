@@ -12,7 +12,7 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     match &mut thing.path_action {
         Some(PathAction::Move { dist }) if *dist > FP16_ZERO => {
-            let (dx, dy) = thing.direction.tile_offset();
+            let (mut dx, mut dy) = thing.direction.tile_offset();
 
             if *dist == FP16_ONE {
                 // check if we would bump into door
@@ -29,8 +29,30 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
                         // thing.set_state("stand");
                         // return;
                         // thing.direction = thing.direction.opposite();
-                        *dist = FP16_ZERO;
-                        return;
+                        'x: {
+                            if dx != 0 && dy != 0 {
+                                match map_dynamic.lookup_tile(enter_x, thing.y.get_int()) {
+                                    MapTile::Walkable(_, _)
+                                        if !things.blockmap.is_occupied(enter_x, thing.y.get_int()) =>
+                                    {
+                                        dy = 0;
+                                        break 'x;
+                                    }
+                                    _ => (),
+                                }
+                                match map_dynamic.lookup_tile(thing.x.get_int(), enter_y) {
+                                    MapTile::Walkable(_, _)
+                                        if !things.blockmap.is_occupied(thing.x.get_int(), enter_y) =>
+                                    {
+                                        dx = 0;
+                                        break 'x;
+                                    }
+                                    _ => (),
+                                }
+                            }
+                            *dist = FP16_ZERO;
+                            return;
+                        }
                     }
                     MapTile::Walkable(_, _) => {
                         if things.blockmap.is_occupied(enter_x, enter_y) {
