@@ -76,11 +76,12 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 }
 
 // fn think_path(thing: &mut Thing) {}
-fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things) {
+fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     if thing.path_action.is_none() {
         thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
         thing.path_action = try_find_pathaction(thing, map_dynamic, things);
     }
+    move_default(thing, map_dynamic, static_index);
 }
 
 fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize) {
@@ -261,11 +262,10 @@ impl Enemy {
         match self.exec_ctx.state.think {
             Think::None => (),
             Think::Stand => (),
-            Think::Path => think_path(self, map_dynamic, things),
+            Think::Path => think_path(self, map_dynamic, things, static_index),
             Think::Chase => think_chase(self, map_dynamic),
         }
 
-        move_default(self, map_dynamic, static_index);
         // self.states[self.cur].2();
 
         self.exec_ctx.state.ticks -= 1;
