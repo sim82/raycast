@@ -11,13 +11,11 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 // fn think_path(thing: &mut Thing) {}
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     match &mut thing.path_action {
-        Some(PathAction::Move { dist }) if *dist > FP16_ZERO => {
-            let (mut dx, mut dy) = thing.direction.tile_offset();
-
+        Some(PathAction::Move { dist, dx, dy }) if *dist > FP16_ZERO => {
             if *dist == FP16_ONE {
                 // check if we would bump into door
-                let enter_x = thing.x.get_int() + dx;
-                let enter_y = thing.y.get_int() + dy;
+                let enter_x = thing.x.get_int() + *dx;
+                let enter_y = thing.y.get_int() + *dy;
                 match map_dynamic.lookup_tile(enter_x, enter_y) {
                     MapTile::Door(_, _, door_id) => {
                         thing.path_action = Some(PathAction::WaitForDoor { door_id });
@@ -30,12 +28,12 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
                         // return;
                         // thing.direction = thing.direction.opposite();
                         'x: {
-                            if dx != 0 && dy != 0 {
+                            if *dx != 0 && *dy != 0 {
                                 match map_dynamic.lookup_tile(enter_x, thing.y.get_int()) {
                                     MapTile::Walkable(_, _)
                                         if !things.blockmap.is_occupied(enter_x, thing.y.get_int()) =>
                                     {
-                                        dy = 0;
+                                        *dy = 0;
                                         break 'x;
                                     }
                                     _ => (),
@@ -44,7 +42,7 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
                                     MapTile::Walkable(_, _)
                                         if !things.blockmap.is_occupied(thing.x.get_int(), enter_y) =>
                                     {
-                                        dx = 0;
+                                        *dx = 0;
                                         break 'x;
                                     }
                                     _ => (),
@@ -70,10 +68,10 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
 
             // still some way to go on old action
             *dist -= crate::fp16::FP16_FRAC_128;
-            thing.x += crate::fp16::FP16_FRAC_128 * dx;
-            thing.y += crate::fp16::FP16_FRAC_128 * dy;
+            thing.x += crate::fp16::FP16_FRAC_128 * *dx;
+            thing.y += crate::fp16::FP16_FRAC_128 * *dy;
         }
-        Some(PathAction::Move { dist: _ }) => {
+        Some(PathAction::Move { dist: _, dx, dy }) => {
             // check how to continue
             let xaligned = thing.x.fract() == FP16_HALF;
             let yaligned = thing.y.fract() == FP16_HALF;
@@ -87,11 +85,19 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
                     // change direction
                     println!("change path direction {path_direction:?}");
                     thing.direction = path_direction;
-                    thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
+                    thing.path_action = Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx: thing.direction.x_offs(),
+                        dy: thing.direction.y_offs(),
+                    })
                 }
                 MapTile::Walkable(_, None) => {
                     // continue in same direction
-                    thing.path_action = Some(PathAction::Move { dist: FP16_ONE })
+                    thing.path_action = Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx: thing.direction.x_offs(),
+                        dy: thing.direction.y_offs(),
+                    })
                 }
                 x => {
                     println!("hit non-walkable {x:?}");
@@ -116,7 +122,11 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
             } else {
                 // unblock door and keep moving in same direction
                 map_dynamic.unblock_door(*door_id, static_index as i32);
-                thing.path_action = Some(PathAction::Move { dist: FP16_ONE });
+                thing.path_action = Some(PathAction::Move {
+                    dist: FP16_ONE,
+                    dx: thing.direction.x_offs(),
+                    dy: thing.direction.y_offs(),
+                });
             }
         }
         None => {
@@ -126,9 +136,10 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
 }
 
 pub enum PathAction {
-    Move { dist: Fp16 },
+    Move { dist: Fp16, dx: i32, dy: i32 },
     WaitForDoor { door_id: usize },
     MoveThroughDoor { dist: Fp16, door_id: usize },
+    None,
 }
 
 impl ms::Loadable for PathAction {
@@ -136,6 +147,8 @@ impl ms::Loadable for PathAction {
         Ok(match r.read_u8()? {
             0 => PathAction::Move {
                 dist: Fp16::read_from(r)?,
+                dx: r.read_i32::<LittleEndian>()?,
+                dy: r.read_i32::<LittleEndian>()?,
             },
             1 => PathAction::WaitForDoor {
                 door_id: r.read_u32::<LittleEndian>()? as usize,
@@ -144,6 +157,7 @@ impl ms::Loadable for PathAction {
                 dist: Fp16::read_from(r)?,
                 door_id: r.read_u32::<LittleEndian>()? as usize,
             },
+            3 => PathAction::None,
             x => return Err(anyhow!("unhandled PathAction discriminator: {x}")),
         })
     }
@@ -152,9 +166,11 @@ impl ms::Loadable for PathAction {
 impl ms::Writable for PathAction {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         match self {
-            PathAction::Move { dist } => {
+            PathAction::Move { dist, dx, dy } => {
                 w.write_u8(0)?;
                 dist.write(w)?;
+                w.write_i32::<LittleEndian>(*dx)?;
+                w.write_i32::<LittleEndian>(*dy)?;
             }
             PathAction::WaitForDoor { door_id } => {
                 w.write_u8(1)?;
@@ -165,6 +181,7 @@ impl ms::Writable for PathAction {
                 dist.write(w)?;
                 w.write_u32::<LittleEndian>(*door_id as u32)?
             }
+            PathAction::None => w.write_u8(3)?,
         }
         Ok(())
     }
@@ -287,7 +304,14 @@ impl Enemy {
     ) -> Enemy {
         let (start_label, path_action) = match state {
             crate::thing_def::EnemyState::Standing => ("stand", None),
-            crate::thing_def::EnemyState::Patrolling => ("path", Some(PathAction::Move { dist: FP16_ONE })),
+            crate::thing_def::EnemyState::Patrolling => (
+                "path",
+                Some(PathAction::Move {
+                    dist: FP16_ONE,
+                    dx: direction.x_offs(),
+                    dy: direction.y_offs(),
+                }),
+            ),
         };
         let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
 

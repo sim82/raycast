@@ -268,6 +268,30 @@ impl Direction {
             Direction::West => (-1, 0),
         }
     }
+    pub fn x_offs(&self) -> i32 {
+        match self {
+            Direction::NorthWest => -1,
+            Direction::North => 0,
+            Direction::NorthEast => 1,
+            Direction::East => 1,
+            Direction::SouthEast => 1,
+            Direction::South => 0,
+            Direction::SouthWest => -1,
+            Direction::West => -1,
+        }
+    }
+    pub fn y_offs(&self) -> i32 {
+        match self {
+            Direction::NorthWest => -1,
+            Direction::North => -1,
+            Direction::NorthEast => -1,
+            Direction::East => 0,
+            Direction::SouthEast => 1,
+            Direction::South => 1,
+            Direction::SouthWest => 1,
+            Direction::West => 0,
+        }
+    }
     pub fn opposite(&self) -> Direction {
         match self {
             Direction::East => Direction::West,
