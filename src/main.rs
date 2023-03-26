@@ -7,7 +7,7 @@ use raycast::{
     prelude::*,
     wl6, Resources,
 };
-use sdl2::event::Event;
+use sdl2::{event::Event, keyboard::Scancode, pixels::PixelFormatEnum};
 
 struct StaticMapData {
     level_id: i32,
@@ -28,29 +28,24 @@ fn main() -> raycast::prelude::Result<()> {
     let resources = Resources::load_wl6("vswap.wl6");
     let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
-    // let mut window = Window::new(
-    //     "Test - ESC to exit",
-    //     WIDTH,
-    //     HEIGHT,
-    //     WindowOptions {
-    //         scale: minifb::Scale::X4,
-    //         ..Default::default()
-    //     },
-    // )
-    // .unwrap_or_else(|e| {
-    //     panic!("{}", e);
-    // });
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window("rust-sdl2_gfx: draw line & FPSManager", WIDTH as u32, HEIGHT as u32)
+        .window(
+            "rust-sdl2_gfx: draw line & FPSManager",
+            WIDTH as u32 * 4,
+            HEIGHT as u32 * 4,
+        )
         .position_centered()
-        .opengl()
-        .build()
-        .map_err(|e| e.to_string())?;
+        .build()?;
 
-    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
-    let mut events = sdl_context.event_pump()?;
+    let mut canvas = window.into_canvas().present_vsync().build()?;
+    let creator = canvas.texture_creator();
+    let mut texture = creator.create_texture_streaming(PixelFormatEnum::RGB24, 320, 200)?;
+
+    let mut events = sdl_context
+        .event_pump()
+        .unwrap_or_else(|_| panic!("faild to get event pump"));
 
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
     let mut automap = false;
@@ -143,7 +138,6 @@ fn main() -> raycast::prelude::Result<()> {
                     break 'outer;
                 };
             }
-
             for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
                 if i == 0 {
                     chunk.fill(0x38383838);
@@ -163,43 +157,44 @@ fn main() -> raycast::prelude::Result<()> {
             player_vel.rot = 0;
             player.trigger = false;
             player.shoot = false;
-            let (fwd_speed, rot_speed) = if window.is_key_down(Key::LeftShift) {
+            let keyboard_state = events.keyboard_state();
+            let (fwd_speed, rot_speed) = if keyboard_state.is_scancode_pressed(Scancode::LShift) {
                 (2, 360)
             } else {
                 (7, 3 * 360)
             };
 
-            if window.is_key_down(Key::W) {
+            if keyboard_state.is_scancode_pressed(Scancode::W) {
                 player_vel.forward += fwd_speed;
             }
-            if window.is_key_down(Key::S) {
+            if keyboard_state.is_scancode_pressed(Scancode::S) {
                 player_vel.forward -= fwd_speed;
             }
 
-            if window.is_key_down(Key::Q) {
+            if keyboard_state.is_scancode_pressed(Scancode::Q) {
                 player_vel.right += fwd_speed;
             }
-            if window.is_key_down(Key::E) {
+            if keyboard_state.is_scancode_pressed(Scancode::E) {
                 player_vel.right -= fwd_speed;
             }
-            if window.is_key_down(Key::D) {
+            if keyboard_state.is_scancode_pressed(Scancode::D) {
                 player_vel.rot += rot_speed;
             }
-            if window.is_key_down(Key::A) {
+            if keyboard_state.is_scancode_pressed(Scancode::A) {
                 player_vel.rot -= rot_speed;
             }
 
-            if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
-                automap = !automap;
-            }
-            if window.is_key_down(Key::Space) {
+            // if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
+            //     automap = !automap;
+            // }
+            if keyboard_state.is_scancode_pressed(Scancode::Space) {
                 player.trigger = true;
             }
 
-            stop_the_world_mode ^= window.is_key_pressed(Key::F7, KeyRepeat::No);
-            let fast_forward = window.is_key_down(Key::F8);
+            // stop_the_world_mode ^= window.is_key_pressed(Key::F7, KeyRepeat::No);
+            let fast_forward = keyboard_state.is_scancode_pressed(Scancode::F8);
 
-            player.shoot = window.is_key_down(Key::LeftCtrl);
+            player.shoot = keyboard_state.is_scancode_pressed(Scancode::LCtrl);
 
             let num_ticks = if stop_the_world_mode {
                 0
@@ -296,58 +291,76 @@ fn main() -> raycast::prelude::Result<()> {
             // );
 
             // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
-            window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
+            // window.update_with_buffer(&buffer, WIDTH, HEIGHT).unwrap();
 
-            if window.is_key_released(Key::F1) {
-                spawn = SpawnInfo::StartLevel(
-                    level_id,
-                    Some(StaticMapData {
-                        level_id,
-                        map: map_dynamic.release(),
-                        thing_defs: things.release(),
-                    }),
-                );
-                break;
-            }
-            if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
-                spawn = SpawnInfo::StartLevel(
-                    level_id - 1,
-                    Some(StaticMapData {
-                        level_id,
-                        map: map_dynamic.release(),
-                        thing_defs: things.release(),
-                    }),
-                );
-                break;
-            }
-            if window.is_key_pressed(Key::F3, KeyRepeat::No) && level_id < 99 {
-                spawn = SpawnInfo::StartLevel(
-                    level_id + 1,
-                    Some(StaticMapData {
-                        level_id,
-                        map: map_dynamic.release(),
-                        thing_defs: things.release(),
-                    }),
-                );
-                break;
-            }
-            if window.is_key_pressed(Key::F5, KeyRepeat::No) {
-                let mut f = std::fs::File::create("save.bin").unwrap();
-                f.write_i32::<LittleEndian>(level_id).unwrap();
-                player.write(&mut f).expect("failed to write Player to savegame");
-                map_dynamic
-                    .write(&mut f)
-                    .expect("failed to write MapDynamic to savegame");
-                things.write(&mut f).expect("failed to write Things to savegame");
-            }
-            if window.is_key_pressed(Key::F6, KeyRepeat::No) {
-                spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
-                    level_id,
-                    map: map_dynamic.release(),
-                    thing_defs: things.release(),
-                }));
-                break;
-            }
+            texture
+                .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
+                    for y in 0..200 {
+                        for x in 0..320 {
+                            let offset = y * pitch + x * 3;
+                            let s_offset = y * 320 + x;
+                            tex_buffer[offset] = (buffer[s_offset] >> 16) as u8;
+                            tex_buffer[offset + 1] = (buffer[s_offset] >> 8) as u8;
+                            tex_buffer[offset + 2] = buffer[s_offset] as u8;
+                        }
+                    }
+                })
+                .unwrap();
+
+            canvas.clear();
+            canvas.copy(&texture, None, None).unwrap();
+            canvas.present();
+
+            // if window.is_key_released(Key::F1) {
+            //     spawn = SpawnInfo::StartLevel(
+            //         level_id,
+            //         Some(StaticMapData {
+            //             level_id,
+            //             map: map_dynamic.release(),
+            //             thing_defs: things.release(),
+            //         }),
+            //     );
+            //     break;
+            // }
+            // if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
+            //     spawn = SpawnInfo::StartLevel(
+            //         level_id - 1,
+            //         Some(StaticMapData {
+            //             level_id,
+            //             map: map_dynamic.release(),
+            //             thing_defs: things.release(),
+            //         }),
+            //     );
+            //     break;
+            // }
+            // if window.is_key_pressed(Key::F3, KeyRepeat::No) && level_id < 99 {
+            //     spawn = SpawnInfo::StartLevel(
+            //         level_id + 1,
+            //         Some(StaticMapData {
+            //             level_id,
+            //             map: map_dynamic.release(),
+            //             thing_defs: things.release(),
+            //         }),
+            //     );
+            //     break;
+            // }
+            // if window.is_key_pressed(Key::F5, KeyRepeat::No) {
+            //     let mut f = std::fs::File::create("save.bin").unwrap();
+            //     f.write_i32::<LittleEndian>(level_id).unwrap();
+            //     player.write(&mut f).expect("failed to write Player to savegame");
+            //     map_dynamic
+            //         .write(&mut f)
+            //         .expect("failed to write MapDynamic to savegame");
+            //     things.write(&mut f).expect("failed to write Things to savegame");
+            // }
+            // if window.is_key_pressed(Key::F6, KeyRepeat::No) {
+            //     spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
+            //         level_id,
+            //         map: map_dynamic.release(),
+            //         thing_defs: things.release(),
+            //     }));
+            //     break;
+            // }
         }
     }
     Ok(())
