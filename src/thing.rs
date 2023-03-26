@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-
-use crate::{ms::Loadable, prelude::*};
+use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -10,9 +8,8 @@ pub enum Actor {
         collected: bool,
         collectible: Collectible,
     },
-    Guard {
-        pain: bool,
-        health: i32,
+    Enemy {
+        enemy: Enemy,
     },
     #[default]
     None,
@@ -20,11 +17,11 @@ pub enum Actor {
 
 impl Actor {
     pub fn can_be_shot(&self) -> bool {
-        matches!(self, Actor::Guard { pain: _, health: _ })
+        matches!(self, Actor::Enemy { enemy: _ })
     }
     pub fn shoot(&mut self) {
-        if let Actor::Guard { pain, health: _ } = self {
-            *pain = true
+        if let Actor::Enemy { enemy } = self {
+            enemy.hit()
         }
     }
 }
@@ -37,10 +34,9 @@ impl ms::Writable for Actor {
                 w.write_u8(if *collected { 1 } else { 0 })?;
                 collectible.write(w)?;
             }
-            Actor::Guard { pain, health } => {
+            Actor::Enemy { enemy } => {
                 w.write_u8(1)?;
-                w.write_u8(if *pain { 1 } else { 0 })?;
-                w.write_i32::<LittleEndian>(*health)?;
+                enemy.write(w)?;
             }
             Actor::None => w.write_u8(2)?,
         }
@@ -55,71 +51,22 @@ impl ms::Loadable for Actor {
                 collected: r.read_u8()? != 0,
                 collectible: Collectible::read_from(r)?,
             },
-            1 => Actor::Guard {
-                pain: r.read_u8()? != 0,
-                health: r.read_i32::<LittleEndian>()?,
+            1 => Actor::Enemy {
+                enemy: Enemy::read_from(r)?,
             },
             2 => Actor::None,
-            _ => panic!(),
+            x => return Err(anyhow!("unhandled Actor discriminator {x}")),
         })
-    }
-}
-
-#[derive(PartialEq, Eq)]
-pub enum AnimMode {
-    Oneshot(usize),
-    Loop(usize),
-    Singleframe,
-    Finished,
-}
-
-impl ms::Loadable for AnimMode {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
-            0 => AnimMode::Oneshot(r.read_u32::<LittleEndian>()? as usize),
-            1 => AnimMode::Loop(r.read_u32::<LittleEndian>()? as usize),
-            2 => AnimMode::Singleframe,
-            3 => AnimMode::Finished,
-            x => return Err(anyhow!("unhandled AnimMode discriminator {x}")),
-        })
-    }
-}
-
-impl ms::Writable for AnimMode {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        match self {
-            AnimMode::Oneshot(i) => {
-                w.write_u8(0)?;
-                w.write_u32::<LittleEndian>(*i as u32)?;
-            }
-            AnimMode::Loop(i) => {
-                w.write_u8(1)?;
-                w.write_u32::<LittleEndian>(*i as u32)?;
-            }
-            AnimMode::Singleframe => w.write_u8(2)?,
-            AnimMode::Finished => w.write_u8(3)?,
-        }
-        Ok(())
     }
 }
 
 pub struct Thing {
-    pub animation_frames: Cow<'static, [i32]>,
-    pub directionality: Directionality,
-    pub anim_mode: AnimMode,
     pub actor: Actor,
     pub static_index: usize,
 }
 
 impl ms::Writable for Thing {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_u32::<LittleEndian>(self.animation_frames.len() as u32)?;
-
-        for f in self.animation_frames.iter() {
-            w.write_i32::<LittleEndian>(*f)?;
-        }
-        self.anim_mode.write(w)?;
-        self.directionality.write(w)?;
         w.write_i32::<LittleEndian>(self.static_index as i32)?; // FIXME
         self.actor.write(w)?;
         Ok(())
@@ -128,22 +75,9 @@ impl ms::Writable for Thing {
 
 impl ms::Loadable for Thing {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let num_anim_frames = r.read_u32::<LittleEndian>()?;
-        let mut animation_frames = Vec::new();
-        for _ in 0..num_anim_frames {
-            animation_frames.push(r.read_i32::<LittleEndian>()?);
-        }
-        let anim_mode = AnimMode::read_from(r)?;
-        let anim_directionality = Directionality::read_from(r)?;
         let static_index = r.read_i32::<LittleEndian>()? as usize;
         let actor = Actor::read_from(r)?;
-        Ok(Self {
-            animation_frames: animation_frames.into(),
-            anim_mode,
-            directionality: anim_directionality,
-            actor,
-            static_index,
-        })
+        Ok(Self { actor, static_index })
     }
 }
 
@@ -151,6 +85,9 @@ pub struct Things {
     pub thing_defs: ThingDefs,
     pub things: Vec<Thing>,
     pub anim_timeout: i32,
+    pub blockmap: BlockMap,
+    pub player_x: i32,
+    pub player_y: i32,
 }
 
 impl ms::Writable for Things {
@@ -160,6 +97,7 @@ impl ms::Writable for Things {
             thing.write(w)?;
         }
         w.write_i32::<LittleEndian>(self.anim_timeout)?;
+        self.blockmap.write(w)?;
         Ok(())
     }
 }
@@ -172,28 +110,31 @@ impl Things {
             things.push(Thing::read_from(r)?);
         }
         let anim_timeout = r.read_i32::<LittleEndian>()?;
+        let blockmap = BlockMap::read_from(r)?;
+
         Ok(Self {
             thing_defs,
             things,
             anim_timeout,
+            blockmap,
+            player_x: 0,
+            player_y: 0,
         })
     }
     pub fn from_thing_defs(thing_defs: ThingDefs) -> Self {
         let mut things = Vec::new();
-
+        let mut blockmap = BlockMap::default();
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
-            match thing_def.thing_type {
-                ThingType::Enemy(direction, _, enemy_type, _) => things.push(Thing {
-                    animation_frames: enemy_type.animation_frames(AnimationPhase::Walk).into(),
-                    directionality: Directionality::Direction(direction),
-                    // sprite_index: 0,
-                    anim_mode: AnimMode::Loop(0),
-                    static_index: i,
-                    actor: Actor::Guard {
-                        pain: false,
-                        health: 20,
-                    },
-                }),
+            let thing = match thing_def.thing_type {
+                ThingType::Enemy(direction, difficulty, enemy_type, state) => {
+                    let enemy = Enemy::spawn(direction, difficulty, enemy_type, state, thing_def);
+
+                    blockmap.insert(i, enemy.x, enemy.y);
+                    Thing {
+                        static_index: i,
+                        actor: Actor::Enemy { enemy },
+                    }
+                }
                 ThingType::Prop(sprite_index) => {
                     let actor = try_to_collectible(sprite_index)
                         .map(|collectible| Actor::Item {
@@ -201,88 +142,28 @@ impl Things {
                             collectible,
                         })
                         .unwrap_or_default();
-                    things.push(Thing {
-                        animation_frames: Cow::Borrowed(&[]),
-                        directionality: Directionality::Undirectional,
-                        // sprite_index,
-                        // anim_index: 0,
-                        anim_mode: AnimMode::Singleframe,
-                        static_index: i,
-                        actor,
-                    });
+                    Thing { static_index: i, actor }
                 }
-                ThingType::PlayerStart(_) => (),
-            }
+                ThingType::PlayerStart(_) => continue,
+            };
+
+            things.push(thing);
         }
 
         Things {
             thing_defs,
             things,
             anim_timeout: 0,
+            blockmap,
+            player_x: 0,
+            player_y: 0,
         }
     }
 
-    pub fn update(&mut self, player: &Player) {
-        self.anim_timeout -= 1;
-        let update_anims = if self.anim_timeout <= 0 {
-            self.anim_timeout = 10;
-
-            true
-        } else {
-            false
-        };
-
-        for thing in &mut self.things {
-            match &mut thing.actor {
-                Actor::Guard { pain, health } if *pain => {
-                    *health -= 7;
-                    if let ThingType::Enemy(_, _, enemy_type, _) =
-                        self.thing_defs.thing_defs[thing.static_index].thing_type
-                    {
-                        if *health > 0 {
-                            thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Pain).into();
-                            thing.anim_mode = AnimMode::Oneshot(0);
-                            thing.directionality = Directionality::Undirectional;
-                        } else {
-                            thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Die).into();
-                            thing.anim_mode = AnimMode::Oneshot(0);
-                            thing.directionality = Directionality::Undirectional;
-                        }
-                    }
-                    *pain = false;
-                }
-                Actor::Guard { pain: _, health } if thing.anim_mode == AnimMode::Finished => {
-                    if *health <= 0 {
-                        thing.actor = Actor::None;
-                    } else if let ThingType::Enemy(direction, _, enemy_type, _) =
-                        self.thing_defs.thing_defs[thing.static_index].thing_type
-                    {
-                        thing.animation_frames = enemy_type.animation_frames(AnimationPhase::Walk).into();
-                        // thing.anim_index = 0;
-                        thing.anim_mode = AnimMode::Loop(0);
-                        thing.directionality = Directionality::Direction(direction);
-                    }
-                }
-                _ => (),
-            }
-
-            if update_anims {
-                match &mut thing.anim_mode {
-                    AnimMode::Oneshot(i) => {
-                        if *i < thing.animation_frames.len() - 1 {
-                            // thing.sprite_index = thing.animation_frames[*i];
-                            *i += 1;
-                        } else {
-                            thing.anim_mode = AnimMode::Finished;
-                        }
-                    }
-                    AnimMode::Loop(i) => {
-                        // thing.sprite_index = thing.animation_frames[*i];
-                        *i = (*i + 1) % thing.animation_frames.len();
-                    }
-                    _ => (),
-                }
-            }
+    pub fn update(&mut self, player: &Player, map_dynamic: &mut MapDynamic) {
+        // temporarily take out things during mutation
+        let mut things = std::mem::take(&mut self.things);
+        for thing in &mut things {
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
             match (thing_def.thing_type, &mut thing.actor) {
@@ -296,9 +177,17 @@ impl Things {
                         // println!("collected: {:?} ", thing_def);
                     }
                 }
+                (_, Actor::Enemy { enemy }) => {
+                    let old_x = enemy.x;
+                    let old_y = enemy.y;
+                    enemy.update(map_dynamic, self, thing.static_index);
+
+                    self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+                }
                 _ => (),
             }
         }
+        self.things = things;
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {
         self.things
@@ -308,23 +197,13 @@ impl Things {
                 let thing_def = &self.thing_defs.thing_defs[thing.static_index];
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match (thing_def.thing_type, &thing.actor) {
-                    (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), _) => {
-                        let id = match thing.anim_mode {
-                            AnimMode::Oneshot(i) => thing.animation_frames[i],
-                            AnimMode::Loop(i) => thing.animation_frames[i],
-                            AnimMode::Singleframe => *thing.animation_frames.first().unwrap(),
-                            AnimMode::Finished => *thing.animation_frames.last().unwrap(),
-                        };
-                        let id = match thing.directionality {
-                            Directionality::Direction(d) => sprite::SpriteIndex::Directional(id, d),
-                            Directionality::Undirectional => sprite::SpriteIndex::Undirectional(id),
-                        };
-                        Some(SpriteDef {
-                            id,
-                            x: thing_def.x,
-                            y: thing_def.y,
-                            owner: i,
-                        })
+                    (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), Actor::Enemy { enemy }) => {
+                        let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
+
+                        // if  enemy.dbg_see_player {
+                        //     id = SpriteIndex::Undirectional(1)
+                        // }
+                        Some(SpriteDef { id, x, y, owner: i })
                     }
                     (
                         ThingType::Prop(id),
@@ -343,6 +222,14 @@ impl Things {
                 }
             })
             .collect()
+    }
+
+    pub fn draw_automap(&self, screen: &mut Vec<u32>) {
+        for thing in &self.things {
+            if let Actor::Enemy { enemy } = &thing.actor {
+                screen.point_world(enemy.x, enemy.y, 1);
+            }
+        }
     }
 
     pub fn release(self) -> ThingDefs {

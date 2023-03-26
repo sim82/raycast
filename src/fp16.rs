@@ -22,6 +22,10 @@ pub const FP16_FRAC_64: Fp16 = Fp16 {
     v: 1 << (FP16_SCALE - 6),
 };
 
+pub const FP16_FRAC_128: Fp16 = Fp16 {
+    v: 1 << (FP16_SCALE - 7),
+};
+
 impl From<f32> for Fp16 {
     fn from(f: f32) -> Self {
         let e = if f >= 0.0 { 0.5 } else { -0.5 };

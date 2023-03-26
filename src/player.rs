@@ -1,6 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-use crate::map::MapDynamic;
 pub use crate::prelude::*;
 
 use self::ms::{Loadable, Writable};

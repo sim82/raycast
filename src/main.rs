@@ -192,18 +192,27 @@ fn main() -> raycast::prelude::Result<()> {
             if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
                 automap = !automap;
             }
-            if window.is_key_pressed(Key::F7, KeyRepeat::No) {
-                stop_the_world_mode = !stop_the_world_mode;
-            }
-
             if window.is_key_down(Key::Space) {
                 player.trigger = true;
             }
+
+            stop_the_world_mode ^= window.is_key_pressed(Key::F7, KeyRepeat::No);
+            let fast_forward = window.is_key_down(Key::F8);
+
             player.shoot = window.is_key_down(Key::LeftCtrl);
 
-            if !stop_the_world_mode {
+            let num_ticks = if stop_the_world_mode {
+                0
+            } else if fast_forward {
+                10
+            } else {
+                1
+            };
+            for _ in 0..num_ticks {
+                things.player_x = player.x.get_int();
+                things.player_y = player.y.get_int();
+                things.update(&player, &mut map_dynamic);
                 map_dynamic.update(&player);
-                things.update(&player);
             }
             player.apply_vel(&player_vel, dt, &map_dynamic, !stop_the_world_mode);
 
@@ -265,6 +274,7 @@ fn main() -> raycast::prelude::Result<()> {
 
             if automap {
                 map_dynamic.map.draw_automap(&mut buffer);
+                things.draw_automap(&mut buffer);
             }
 
             buffer.point(320 / 2, 80, 1);

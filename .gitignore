@@ -8,3 +8,5 @@ textures.txt
 *.bin
 map.txt
 .cargo/
+*.bc
+*.lb

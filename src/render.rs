@@ -117,9 +117,9 @@ pub fn sweep_raycast(
                         let hit_y = ny + ty * f;
 
                         if (hstep_y > 0 && hit_y <= hy.into()) || (hstep_y < 0 && hit_y >= hy.into()) {
-                            if direction == Direction::W && hstep_x < 0 {
+                            if direction == Direction::West && hstep_x < 0 {
                                 dx = Fp16::from(hx) - player.x - f;
-                            } else if direction == Direction::E && hstep_x > 0 {
+                            } else if direction == Direction::East && hstep_x > 0 {
                                 dx = Fp16::from(hx) - player.x + f;
                             } else {
                                 dx = Fp16::from(hx) - player.x;
@@ -182,9 +182,9 @@ pub fn sweep_raycast(
                         let hit_x = nx + tx * f;
 
                         if (hstep_x > 0 && hit_x <= hx.into()) || (hstep_x < 0 && hit_x >= hx.into()) {
-                            if direction == Direction::N && hstep_y < 0 {
+                            if direction == Direction::North && hstep_y < 0 {
                                 dy = Fp16::from(hy) - player.y - f;
-                            } else if direction == Direction::S && hstep_y > 0 {
+                            } else if direction == Direction::South && hstep_y > 0 {
                                 dy = Fp16::from(hy) - player.y + f;
                             } else {
                                 dy = Fp16::from(hy) - player.y;

@@ -1,6 +1,8 @@
-use byteorder::{ReadBytesExt, WriteBytesExt};
+use std::io::Write;
 
-use crate::prelude::*;
+use crate::{fa::FA_FRAC_PI_4, prelude::*};
+use anyhow::anyhow;
+use byteorder::{ReadBytesExt, WriteBytesExt};
 
 pub mod anim_def;
 
@@ -14,10 +16,36 @@ pub enum Difficulty {
 #[derive(Clone, Copy, Debug)]
 pub enum EnemyType {
     Brown,
-    White,
     Blue,
-    Woof,
+    White,
     Rotten,
+    Woof,
+}
+
+impl ms::Loadable for EnemyType {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => EnemyType::Brown,
+            1 => EnemyType::Blue,
+            2 => EnemyType::White,
+            3 => EnemyType::Rotten,
+            4 => EnemyType::Woof,
+            x => return Err(anyhow!("unhandled EnemyType discriminator {x}")),
+        })
+    }
+}
+
+impl ms::Writable for EnemyType {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_u8(match self {
+            EnemyType::Brown => 0,
+            EnemyType::Blue => 1,
+            EnemyType::White => 2,
+            EnemyType::Rotten => 3,
+            EnemyType::Woof => 4,
+        })?;
+        Ok(())
+    }
 }
 
 const START_BROWN: i32 = 51;
@@ -141,65 +169,149 @@ pub enum ThingType {
     Prop(i32),
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Direction {
-    N,
-    E,
-    S,
-    W,
-}
-
-impl ms::Writable for Direction {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        match self {
-            Direction::N => w.write_u8(0)?,
-            Direction::E => w.write_u8(1)?,
-            Direction::S => w.write_u8(2)?,
-            Direction::W => w.write_u8(3)?,
-        }
-        Ok(())
-    }
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+    North,
+    NorthEast,
 }
 
 impl ms::Loadable for Direction {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         Ok(match r.read_u8()? {
-            0 => Direction::N,
-            1 => Direction::E,
-            2 => Direction::S,
-            3 => Direction::W,
-            _ => panic!(),
+            0 => Direction::North, // TEMP: keep backward compatible with serialized Direction enum
+            1 => Direction::East,
+            2 => Direction::South,
+            3 => Direction::West,
+            4 => Direction::NorthEast,
+            5 => Direction::NorthWest,
+            6 => Direction::SouthWest,
+            7 => Direction::SouthEast,
+            x => return Err(anyhow!("unrecognized Direction discriminator {x}")),
         })
+    }
+}
+
+impl ms::Writable for Direction {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        match self {
+            Direction::North => w.write_u8(0)?,
+            Direction::East => w.write_u8(1)?,
+            Direction::South => w.write_u8(2)?,
+            Direction::West => w.write_u8(3)?,
+            Direction::NorthEast => w.write_u8(4)?,
+            Direction::NorthWest => w.write_u8(5)?,
+            Direction::SouthWest => w.write_u8(6)?,
+            Direction::SouthEast => w.write_u8(7)?,
+        }
+
+        Ok(())
+    }
+}
+
+impl Direction {
+    pub fn try_from_prop_id(p: i32) -> Option<Direction> {
+        Some(match p {
+            0x5a => Direction::East,
+            0x5b => Direction::NorthEast,
+            0x5c => Direction::North,
+            0x5d => Direction::NorthWest,
+            0x5e => Direction::West,
+            0x5f => Direction::SouthWest,
+            0x60 => Direction::South,
+            0x61 => Direction::SouthEast,
+            _ => return None,
+        })
+    }
+
+    pub fn is_diagonal(&self) -> bool {
+        matches!(
+            self,
+            Direction::SouthEast | Direction::SouthWest | Direction::NorthWest | Direction::NorthEast
+        )
     }
 }
 
 impl Direction {
     pub fn angle(&self) -> i32 {
         match &self {
-            Direction::N => FA_PI_FRAC_PI_2,
-            Direction::E => 0,
-            Direction::S => FA_FRAC_PI_2,
-            Direction::W => FA_PI,
+            Direction::North => FA_PI_FRAC_PI_2,
+            Direction::NorthEast => FA_PI_FRAC_PI_2 + FA_FRAC_PI_4,
+            Direction::East => 0,
+            Direction::SouthEast => FA_FRAC_PI_4,
+            Direction::South => FA_FRAC_PI_2,
+            Direction::SouthWest => FA_FRAC_PI_2 + FA_FRAC_PI_4,
+            Direction::West => FA_PI,
+            Direction::NorthWest => FA_PI + FA_FRAC_PI_4,
         }
     }
     pub fn sprite_offset(&self) -> i32 {
         match &self {
-            Direction::N => 0,
-            Direction::E => 2,
-            Direction::S => 4,
-            Direction::W => 6,
+            Direction::North => 0,
+            Direction::NorthEast => 1,
+            Direction::East => 2,
+            Direction::SouthEast => 3,
+            Direction::South => 4,
+            Direction::SouthWest => 5,
+            Direction::West => 6,
+            Direction::NorthWest => 7,
         }
     }
+
     pub fn tile_offset(&self) -> (i32, i32) {
         match self {
-            Direction::N => (0, -1),
-            Direction::E => (1, 0),
-            Direction::S => (0, 1),
-            Direction::W => (-1, 0),
+            Direction::NorthWest => (-1, -1),
+            Direction::North => (0, -1),
+            Direction::NorthEast => (1, -1),
+            Direction::East => (1, 0),
+            Direction::SouthEast => (1, 1),
+            Direction::South => (0, 1),
+            Direction::SouthWest => (-1, 1),
+            Direction::West => (-1, 0),
+        }
+    }
+    pub fn x_offs(&self) -> i32 {
+        match self {
+            Direction::NorthWest => -1,
+            Direction::North => 0,
+            Direction::NorthEast => 1,
+            Direction::East => 1,
+            Direction::SouthEast => 1,
+            Direction::South => 0,
+            Direction::SouthWest => -1,
+            Direction::West => -1,
+        }
+    }
+    pub fn y_offs(&self) -> i32 {
+        match self {
+            Direction::NorthWest => -1,
+            Direction::North => -1,
+            Direction::NorthEast => -1,
+            Direction::East => 0,
+            Direction::SouthEast => 1,
+            Direction::South => 1,
+            Direction::SouthWest => 1,
+            Direction::West => 0,
+        }
+    }
+    pub fn opposite(&self) -> Direction {
+        match self {
+            Direction::East => Direction::West,
+            Direction::SouthEast => Direction::NorthWest,
+            Direction::South => Direction::North,
+            Direction::SouthWest => Direction::NorthEast,
+            Direction::West => Direction::East,
+            Direction::NorthWest => Direction::SouthEast,
+            Direction::North => Direction::South,
+            Direction::NorthEast => Direction::SouthWest,
         }
     }
 }
-
 #[derive(Debug)]
 pub struct ThingDef {
     pub thing_type: ThingType,
@@ -245,10 +357,14 @@ impl ThingDefs {
 
     fn oa(o: u16) -> Direction {
         match o % 4 {
-            0 => Direction::N,
-            1 => Direction::E,
-            2 => Direction::S,
-            3 => Direction::W,
+            // 0 => Direction::East,
+            // 1 => Direction::South,
+            // 2 => Direction::West,
+            // 3 => Direction::North,
+            0 => Direction::East,
+            1 => Direction::North,
+            2 => Direction::West,
+            3 => Direction::South,
             _ => panic!(),
         }
     }
@@ -268,7 +384,7 @@ impl ThingDefs {
         116..=123 => ThingType::Enemy(ThingDefs::oa(t - 116), Difficulty::Easy, EnemyType::White, ThingDefs::os(t - 116)),
         126..=133 => ThingType::Enemy(ThingDefs::oa(t - 126), Difficulty::Easy, EnemyType::Blue, ThingDefs::os(t - 126)),
         134..=141 => ThingType::Enemy(ThingDefs::oa(t - 134), Difficulty::Easy, EnemyType::Woof, ThingDefs::os(t - 134)),
-        216..=223 => ThingType::Enemy(ThingDefs::oa(t - 134), Difficulty::Easy, EnemyType::Rotten, ThingDefs::os(t - 216)),
+        216..=223 => ThingType::Enemy(ThingDefs::oa(t - 216), Difficulty::Easy, EnemyType::Rotten, ThingDefs::os(t - 216)),
         // medium
         144..=151 => ThingType::Enemy(ThingDefs::oa(t - 144), Difficulty::Medium, EnemyType::Brown, ThingDefs::os(t - 144)),
         152..=159 => ThingType::Enemy(ThingDefs::oa(t - 152), Difficulty::Medium, EnemyType::White, ThingDefs::os(t - 152)),

@@ -1,14 +1,18 @@
 pub use anyhow::Result;
 use std::path::Path;
 
+pub mod block_map;
 pub mod draw;
+pub mod enemy;
 pub mod fa;
 pub mod fp16;
 pub mod map;
+pub mod map_dynamic;
 pub mod ms;
 pub mod player;
 pub mod render;
 pub mod sprite;
+pub mod state_bc;
 pub mod thing;
 pub mod thing_def;
 pub mod wl6;
@@ -16,18 +20,22 @@ pub mod wl6;
 pub mod prelude {
 
     pub use crate::{
+        block_map::BlockMap,
         draw::Draw,
+        enemy::Enemy,
         fa::{
             fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF,
             FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
         },
-        fp16::{Fp16, FP16_F, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
-        map::{DoorType, Map, MapDynamic, MapTile, PlaneOrientation},
+        fp16::{Fp16, FP16_F, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
+        map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},
         ms,
         player::{Player, PlayerVel},
         render,
-        sprite::{self, Directionality, SpriteDef},
-        thing::Things,
+        sprite::{self, Directionality, SpriteDef, SpriteIndex},
+        state_bc::{Action, ExecCtx, StateBc, Think},
+        thing::{Actor, Thing, Things},
         thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
         Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
