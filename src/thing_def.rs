@@ -228,6 +228,13 @@ impl Direction {
             _ => return None,
         })
     }
+
+    pub fn is_diagonal(&self) -> bool {
+        matches!(
+            self,
+            Direction::SouthEast | Direction::SouthWest | Direction::NorthWest | Direction::NorthEast
+        )
+    }
 }
 
 impl Direction {

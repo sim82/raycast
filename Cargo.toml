@@ -11,6 +11,7 @@ minifb = { version = "0.24", default-features = false, features = ["x11"] }
 lazy_static = "1.4"
 byteorder = "1"
 anyhow = "1"
+rand = { version = "0.8" }
 
 [dev-dependencies]
 nom = "7"

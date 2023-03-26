@@ -14,6 +14,7 @@ pub enum Think {
     Stand,
     Path,
     Chase,
+    Shoot,
 }
 
 impl Think {
@@ -23,6 +24,7 @@ impl Think {
             "Stand" => Think::Stand,
             "Path" => Think::Path,
             "Chase" => Think::Chase,
+            "Shoot" => Think::Shoot,
             _ => panic!("unhandled Think identifier {name}"),
         }
     }
@@ -35,6 +37,7 @@ impl ms::Loadable for Think {
             1 => Think::Stand,
             2 => Think::Path,
             3 => Think::Chase,
+            4 => Think::Shoot,
             x => return Err(anyhow!("unhandled Think dicriminator {x}")),
         })
     }
@@ -47,6 +50,7 @@ impl ms::Writable for Think {
             Think::Stand => 1,
             Think::Path => 2,
             Think::Chase => 3,
+            Think::Shoot => 4,
         };
         w.write_u8(v)?;
         Ok(())

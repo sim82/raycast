@@ -25,6 +25,10 @@ die:
     state BROWN_DIE_3, false, 15, None, None, next
 dead:
     state BROWN_DEAD, false, 0, None, None, dead
+shoot:
+    state BROWN_SHOOT1, false, 20, None, None, next
+    state BROWN_SHOOT2, false, 20, Shoot, None, next
+    state BROWN_SHOOT3, false, 20, None, None, chase
 }
 
 states blue {
@@ -54,6 +58,17 @@ die:
     state BLUE_DIE_3, false, 15, None, None, next
 dead:
     state BLUE_DEAD, false, 0, None, None, dead
+
+shoot:
+    state BLUE_SHOOT1, false, 20, None, None, next
+    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT3, false, 10, None, None, next
+    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT3, false, 10, None, None, next
+    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT3, false, 10, None, None, next
+    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT3, false, 10, None, None, chase
 }
 
 states white {
@@ -83,6 +98,10 @@ die:
     state WHITE_DIE_3, false, 15, None, None, next
 dead:
     state WHITE_DEAD, false, 0, None, None, dead
+shoot:
+    state WHITE_SHOOT1, false, 20, None, None, next
+    state WHITE_SHOOT2, false, 20, Shoot, None, next
+    state WHITE_SHOOT3, false, 20, None, None, chase
 }
 
 states rotten {
@@ -112,6 +131,11 @@ die:
     state ROTTEN_DIE_3, false, 15, None, None, next
 dead:
     state ROTTEN_DEAD, false, 0, None, None, dead
+
+shoot:
+    state ROTTEN_SHOOT1, false, 20, None, None, next
+    state ROTTEN_SHOOT2, false, 20, Shoot, None, next
+    state ROTTEN_SHOOT3, false, 20, None, None, chase
 }
 
 states furry {
@@ -141,6 +165,10 @@ die:
     state FURRY_DIE_3, false, 15, None, None, next
 dead:
     state FURRY_DEAD, false, 0, None, None, dead
+shoot:
+    state FURRY_JUMP1, false, 20, None, None, next
+    state FURRY_JUMP2, false, 20, Shoot, None, next
+    state FURRY_JUMP3, false, 20, None, None, chase
 }
 
 enum
