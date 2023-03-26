@@ -106,6 +106,34 @@ fn try_find_pathaction(thing: &Enemy, map_dynamic: &mut MapDynamic, things: &Thi
     }
 }
 
+fn try_chase_pathaction(
+    direction: Direction,
+    thing: &Enemy,
+    map_dynamic: &mut MapDynamic,
+    things: &Things,
+) -> Option<PathAction> {
+    let (dx, dy) = direction.tile_offset();
+    // check the block we are about to enter
+    let enter_x = thing.x.get_int() + dx;
+    let enter_y = thing.y.get_int() + dy;
+    match map_dynamic.lookup_tile(enter_x, enter_y) {
+        MapTile::Door(_, _, door_id) if !direction.is_diagonal() => {
+            println!("open door");
+            Some(PathAction::WaitForDoor { door_id })
+        }
+        MapTile::Walkable(_, _) => {
+            if things.blockmap.is_occupied(enter_x, enter_y) {
+                None
+            } else {
+                Some(PathAction::Move { dist: FP16_ONE, dx, dy })
+            }
+        }
+        MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => None,
+
+        _ => None,
+    }
+}
+
 fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     let mut dodge = false;
     if check_player_sight(thing, things, map_dynamic, static_index) {
@@ -119,7 +147,7 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
         } else {
             16 / d
         };
-        println!("chance: {chance}");
+        // println!("chance: {chance}");
         if (rand::random::<u8>() as u32) < chance {
             thing.set_state("shoot");
         }
@@ -166,17 +194,12 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
                     _ => None,
                 };
 
-            // FIXME: make find pathaction code more generic so we don't have to modity thing.direction just to test
-            let old_dir = thing.direction;
             for dir in dirtry.iter().filter_map(|x| *x) {
-                thing.direction = dir;
-                thing.path_action = try_find_pathaction(thing, map_dynamic, things);
+                thing.path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
                 if thing.path_action.is_some() {
+                    thing.direction = dir;
                     break;
                 }
-            }
-            if thing.path_action.is_none() {
-                thing.direction = old_dir;
             }
         } else {
             let mut dirtry = [None; 3];
@@ -192,6 +215,10 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
                 dirtry[2] = Some(Direction::North);
             }
 
+            if dy.abs() > dx.abs() {
+                dirtry.swap(1, 2);
+            }
+
             dirtry[0] =
                 match (dirtry[1], dirtry[2]) {
                     (Some(Direction::North), Some(Direction::East))
@@ -205,23 +232,17 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
                     _ => None,
                 };
 
-            // FIXME: make find pathaction code more generic so we don't have to modity thing.direction just to test
-            let old_dir = thing.direction;
             for dir in dirtry.iter().filter_map(|x| *x) {
-                thing.direction = dir;
-                thing.path_action = try_find_pathaction(thing, map_dynamic, things);
+                // println!("chase try: {dir:?}");
+                thing.path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
                 if thing.path_action.is_some() {
+                    thing.direction = dir;
                     break;
                 }
             }
-            if thing.path_action.is_none() {
-                thing.direction = old_dir;
-            } else {
-                println!("chase path action: {:?}", thing.path_action);
-            }
         }
     }
-    move_default(thing, map_dynamic, static_index);
+    move_default(thing, map_dynamic, static_index, FP16_FRAC_64);
 }
 
 fn boost_shoot_chance(path_action: &PathAction) -> bool {
@@ -244,7 +265,7 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
         thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
         thing.path_action = try_find_pathaction(thing, map_dynamic, things);
     }
-    move_default(thing, map_dynamic, static_index);
+    move_default(thing, map_dynamic, static_index, FP16_FRAC_128);
 }
 
 fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
@@ -253,7 +274,7 @@ fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
     }
 }
 
-fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize) {
+fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize, speed: Fp16) {
     match &mut thing.path_action {
         Some(PathAction::Move { dist, dx, dy }) if *dist > FP16_ZERO => {
             if *dist == FP16_ONE {
@@ -261,15 +282,25 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
             }
 
             // still some way to go on old action
-            *dist -= crate::fp16::FP16_FRAC_128;
-            thing.x += crate::fp16::FP16_FRAC_128 * *dx;
-            thing.y += crate::fp16::FP16_FRAC_128 * *dy;
+            *dist -= speed;
+            thing.x += speed * *dx;
+            thing.y += speed * *dy;
+
+            if *dist < FP16_ZERO {
+                // mid-move speed changes result in non precise end position. Not sure how to solve this. Hard reset to tile center to keep everything aligned.
+                println!("negative dist. fixing");
+                *dist = FP16_ZERO;
+                thing.x = FP16_HALF + thing.x.get_int().into();
+                thing.y = FP16_HALF + thing.y.get_int().into();
+            }
+
             if *dist == FP16_ZERO {
                 thing.path_action = None;
             }
         }
-        Some(PathAction::Move { dist: _, dx: _, dy: _ }) => {
-            panic!("PathAction::Move with zero dist.");
+        Some(PathAction::Move { dist, dx: _, dy: _ }) => {
+
+            // panic!("PathAction::Move with zero dist.");
         }
         Some(PathAction::WaitForDoor { door_id }) => {
             if map_dynamic.try_open_and_block_door(*door_id, static_index as i32) {
@@ -281,10 +312,10 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
         }
         Some(PathAction::MoveThroughDoor { dist, door_id }) => {
             if *dist > FP16_ZERO {
-                *dist -= crate::fp16::FP16_FRAC_128;
+                *dist -= speed;
                 let (dx, dy) = thing.direction.tile_offset();
-                thing.x += crate::fp16::FP16_FRAC_128 * dx;
-                thing.y += crate::fp16::FP16_FRAC_128 * dy;
+                thing.x += speed * dx;
+                thing.y += speed * dy;
             } else {
                 // unblock door and keep moving in same direction
                 map_dynamic.unblock_door(*door_id, static_index as i32);

@@ -27,7 +27,7 @@ pub mod prelude {
             fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF,
             FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
         },
-        fp16::{Fp16, FP16_F, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        fp16::{Fp16, FP16_F, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
         map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},
         ms,
