@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};

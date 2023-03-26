@@ -1,7 +1,4 @@
-use std::collections::HashSet;
-
-use crate::{enemy::Enemy, ms::Loadable, prelude::*};
-use anyhow::anyhow;
+use crate::prelude::*;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub struct BlockMap {

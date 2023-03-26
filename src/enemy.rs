@@ -3,6 +3,38 @@ use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 
+fn check_player_sight(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic, _static_index: usize) -> bool {
+    let dx = things.player_x - thing.x.get_int();
+    let dy = things.player_y - thing.y.get_int();
+
+    let in_front = match thing.direction {
+        Direction::East => dx > 0,
+        Direction::SouthEast => dx + dy > 0,
+        Direction::South => dy > 0,
+        Direction::SouthWest => dx - dy < 0,
+        Direction::West => dx < 0,
+        Direction::NorthWest => dx + dy < 0,
+        Direction::North => dy < 0,
+        Direction::NorthEast => dx - dy > 0,
+    };
+
+    if !in_front {
+        return false;
+    }
+
+    bresenham_trace(
+        thing.x.get_int(),
+        thing.y.get_int(),
+        things.player_x,
+        things.player_y,
+        |x, y| match map_dynamic.lookup_tile(x, y) {
+            MapTile::Walkable(_, _) => true,
+            MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
+            _ => false,
+        },
+    )
+}
+
 fn try_update_pathdir(thing: &Enemy, map_dynamic: &mut MapDynamic) -> Option<Direction> {
     // check how to continue
     let xaligned = thing.x.fract() == FP16_HALF;
@@ -73,7 +105,7 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 }
 
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    thing.dbg_see_player = check_see_player(thing, things, map_dynamic, static_index);
+    thing.dbg_see_player = check_player_sight(thing, things, map_dynamic, static_index);
 
     if thing.path_action.is_none() {
         thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
@@ -83,39 +115,7 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
 }
 
 fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    thing.dbg_see_player = check_see_player(thing, things, map_dynamic, static_index);
-}
-
-fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic, static_index: usize) -> bool {
-    let dx = things.player_x - thing.x.get_int();
-    let dy = things.player_y - thing.y.get_int();
-
-    let in_front = match thing.direction {
-        Direction::East => dx > 0,
-        Direction::SouthEast => dx + dy > 0,
-        Direction::South => dy > 0,
-        Direction::SouthWest => dx - dy < 0,
-        Direction::West => dx < 0,
-        Direction::NorthWest => dx + dy < 0,
-        Direction::North => dy < 0,
-        Direction::NorthEast => dx - dy > 0,
-    };
-
-    if !in_front {
-        return false;
-    }
-
-    bresenham_trace(
-        thing.x.get_int(),
-        thing.y.get_int(),
-        things.player_x,
-        things.player_y,
-        |x, y| match map_dynamic.lookup_tile(x, y) {
-            MapTile::Walkable(_, _) => true,
-            MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
-            _ => false,
-        },
-    )
+    thing.dbg_see_player = check_player_sight(thing, things, map_dynamic, static_index);
 }
 
 fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize) {
