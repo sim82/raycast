@@ -2,9 +2,9 @@ use std::ops::Range;
 
 use crate::prelude::*;
 
-pub fn sweep_raycast(
+pub fn sweep_raycast<D: Draw>(
     map_dynamic: &MapDynamic,
-    screen: &mut Vec<u32>,
+    screen: &mut D,
     zbuffer: &mut [Fp16; WIDTH],
     player: &Player,
     columns: Range<usize>,
@@ -266,7 +266,7 @@ pub fn sweep_raycast(
     }
 }
 
-pub fn draw_sprite(screen: &mut Vec<u32>, zbuffer: &[Fp16], resources: &Resources, id: i32, x_mid: i32, z: Fp16) {
+pub fn draw_sprite<D: Draw>(screen: &mut D, zbuffer: &[Fp16], resources: &Resources, id: i32, x_mid: i32, z: Fp16) {
     const C: i32 = MID;
     let offs = if z > FP16_ZERO { (C << FP16_SCALE) / z.v } else { C };
     let line_range = (MID - offs)..(MID + offs);

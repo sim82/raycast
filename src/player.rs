@@ -147,7 +147,7 @@ impl Player {
         (tx, ty)
     }
 
-    pub fn draw(&self, buffer: &mut Vec<u32>) {
+    pub fn draw<D: Draw>(&self, buffer: &mut D) {
         buffer.point_world(self.x, self.y, 0);
 
         for angle in COL_ANGLE.chunks(10) {

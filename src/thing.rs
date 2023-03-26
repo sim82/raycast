@@ -224,7 +224,7 @@ impl Things {
             .collect()
     }
 
-    pub fn draw_automap(&self, screen: &mut Vec<u32>) {
+    pub fn draw_automap<D: Draw>(&self, screen: &mut D) {
         for thing in &self.things {
             if let Actor::Enemy { enemy } = &thing.actor {
                 screen.point_world(enemy.x, enemy.y, 1);
