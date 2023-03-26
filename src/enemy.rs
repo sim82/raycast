@@ -112,7 +112,7 @@ fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDyn
         things.player_y,
         |x, y| match map_dynamic.lookup_tile(x, y) {
             MapTile::Walkable(_, _) => true,
-            MapTile::Door(_, _, _) => false,
+            MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
             _ => false,
         },
     )
