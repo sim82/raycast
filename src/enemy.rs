@@ -1,10 +1,7 @@
-use crate::{map_dynamic::bresenham, prelude::*, thing_def::EnemyType};
+use crate::{prelude::*, thing_def::EnemyType};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::{
-    io::{Read, Write},
-    path,
-};
+use std::io::{Read, Write};
 
 fn try_update_pathdir(thing: &Enemy, map_dynamic: &mut MapDynamic) -> Option<Direction> {
     // check how to continue
@@ -77,7 +74,7 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 
 // fn think_path(thing: &mut Thing) {}
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    check_see_player(thing, things, map_dynamic);
+    check_see_player(thing, things, map_dynamic, static_index);
 
     if thing.path_action.is_none() {
         thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
@@ -87,19 +84,24 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
 }
 
 fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    check_see_player(thing, things, map_dynamic);
+    check_see_player(thing, things, map_dynamic, static_index);
 }
 
-fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic) {
-    let sight_blocks = bresenham(thing.x.get_int(), thing.y.get_int(), things.player_x, things.player_y);
+fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic, static_index: usize) {
+    let see_player = bresenham_trace(
+        thing.x.get_int(),
+        thing.y.get_int(),
+        things.player_x,
+        things.player_y,
+        |x, y| match map_dynamic.lookup_tile(x, y) {
+            MapTile::Walkable(_, _) => true,
+            MapTile::Door(_, _, _) => false,
+            _ => false,
+        },
+    );
 
-    let see_player = sight_blocks.iter().all(|(x, y)| match map_dynamic.lookup_tile(*x, *y) {
-        MapTile::Walkable(_, _) => true,
-        MapTile::Door(_, _, _) => false,
-        _ => false,
-    });
     if see_player {
-        println!("see player: {thing:?}");
+        println!("see player: {static_index} {:?} {:?}", things.player_x, things.player_y);
     }
 }
 
@@ -118,7 +120,7 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
                 thing.path_action = None;
             }
         }
-        Some(PathAction::Move { dist: _, dx, dy }) => {
+        Some(PathAction::Move { dist: _, dx: _, dy: _ }) => {
             panic!("PathAction::Move with zero dist.");
         }
         Some(PathAction::WaitForDoor { door_id }) => {

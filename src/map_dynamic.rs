@@ -428,35 +428,3 @@ impl ms::Loadable for PushwallState {
         Ok(Self { x, y, action })
     }
 }
-
-pub fn bresenham(mut x0: i32, mut y0: i32, x1: i32, y1: i32) -> Vec<(i32, i32)> {
-    let dx = (x1 - x0).abs();
-    let sx = if x0 < x1 { 1 } else { -1 };
-    let dy = -(y1 - y0).abs();
-    let sy = if y0 < y1 { 1 } else { -1 };
-    let mut error = dx + dy;
-    let mut out = Vec::new();
-    loop {
-        //   plot(x0, y0)
-        out.push((x0, y0));
-        if x0 == x1 && y0 == y1 {
-            break;
-        }
-        let e2 = 2 * error;
-        if e2 >= dy {
-            if x0 == x1 {
-                break;
-            }
-            error += dy;
-            x0 += sx;
-        }
-        if e2 <= dx {
-            if y0 == y1 {
-                break;
-            }
-            error += dx;
-            y0 += sy;
-        }
-    }
-    out
-}
