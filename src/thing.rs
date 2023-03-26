@@ -200,7 +200,10 @@ impl Things {
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match (thing_def.thing_type, &thing.actor) {
                     (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), Actor::Enemy { enemy }) => {
-                        let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
+                        let (mut id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
+                        if enemy.dbg_see_player {
+                            id = SpriteIndex::Undirectional(1)
+                        }
                         Some(SpriteDef { id, x, y, owner: i })
                     }
                     (

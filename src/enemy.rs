@@ -77,7 +77,7 @@ fn think_chase(_thing: &mut Enemy, _map_dynamic: &MapDynamic) {
 
 // fn think_path(thing: &mut Thing) {}
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    check_see_player(thing, things, map_dynamic);
+    thing.dbg_see_player = check_see_player(thing, things, map_dynamic);
 
     if thing.path_action.is_none() {
         thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
@@ -87,10 +87,28 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
 }
 
 fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    check_see_player(thing, things, map_dynamic);
+    thing.dbg_see_player = check_see_player(thing, things, map_dynamic);
 }
 
-fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic) {
+fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic) -> bool {
+    let dx = things.player_x - thing.x.get_int();
+    let dy = things.player_y - thing.y.get_int();
+
+    let in_front = match thing.direction {
+        Direction::East => dx > 0,
+        Direction::SouthEast => dx + dy > 0,
+        Direction::South => dy > 0,
+        Direction::SouthWest => dx - dy < 0,
+        Direction::West => dx < 0,
+        Direction::NorthWest => dx + dy < 0,
+        Direction::North => dy < 0,
+        Direction::NorthEast => dx - dy > 0,
+    };
+
+    if !in_front {
+        return false;
+    }
+
     let sight_blocks = bresenham(thing.x.get_int(), thing.y.get_int(), things.player_x, things.player_y);
 
     let see_player = sight_blocks.iter().all(|(x, y)| match map_dynamic.lookup_tile(*x, *y) {
@@ -98,9 +116,10 @@ fn check_see_player(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDyn
         MapTile::Door(_, _, _) => false,
         _ => false,
     });
-    if see_player {
-        println!("see player: {thing:?}");
-    }
+    // if see_player {
+    //     println!("see player: {thing:?}");
+    // }
+    see_player
 }
 
 fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize) {
@@ -208,6 +227,7 @@ pub struct Enemy {
     health: i32,
     pub x: Fp16,
     pub y: Fp16,
+    pub dbg_see_player: bool,
 }
 
 impl ms::Loadable for Enemy {
@@ -227,6 +247,7 @@ impl ms::Loadable for Enemy {
             health,
             x,
             y,
+            dbg_see_player: false,
         })
     }
 }
@@ -338,6 +359,7 @@ impl Enemy {
             health: 25,
             x: thing_def.x,
             y: thing_def.y,
+            dbg_see_player: false,
         }
     }
 }
