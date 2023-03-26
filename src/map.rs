@@ -112,7 +112,7 @@ impl Map {
         &self.map[y as usize][x as usize]
     }
 
-    pub fn draw_automap<D: Draw>(&self, screen: &mut D) {
+    pub fn draw_automap<D: Draw + ?Sized>(&self, screen: &mut D) {
         let wall_color = |x: usize, y: usize| match self.map[y][x] {
             MapTile::Wall(wall) => Some(wall % 16),
             MapTile::Walkable(_, _) => None,

@@ -51,9 +51,9 @@ pub struct SpriteSceenSetup {
     pub owner: usize,
 }
 
-pub fn draw(
+pub fn draw<D: Draw + ?Sized>(
     sprite_screen_setup: impl IntoIterator<Item = SpriteSceenSetup>,
-    screen: &mut Vec<u32>,
+    screen: &mut D,
     zbuffer: &[Fp16],
     resources: &Resources,
 ) {

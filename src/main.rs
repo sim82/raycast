@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{iter::Scan, time::Instant};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 // use minifb::{Key, KeyRepeat, Window, WindowOptions};
@@ -7,7 +7,7 @@ use raycast::{
     prelude::*,
     wl6, Resources,
 };
-use sdl2::{event::Event, keyboard::Scancode, pixels::PixelFormatEnum};
+use sdl2::{event::Event, keyboard::Scancode, mouse::MouseButton, pixels::PixelFormatEnum, EventPump};
 
 struct StaticMapData {
     level_id: i32,
@@ -18,6 +18,88 @@ struct StaticMapData {
 enum SpawnInfo {
     StartLevel(i32, Option<StaticMapData>),
     LoadSavegame(Option<StaticMapData>),
+}
+
+#[derive(Default)]
+struct InputState {
+    // one-shot events
+    quit: bool,
+    restart: bool,
+    prev_level: bool,
+    next_level: bool,
+    save: bool,
+    load: bool,
+    toggle_automap: bool,
+    toggle_stop_the_world: bool,
+
+    // press state
+    forward: bool,
+    backward: bool,
+    turn_left: bool,
+    turn_right: bool,
+    strafe_left: bool,
+    strafe_right: bool,
+    slow: bool,
+    open: bool,
+    shoot: bool,
+    fast_forward_mode: bool,
+
+    // mouse
+    dx: i32,
+    dy: i32,
+}
+
+impl InputState {
+    pub fn new(events: &mut EventPump) -> InputState {
+        let mut input_state = InputState::default();
+        for event in events.poll_iter() {
+            match event {
+                Event::Quit { .. } => input_state.quit = true,
+                Event::KeyDown {
+                    scancode: Some(scancode),
+                    repeat: false,
+                    ..
+                } => match scancode {
+                    Scancode::Escape => input_state.quit = true,
+                    Scancode::F1 => input_state.restart = true,
+                    Scancode::F2 => input_state.prev_level = true,
+                    Scancode::F3 => input_state.next_level = true,
+                    Scancode::F5 => input_state.save = true,
+                    Scancode::F6 => input_state.load = true,
+                    Scancode::F7 => input_state.toggle_stop_the_world = true,
+                    Scancode::Tab => input_state.toggle_automap = true,
+                    _ => (),
+                },
+                Event::MouseMotion { xrel, yrel, .. } => {
+                    input_state.dx += xrel;
+                    input_state.dy += yrel;
+                }
+                _ => (),
+            }
+        }
+        let keyboard_state = events.keyboard_state();
+        input_state.forward = keyboard_state.is_scancode_pressed(Scancode::W);
+        input_state.backward = keyboard_state.is_scancode_pressed(Scancode::S);
+        const HOLD_STRAFE: bool = true;
+        if !HOLD_STRAFE {
+            input_state.turn_left = keyboard_state.is_scancode_pressed(Scancode::A);
+            input_state.turn_right = keyboard_state.is_scancode_pressed(Scancode::D);
+            input_state.strafe_left = keyboard_state.is_scancode_pressed(Scancode::Q);
+            input_state.strafe_right = keyboard_state.is_scancode_pressed(Scancode::E);
+        } else {
+            input_state.turn_left = keyboard_state.is_scancode_pressed(Scancode::Q);
+            input_state.turn_right = keyboard_state.is_scancode_pressed(Scancode::E);
+            input_state.strafe_left = keyboard_state.is_scancode_pressed(Scancode::A);
+            input_state.strafe_right = keyboard_state.is_scancode_pressed(Scancode::D);
+        }
+        input_state.slow = keyboard_state.is_scancode_pressed(Scancode::LShift);
+        input_state.open = keyboard_state.is_scancode_pressed(Scancode::Space);
+        input_state.shoot = keyboard_state.is_scancode_pressed(Scancode::LCtrl);
+        input_state.fast_forward_mode = keyboard_state.is_scancode_pressed(Scancode::F8);
+        let mouse_state = events.mouse_state();
+        input_state.shoot |= mouse_state.is_mouse_button_pressed(MouseButton::Left);
+        input_state
+    }
 }
 
 fn main() -> raycast::prelude::Result<()> {
@@ -133,68 +215,49 @@ fn main() -> raycast::prelude::Result<()> {
         };
 
         loop {
-            for event in events.poll_iter() {
-                if let Event::Quit { .. } = event {
-                    break 'outer;
-                };
-            }
-            for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
-                if i == 0 {
-                    chunk.fill(0x38383838);
-                } else if i == 1 {
-                    chunk.fill(0x64646464);
-                } else {
-                    chunk.fill(0x00000064);
-                }
-            }
+            let input_events = InputState::new(&mut events);
 
-            for i in 0..16 {
-                buffer.point(10 + i, 10 + i, i);
+            if input_events.quit {
+                break 'outer;
             }
-
             player_vel.forward = 0;
             player_vel.right = 0;
             player_vel.rot = 0;
             player.trigger = false;
             player.shoot = false;
-            let keyboard_state = events.keyboard_state();
-            let (fwd_speed, rot_speed) = if keyboard_state.is_scancode_pressed(Scancode::LShift) {
-                (2, 360)
-            } else {
-                (7, 3 * 360)
-            };
+            let (fwd_speed, rot_speed) = if input_events.slow { (2, 360) } else { (7, 3 * 360) };
 
-            if keyboard_state.is_scancode_pressed(Scancode::W) {
+            if input_events.forward {
                 player_vel.forward += fwd_speed;
             }
-            if keyboard_state.is_scancode_pressed(Scancode::S) {
+            if input_events.backward {
                 player_vel.forward -= fwd_speed;
             }
 
-            if keyboard_state.is_scancode_pressed(Scancode::Q) {
-                player_vel.right += fwd_speed;
-            }
-            if keyboard_state.is_scancode_pressed(Scancode::E) {
+            if input_events.strafe_right {
                 player_vel.right -= fwd_speed;
             }
-            if keyboard_state.is_scancode_pressed(Scancode::D) {
+            if input_events.strafe_left {
+                player_vel.right += fwd_speed; // FIXME: strafe dirs seem mixed up
+            }
+            if input_events.turn_right {
                 player_vel.rot += rot_speed;
             }
-            if keyboard_state.is_scancode_pressed(Scancode::A) {
+            if input_events.turn_left {
                 player_vel.rot -= rot_speed;
             }
 
-            // if window.is_key_pressed(Key::Tab, KeyRepeat::No) {
-            //     automap = !automap;
-            // }
-            if keyboard_state.is_scancode_pressed(Scancode::Space) {
+            player_vel.rot += input_events.dx * 300;
+
+            automap ^= input_events.toggle_stop_the_world;
+            if input_events.open {
                 player.trigger = true;
             }
 
-            // stop_the_world_mode ^= window.is_key_pressed(Key::F7, KeyRepeat::No);
-            let fast_forward = keyboard_state.is_scancode_pressed(Scancode::F8);
+            stop_the_world_mode ^= input_events.toggle_stop_the_world;
+            let fast_forward = input_events.fast_forward_mode;
 
-            player.shoot = keyboard_state.is_scancode_pressed(Scancode::LCtrl);
+            player.shoot = input_events.shoot;
 
             let num_ticks = if stop_the_world_mode {
                 0
@@ -213,6 +276,16 @@ fn main() -> raycast::prelude::Result<()> {
 
             // println!("player: {:?} {:?} {:?}", player_vel, player.x, player.y);
             // println!("player: {:?}", player);
+
+            for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
+                if i == 0 {
+                    chunk.fill(0x38383838);
+                } else if i == 1 {
+                    chunk.fill(0x64646464);
+                } else {
+                    chunk.fill(0x00000064);
+                }
+            }
 
             player.draw(&mut buffer);
 
@@ -273,7 +346,6 @@ fn main() -> raycast::prelude::Result<()> {
             }
 
             buffer.point(320 / 2, 80, 1);
-
             if player.shoot {
                 if let Some(hit_thing) = hit_thing {
                     println!("hit: {:?}", things.things[hit_thing].actor);
@@ -306,61 +378,60 @@ fn main() -> raycast::prelude::Result<()> {
                     }
                 })
                 .unwrap();
-
             canvas.clear();
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();
 
-            // if window.is_key_released(Key::F1) {
-            //     spawn = SpawnInfo::StartLevel(
-            //         level_id,
-            //         Some(StaticMapData {
-            //             level_id,
-            //             map: map_dynamic.release(),
-            //             thing_defs: things.release(),
-            //         }),
-            //     );
-            //     break;
-            // }
-            // if window.is_key_pressed(Key::F2, KeyRepeat::No) && level_id > 0 {
-            //     spawn = SpawnInfo::StartLevel(
-            //         level_id - 1,
-            //         Some(StaticMapData {
-            //             level_id,
-            //             map: map_dynamic.release(),
-            //             thing_defs: things.release(),
-            //         }),
-            //     );
-            //     break;
-            // }
-            // if window.is_key_pressed(Key::F3, KeyRepeat::No) && level_id < 99 {
-            //     spawn = SpawnInfo::StartLevel(
-            //         level_id + 1,
-            //         Some(StaticMapData {
-            //             level_id,
-            //             map: map_dynamic.release(),
-            //             thing_defs: things.release(),
-            //         }),
-            //     );
-            //     break;
-            // }
-            // if window.is_key_pressed(Key::F5, KeyRepeat::No) {
-            //     let mut f = std::fs::File::create("save.bin").unwrap();
-            //     f.write_i32::<LittleEndian>(level_id).unwrap();
-            //     player.write(&mut f).expect("failed to write Player to savegame");
-            //     map_dynamic
-            //         .write(&mut f)
-            //         .expect("failed to write MapDynamic to savegame");
-            //     things.write(&mut f).expect("failed to write Things to savegame");
-            // }
-            // if window.is_key_pressed(Key::F6, KeyRepeat::No) {
-            //     spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
-            //         level_id,
-            //         map: map_dynamic.release(),
-            //         thing_defs: things.release(),
-            //     }));
-            //     break;
-            // }
+            if input_events.restart {
+                spawn = SpawnInfo::StartLevel(
+                    level_id,
+                    Some(StaticMapData {
+                        level_id,
+                        map: map_dynamic.release(),
+                        thing_defs: things.release(),
+                    }),
+                );
+                break;
+            }
+            if input_events.prev_level && level_id > 0 {
+                spawn = SpawnInfo::StartLevel(
+                    level_id - 1,
+                    Some(StaticMapData {
+                        level_id,
+                        map: map_dynamic.release(),
+                        thing_defs: things.release(),
+                    }),
+                );
+                break;
+            }
+            if input_events.next_level && level_id < 99 {
+                spawn = SpawnInfo::StartLevel(
+                    level_id + 1,
+                    Some(StaticMapData {
+                        level_id,
+                        map: map_dynamic.release(),
+                        thing_defs: things.release(),
+                    }),
+                );
+                break;
+            }
+            if input_events.save {
+                let mut f = std::fs::File::create("save.bin").unwrap();
+                f.write_i32::<LittleEndian>(level_id).unwrap();
+                player.write(&mut f).expect("failed to write Player to savegame");
+                map_dynamic
+                    .write(&mut f)
+                    .expect("failed to write MapDynamic to savegame");
+                things.write(&mut f).expect("failed to write Things to savegame");
+            }
+            if input_events.load {
+                spawn = SpawnInfo::LoadSavegame(Some(StaticMapData {
+                    level_id,
+                    map: map_dynamic.release(),
+                    thing_defs: things.release(),
+                }));
+                break;
+            }
         }
     }
     Ok(())
