@@ -31,6 +31,7 @@ struct InputState {
     load: bool,
     toggle_automap: bool,
     toggle_stop_the_world: bool,
+    toggle_mouse_grab: bool,
 
     // press state
     forward: bool,
@@ -53,6 +54,7 @@ impl InputState {
     pub fn new(events: &mut EventPump) -> InputState {
         let mut input_state = InputState::default();
         for event in events.poll_iter() {
+            println!("{event:?}");
             match event {
                 Event::Quit { .. } => input_state.quit = true,
                 Event::KeyDown {
@@ -68,6 +70,7 @@ impl InputState {
                     Scancode::F6 => input_state.load = true,
                     Scancode::F7 => input_state.toggle_stop_the_world = true,
                     Scancode::Tab => input_state.toggle_automap = true,
+                    Scancode::Grave => input_state.toggle_mouse_grab = true,
                     _ => (),
                 },
                 Event::MouseMotion { xrel, yrel, .. } => {
@@ -132,6 +135,8 @@ fn main() -> raycast::prelude::Result<()> {
     let dt: Fp16 = (1.0f32 / 60.0f32).into();
     let mut automap = false;
     let mut stop_the_world_mode = false;
+    let mut mouse_grabbed = false;
+    let mut initial_ungrabbed = true;
     // Limit to max ~60 fps update rate
     // window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
@@ -246,10 +251,10 @@ fn main() -> raycast::prelude::Result<()> {
             if input_events.turn_left {
                 player_vel.rot -= rot_speed;
             }
-
-            player_vel.rot += input_events.dx * 300;
-
-            automap ^= input_events.toggle_stop_the_world;
+            if mouse_grabbed {
+                player_vel.rot += input_events.dx * 300;
+            }
+            automap ^= input_events.toggle_automap;
             if input_events.open {
                 player.trigger = true;
             }
@@ -381,6 +386,13 @@ fn main() -> raycast::prelude::Result<()> {
             canvas.clear();
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();
+
+            if input_events.toggle_mouse_grab || (input_events.shoot && initial_ungrabbed) {
+                mouse_grabbed = !mouse_grabbed;
+                canvas.window_mut().set_grab(mouse_grabbed);
+                sdl_context.mouse().set_relative_mouse_mode(mouse_grabbed);
+                initial_ungrabbed = false;
+            }
 
             if input_events.restart {
                 spawn = SpawnInfo::StartLevel(

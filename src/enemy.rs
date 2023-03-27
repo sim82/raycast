@@ -1,6 +1,7 @@
 use crate::{fp16::FP16_FRAC_64, prelude::*, thing_def::EnemyType};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use rand::random;
 use std::io::{Read, Write};
 
 fn check_player_sight(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic, _static_index: usize) -> bool {
@@ -203,24 +204,24 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
             }
         } else {
             let mut dirtry = [None; 3];
-            if dx > 0 {
+
+            if (dx > 0) ^ (random::<u8>() < 64) {
                 dirtry[1] = Some(Direction::East);
             } else {
                 dirtry[1] = Some(Direction::West);
             }
 
-            if dy > 0 {
+            if (dy > 0) ^ (random::<u8>() < 64) {
                 dirtry[2] = Some(Direction::South);
             } else {
                 dirtry[2] = Some(Direction::North);
             }
 
-            if dy.abs() > dx.abs() {
+            if (dy.abs() > dx.abs()) ^ (random::<u8>() < 64) {
                 dirtry.swap(1, 2);
             }
-
-            dirtry[0] =
-                match (dirtry[1], dirtry[2]) {
+            if random::<u8>() < 192 {
+                dirtry[0] = match (dirtry[1], dirtry[2]) {
                     (Some(Direction::North), Some(Direction::East))
                     | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
                     (Some(Direction::North), Some(Direction::West))
@@ -231,7 +232,7 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
                     | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
                     _ => None,
                 };
-
+            }
             for dir in dirtry.iter().filter_map(|x| *x) {
                 // println!("chase try: {dir:?}");
                 thing.path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
