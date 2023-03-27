@@ -388,7 +388,7 @@ pub struct Enemy {
     enemy_type: EnemyType,
     direction: Direction,
     path_action: Option<PathAction>,
-    health: i32,
+    pub health: i32,
     pub x: Fp16,
     pub y: Fp16,
 }
@@ -473,15 +473,15 @@ impl Enemy {
 
         self.exec_ctx.state.ticks -= 1;
     }
-    pub fn hit(&mut self) {
-        self.health -= 7;
+    pub fn hit(&mut self, hitpoints: i32) {
+        self.health -= hitpoints;
 
-        if self.health > 10 {
-            self.set_state("pain1");
-        } else if self.health > 0 {
-            self.set_state("pain2");
-        } else {
+        if self.health <= 0 {
             self.set_state("die");
+        } else if self.health % 2 == 0 {
+            self.set_state("pain1");
+        } else {
+            self.set_state("pain2");
         }
     }
     pub fn get_sprite(&self) -> (SpriteIndex, Fp16, Fp16) {

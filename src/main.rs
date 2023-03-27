@@ -1,6 +1,7 @@
 use std::{iter::Scan, time::Instant};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use rand::random;
 // use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::{
     ms::{Loadable, Writable},
@@ -54,7 +55,6 @@ impl InputState {
     pub fn new(events: &mut EventPump) -> InputState {
         let mut input_state = InputState::default();
         for event in events.poll_iter() {
-            println!("{event:?}");
             match event {
                 Event::Quit { .. } => input_state.quit = true,
                 Event::KeyDown {
@@ -353,10 +353,15 @@ fn main() -> raycast::prelude::Result<()> {
             buffer.point(320 / 2, 80, 1);
             if player.shoot {
                 if let Some(hit_thing) = hit_thing {
-                    println!("hit: {:?}", things.things[hit_thing].actor);
-                    things.things[hit_thing].actor.shoot();
-                } else {
-                    println!("miss");
+                    if let Some((x, y)) = &things.things[hit_thing].actor.get_pos() {
+                        let dx = player.x.get_int().abs_diff(x.get_int());
+                        let dy = player.y.get_int().abs_diff(y.get_int());
+                        let boost = 5 - dx.max(dy).min(5);
+                        let base_hitpoints = 7;
+                        let hitpoints = base_hitpoints + ((boost * 7) * (random::<u8>() as u32)) / 255;
+                        println!("hit: {}", hitpoints - base_hitpoints);
+                        things.things[hit_thing].actor.shoot(hitpoints as i32);
+                    }
                 }
             }
 

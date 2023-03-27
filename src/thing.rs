@@ -17,11 +17,18 @@ pub enum Actor {
 
 impl Actor {
     pub fn can_be_shot(&self) -> bool {
-        matches!(self, Actor::Enemy { enemy: _ })
+        matches!(self, Actor::Enemy { enemy: Enemy { health, .. } } if *health > 0)
     }
-    pub fn shoot(&mut self) {
+    pub fn get_pos(&self) -> Option<(Fp16, Fp16)> {
+        match self {
+            Actor::Enemy { enemy } => Some((enemy.x, enemy.y)),
+            _ => None,
+        }
+    }
+
+    pub fn shoot(&mut self, hitpoints: i32) {
         if let Actor::Enemy { enemy } = self {
-            enemy.hit()
+            enemy.hit(hitpoints)
         }
     }
 }
