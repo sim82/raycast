@@ -137,6 +137,7 @@ fn main() -> raycast::prelude::Result<()> {
     let mut stop_the_world_mode = false;
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
+    let mut frame = 0;
     // Limit to max ~60 fps update rate
     // window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
@@ -378,6 +379,12 @@ fn main() -> raycast::prelude::Result<()> {
             texture
                 .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
                     for y in 0..200 {
+                        if false {
+                            let c = if (frame % 2) == 0 { 0 } else { 15 };
+                            for x in 0..10 {
+                                buffer.point(x, y as i32, c);
+                            }
+                        }
                         for x in 0..320 {
                             let offset = y * pitch + x * 3;
                             let s_offset = y * 320 + x;
@@ -391,7 +398,7 @@ fn main() -> raycast::prelude::Result<()> {
             canvas.clear();
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();
-
+            frame += 1;
             if input_events.toggle_mouse_grab || (input_events.shoot && initial_ungrabbed) {
                 mouse_grabbed = !mouse_grabbed;
                 canvas.window_mut().set_grab(mouse_grabbed);
