@@ -2,6 +2,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
+    ops::RangeInclusive,
     path::Path,
 };
 
@@ -64,6 +65,57 @@ impl VswapFile {
 
         let (offs, size) = self.chunks[chunk_index];
         read_vec_from_pos_size(&mut self.f, offs, size)
+    }
+}
+
+pub struct SpritePosts {
+    pub range: RangeInclusive<u16>,
+    pub posts: Vec<Vec<(u16, u16)>>,
+    pub pixels: Vec<u8>,
+}
+
+pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
+    let mut cursor = Cursor::new(buf);
+    let first_col = cursor.read_u16::<LittleEndian>().unwrap();
+    let last_col = cursor.read_u16::<LittleEndian>().unwrap();
+    // let n = (last_col - first_col) + 1;
+    let offsets = (first_col..=last_col)
+        .map(|_| cursor.read_u16::<LittleEndian>().unwrap())
+        .collect::<Vec<_>>();
+    let mut pixels_cursor = cursor.clone();
+    let mut posts = Vec::new();
+    let mut pixels_end = u64::MAX;
+    for (i, col_offset) in offsets.iter().enumerate() {
+        // println!("col start {}", col_offset);
+        cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
+        pixels_end = pixels_end.min(cursor.position());
+        let mut col_posts = Vec::new();
+        loop {
+            let end = cursor.read_u16::<LittleEndian>().unwrap();
+            if end == 0 {
+                break;
+            }
+            let _ = cursor.read_u16::<LittleEndian>().unwrap();
+            let start = cursor.read_u16::<LittleEndian>().unwrap();
+            col_posts.push((start / 2, end / 2));
+            // let start = start as usize / 2;
+            // let end = end as usize / 2;
+
+            // for row in start..end {
+            //     texture[first_col as usize + i][row] = pixels.read_u8().unwrap();
+            // }
+            // println!("post: {} {}", start, end);
+        }
+        posts.push(col_posts);
+    }
+
+    let num_pixels = pixels_end - pixels_cursor.position();
+    let mut pixels = vec![0; num_pixels as usize];
+    pixels_cursor.read_exact(&mut pixels).unwrap();
+    SpritePosts {
+        range: first_col..=last_col,
+        posts,
+        pixels,
     }
 }
 
