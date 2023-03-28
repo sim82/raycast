@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use crate::{palette, Texture8};
+use crate::Texture;
 
 pub const TEX_SIZE: usize = 64;
 
@@ -67,7 +67,7 @@ impl VswapFile {
     }
 }
 
-pub fn sprite_chunk_to_texture8(buf: &[u8]) -> [[u8; TEX_SIZE]; TEX_SIZE] {
+pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u8; TEX_SIZE]; TEX_SIZE] {
     let mut cursor = Cursor::new(buf);
     // UInt16LE 	FirstCol: Index of leftmost non-empty column
     // UInt16LE 	LastCol: Index of rightmost non-empty column
@@ -106,7 +106,7 @@ pub fn sprite_chunk_to_texture8(buf: &[u8]) -> [[u8; TEX_SIZE]; TEX_SIZE] {
     texture
 }
 
-pub fn wall_chunk_to_texture8(buf: &[u8]) -> Texture8 {
+pub fn wall_chunk_to_texture(buf: &[u8]) -> Texture {
     let mut cursor = Cursor::new(buf);
 
     let mut texture = [[0; TEX_SIZE]; TEX_SIZE];

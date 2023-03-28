@@ -51,38 +51,38 @@ pub const HALF_HEIGHT: i32 = VIEW_HEIGHT / 2;
 const TEX_SIZE: usize = wl6::TEX_SIZE;
 
 // column first order
-pub type Texture8 = [[u8; TEX_SIZE]; TEX_SIZE];
+pub type Texture = [[u8; TEX_SIZE]; TEX_SIZE];
 use wl6::VswapFile;
 
 pub struct Resources {
-    textures8: Vec<Texture8>,
-    sprites8: Vec<Texture8>,
-    fallback_texture8: Texture8,
+    textures: Vec<Texture>,
+    sprites: Vec<Texture>,
+    fallback_texture: Texture,
 }
 impl Default for Resources {
     fn default() -> Self {
         Self {
-            fallback_texture8: [[0x9; TEX_SIZE]; TEX_SIZE],
-            textures8: Default::default(),
-            sprites8: Default::default(),
+            fallback_texture: [[0x9; TEX_SIZE]; TEX_SIZE],
+            textures: Default::default(),
+            sprites: Default::default(),
         }
     }
 }
 
 impl Resources {
-    pub fn get_texture8(&self, id: i32) -> &Texture8 {
-        if id >= 0 && (id as usize) <= self.textures8.len() {
-            &self.textures8[id as usize]
+    pub fn get_texture(&self, id: i32) -> &Texture {
+        if id >= 0 && (id as usize) <= self.textures.len() {
+            &self.textures[id as usize]
         } else {
-            &self.fallback_texture8
+            &self.fallback_texture
         }
     }
 
-    pub fn get_sprite8(&self, id: i32) -> &Texture8 {
-        if id >= 1 && (id as usize) <= self.sprites8.len() {
-            &self.sprites8[(id - 1) as usize]
+    pub fn get_sprite_as_texture(&self, id: i32) -> &Texture {
+        if id >= 1 && (id as usize) <= self.sprites.len() {
+            &self.sprites[(id - 1) as usize]
         } else {
-            &self.fallback_texture8
+            &self.fallback_texture
         }
     }
 
@@ -119,21 +119,21 @@ impl Resources {
         let mut textures8 = Vec::new();
 
         for i in 0..vs.num_walls {
-            textures8.push(wl6::wall_chunk_to_texture8(
+            textures8.push(wl6::wall_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Wall(i as usize)),
             ));
         }
         let mut sprites8 = Vec::new();
         for i in 0..vs.num_sprites {
             // println!("sprite {}", i);
-            sprites8.push(wl6::sprite_chunk_to_texture8(
+            sprites8.push(wl6::sprite_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Sprite(i as usize)),
             ));
         }
 
         Resources {
-            textures8,
-            sprites8,
+            textures: textures8,
+            sprites: sprites8,
             ..Default::default()
         }
     }

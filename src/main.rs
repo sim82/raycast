@@ -1,4 +1,4 @@
-use std::{iter::Scan, time::Instant};
+use std::time::Instant;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;

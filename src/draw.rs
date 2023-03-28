@@ -1,5 +1,3 @@
-use sdl2::render::{Canvas, RenderTarget};
-
 use crate::prelude::*;
 
 pub const COLORS: [u32; 16] = [
