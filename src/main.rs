@@ -5,6 +5,7 @@ use rand::random;
 // use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use raycast::{
     ms::{Loadable, Writable},
+    palette::PALETTE,
     prelude::*,
     wl6, Resources,
 };
@@ -106,7 +107,7 @@ impl InputState {
 }
 
 fn main() -> raycast::prelude::Result<()> {
-    let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
+    let mut buffer: Vec<u8> = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];
 
     // let resources = Resources::load_textures("textures.txt");
@@ -284,20 +285,27 @@ fn main() -> raycast::prelude::Result<()> {
 
             for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
                 if i == 0 {
-                    chunk.fill(0x38383838);
+                    chunk.fill(29);
                 } else if i == 1 {
-                    chunk.fill(0x64646464);
+                    chunk.fill(26);
                 } else {
-                    chunk.fill(0x00000064);
+                    chunk.fill(155);
                 }
             }
 
-            player.draw(&mut buffer);
+            player.draw(&mut buffer[..]);
 
             let _start = Instant::now();
 
             // for _ in 0..1000 {
-            render::sweep_raycast(&map_dynamic, &mut buffer, &mut zbuffer, &player, 0..WIDTH, &resources);
+            render::sweep_raycast(
+                &map_dynamic,
+                &mut buffer[..],
+                &mut zbuffer,
+                &player,
+                0..WIDTH,
+                &resources,
+            );
 
             let _sprite_start = Instant::now();
 
@@ -343,14 +351,14 @@ fn main() -> raycast::prelude::Result<()> {
                 player.shoot_timeout -= 1;
             }
 
-            sprite::draw(sprite_screen_setup, &mut buffer, &zbuffer, &resources);
+            sprite::draw(sprite_screen_setup, &mut buffer[..], &zbuffer, &resources);
 
             if automap {
-                map_dynamic.map.draw_automap(&mut buffer);
-                things.draw_automap(&mut buffer);
+                map_dynamic.map.draw_automap(&mut buffer[..]);
+                things.draw_automap(&mut buffer[..]);
             }
 
-            buffer.point(320 / 2, 80, 1);
+            buffer.point(320 / 2, 80, 4);
             if player.shoot {
                 if let Some(hit_thing) = hit_thing {
                     if let Some((x, y)) = &things.things[hit_thing].actor.get_pos() {
@@ -381,9 +389,10 @@ fn main() -> raycast::prelude::Result<()> {
                         for x in 0..320 {
                             let offset = y * pitch + x * 3;
                             let s_offset = y * 320 + x;
-                            tex_buffer[offset] = (buffer[s_offset] >> 16) as u8;
-                            tex_buffer[offset + 1] = (buffer[s_offset] >> 8) as u8;
-                            tex_buffer[offset + 2] = buffer[s_offset] as u8;
+                            let c32 = PALETTE[buffer[s_offset] as usize];
+                            tex_buffer[offset] = (c32 >> 16) as u8;
+                            tex_buffer[offset + 1] = (c32 >> 8) as u8;
+                            tex_buffer[offset + 2] = c32 as u8;
                         }
                     }
                 })

@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use crate::palette;
+use crate::{palette, Texture8};
 
 pub const TEX_SIZE: usize = 64;
 
@@ -67,7 +67,7 @@ impl VswapFile {
     }
 }
 
-pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
+pub fn sprite_chunk_to_texture8(buf: &[u8]) -> [[u8; TEX_SIZE]; TEX_SIZE] {
     let mut cursor = Cursor::new(buf);
     // UInt16LE 	FirstCol: Index of leftmost non-empty column
     // UInt16LE 	LastCol: Index of rightmost non-empty column
@@ -75,7 +75,7 @@ pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
     // UInt8[?] 	Pixel pool: Palette indexes for all solid pixels of the sprite (size unknown when decoding)
     // UInt16[?] 	Array of values describing all posts in the sprite (size unknown when decoding)
 
-    let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
+    let mut texture = [[255; TEX_SIZE]; TEX_SIZE];
     let first_col = cursor.read_u16::<LittleEndian>().unwrap();
     let last_col = cursor.read_u16::<LittleEndian>().unwrap();
     // let n = (last_col - first_col) + 1;
@@ -98,8 +98,7 @@ pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
             let end = end as usize / 2;
 
             for row in start..end {
-                texture[first_col as usize + i][row] =
-                    0xff000000 | palette::PALETTE[pixels.read_u8().unwrap() as usize];
+                texture[first_col as usize + i][row] = pixels.read_u8().unwrap();
             }
             // println!("post: {} {}", start, end);
         }
@@ -107,13 +106,13 @@ pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
     texture
 }
 
-pub fn wall_chunk_to_texture(buf: &[u8]) -> [[u32; TEX_SIZE]; TEX_SIZE] {
+pub fn wall_chunk_to_texture8(buf: &[u8]) -> Texture8 {
     let mut cursor = Cursor::new(buf);
 
     let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
     for col in &mut texture {
         for c in col {
-            *c = 0xff000000 | palette::PALETTE[cursor.read_u8().unwrap() as usize];
+            *c = cursor.read_u8().unwrap();
         }
     }
     texture

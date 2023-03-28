@@ -247,13 +247,18 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
         let d_tex = (64 << TEXEL_SCALE) - 2 * tex_clip - 1;
         let mut d = 2 * d_tex - d_screen;
         let mut row_tex = 0;
-        let tex_col = &resources.get_texture(hit_tile)[(tex_u) as usize];
+        let tex_col = &resources.get_texture8(hit_tile)[(tex_u) as usize];
 
         for row_screen in line_range_clamped {
-            screen.point_rgb(
+            // screen.point_rgb(
+            //     column as i32,
+            //     row_screen,
+            //     tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
+            // );
+            screen.point(
                 column as i32,
                 row_screen,
-                tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE],
+                tex_col[(row_tex + tex_clip) as usize >> TEXEL_SCALE] as i32,
             );
             while d > 0 {
                 row_tex += 1;
@@ -278,7 +283,7 @@ pub fn draw_sprite<D: Draw + ?Sized>(
     let offs = if z > FP16_ZERO { (C << FP16_SCALE) / z.v } else { C };
     let line_range = (MID - offs)..(MID + offs);
 
-    let tex = resources.get_sprite(id);
+    let tex = resources.get_sprite8(id);
 
     let target_size = 2 * offs;
     // TODO: re-think the whole thing... it kind of works without explicit clipping to screen bounds, but the redundant in-loop bounds checks are weird and inefficient
@@ -317,9 +322,8 @@ pub fn draw_sprite<D: Draw + ?Sized>(
             }
             if (0..VIEW_HEIGHT).contains(&row) {
                 let c = tex_col[texcoord[y as usize] as usize];
-                if c != 0 {
-                    screen.point_rgb(column, row, c);
-                }
+                // screen.point_rgb(column, row, c);
+                screen.point(column, row, c as i32);
             }
         }
     }
@@ -342,7 +346,7 @@ fn raycast_test() {
     let col = 10;
     sweep_raycast(
         &map_dynamic,
-        &mut screen,
+        &mut screen[..],
         &mut zbuffer,
         &player,
         col..(col + 1),
