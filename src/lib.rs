@@ -52,11 +52,12 @@ const TEX_SIZE: usize = wl6::TEX_SIZE;
 
 // column first order
 pub type Texture = [[u8; TEX_SIZE]; TEX_SIZE];
-use wl6::VswapFile;
+use wl6::{SpritePosts, VswapFile};
 
 pub struct Resources {
     textures: Vec<Texture>,
     sprites: Vec<Texture>,
+    sprite_posts: Vec<SpritePosts>,
     fallback_texture: Texture,
 }
 impl Default for Resources {
@@ -65,6 +66,7 @@ impl Default for Resources {
             fallback_texture: [[0x9; TEX_SIZE]; TEX_SIZE],
             textures: Default::default(),
             sprites: Default::default(),
+            sprite_posts: Default::default(),
         }
     }
 }
@@ -83,6 +85,14 @@ impl Resources {
             &self.sprites[(id - 1) as usize]
         } else {
             &self.fallback_texture
+        }
+    }
+
+    pub fn get_sprite(&self, id: i32) -> &SpritePosts {
+        if id >= 1 && (id as usize) <= self.sprites.len() {
+            &self.sprite_posts[(id - 1) as usize]
+        } else {
+            panic!("unknown sprite {id}");
         }
     }
 
@@ -116,24 +126,29 @@ impl Resources {
     pub fn load_wl6<P: AsRef<Path>>(name: P) -> Resources {
         let mut vs = VswapFile::open(name);
 
-        let mut textures8 = Vec::new();
+        let mut textures = Vec::new();
 
         for i in 0..vs.num_walls {
-            textures8.push(wl6::wall_chunk_to_texture(
+            textures.push(wl6::wall_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Wall(i as usize)),
             ));
         }
-        let mut sprites8 = Vec::new();
+        let mut sprites = Vec::new();
         for i in 0..vs.num_sprites {
             // println!("sprite {}", i);
-            sprites8.push(wl6::sprite_chunk_to_texture(
+            sprites.push(wl6::sprite_chunk_to_texture(
                 &vs.read_chunk(wl6::ChunkId::Sprite(i as usize)),
             ));
         }
 
+        let sprite_posts = (0..vs.num_sprites as usize)
+            .map(|i| wl6::sprite_chunk_to_posts(&vs.read_chunk(wl6::ChunkId::Sprite(i))))
+            .collect();
+
         Resources {
-            textures: textures8,
-            sprites: sprites8,
+            textures,
+            sprites,
+            sprite_posts,
             ..Default::default()
         }
     }

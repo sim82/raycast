@@ -70,7 +70,7 @@ impl VswapFile {
 
 pub struct SpritePosts {
     pub range: RangeInclusive<u16>,
-    pub posts: Vec<Vec<(u16, u16)>>,
+    pub posts: Vec<(Vec<(u16, u16)>, u16)>,
     pub pixels: Vec<u8>,
 }
 
@@ -84,12 +84,15 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
         .collect::<Vec<_>>();
     let mut pixels_cursor = cursor.clone();
     let mut posts = Vec::new();
-    let mut pixels_end = u64::MAX;
+    let mut pixels_end = buf.len() as u64;
+    let mut pixels = 0;
+
     for (i, col_offset) in offsets.iter().enumerate() {
         // println!("col start {}", col_offset);
         cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
-        pixels_end = pixels_end.min(cursor.position());
+        // pixels_end = pixels_end.min(cursor.position());
         let mut col_posts = Vec::new();
+        let pixel_start = pixels;
         loop {
             let end = cursor.read_u16::<LittleEndian>().unwrap();
             if end == 0 {
@@ -98,6 +101,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
             let _ = cursor.read_u16::<LittleEndian>().unwrap();
             let start = cursor.read_u16::<LittleEndian>().unwrap();
             col_posts.push((start / 2, end / 2));
+            pixels += end / 2 - start / 2;
             // let start = start as usize / 2;
             // let end = end as usize / 2;
 
@@ -106,7 +110,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
             // }
             // println!("post: {} {}", start, end);
         }
-        posts.push(col_posts);
+        posts.push((col_posts, pixel_start));
     }
 
     let num_pixels = pixels_end - pixels_cursor.position();

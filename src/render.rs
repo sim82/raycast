@@ -329,6 +329,81 @@ pub fn draw_sprite<D: Draw + ?Sized>(
     }
 }
 
+pub fn draw_sprite2<D: Draw + ?Sized>(
+    screen: &mut D,
+    zbuffer: &[Fp16],
+    resources: &Resources,
+    id: i32,
+    x_mid: i32,
+    z: Fp16,
+) {
+    const C: i32 = MID;
+    let offs = if z > FP16_ZERO { (C << FP16_SCALE) / z.v } else { C };
+    let line_range = (MID - offs)..(MID + offs);
+
+    let tex = resources.get_sprite_as_texture(id);
+    let sprite = resources.get_sprite(id);
+
+    let target_size = 2 * offs;
+    // TODO: re-think the whole thing... it kind of works without explicit clipping to screen bounds, but the redundant in-loop bounds checks are weird and inefficient
+
+    let dx_screen = (line_range.end - line_range.start) - 1;
+    let dx_tex = 64 - 1;
+    let mut dx = 2 * dx_tex - dx_screen;
+    let mut xtex = 0;
+    // only fill first (2 * offs, screen-space target size) entries of the texcoord array, using bresenham-style interpolator
+    // let mut pixels = sprite.pixels.iter();
+
+    'outer: for x in (x_mid - offs)..(x_mid + offs) {
+        // let mut pixel_i_cur = pixel_i;
+
+        if sprite.range.contains(&xtex) {
+            let dy_screen = (line_range.end - line_range.start) - 1;
+            let dy_tex = 64 - 1;
+            let mut dy = 2 * dy_tex - dy_screen;
+            // let mut pixel = 0;
+            let mut ytex = 0;
+            let (posts, mut pixel_i) = &sprite.posts[(xtex - sprite.range.start()) as usize];
+            let mut posts = posts.iter();
+            let Some(mut post) = posts.next() else {continue};
+            let mut in_post = post.0 == 0;
+
+            'yloop: for y in line_range.clone() {
+                // screen.point(x, y, xtex as i32);
+                if in_post {
+                    if pixel_i as usize >= sprite.pixels.len() {
+                        break 'outer;
+                    }
+                    screen.point(x, y, sprite.pixels[pixel_i as usize] as i32);
+                }
+
+                while dy > 0 {
+                    if ytex >= post.1 {
+                        post = match posts.next() {
+                            Some(post) => post,
+                            None => break 'yloop,
+                        };
+                    }
+
+                    in_post = post.0 <= ytex;
+
+                    pixel_i += 1;
+                    ytex += 1;
+                    dy -= 2 * dy_screen;
+                }
+                dy += 2 * dy_tex;
+            }
+        }
+        while dx > 0 {
+            xtex += 1;
+            // c = xtex as i32;
+            // pixel_i = pixel_i_cur;
+            dx -= 2 * dx_screen;
+        }
+        dx += 2 * dx_tex;
+    }
+}
+
 #[test]
 fn raycast_test() {
     let map_dynamic = MapDynamic::wrap(Map::default());

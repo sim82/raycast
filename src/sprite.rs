@@ -64,7 +64,8 @@ pub fn draw<D: Draw + ?Sized>(
         owner: _,
     } in sprite_screen_setup.into_iter()
     {
-        render::draw_sprite(screen, zbuffer, resources, id, screen_x, z);
+        // render::draw_sprite(screen, zbuffer, resources, id, screen_x, z);
+        render::draw_sprite2(screen, zbuffer, resources, id, screen_x, z);
     }
 }
 
