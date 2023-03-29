@@ -370,10 +370,10 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
 
             'yloop: for y in line_range.clone() {
                 // screen.point(x, y, xtex as i32);
-                if in_post {
-                    if pixel_i as usize >= sprite.pixels.len() {
-                        break 'outer;
-                    }
+                if in_post && (pixel_i as usize) < sprite.pixels.len() {
+                    // if pixel_i as usize >= sprite.pixels.len() {
+                    //     pixels_cursor      break 'outer;
+                    // }
                     screen.point(x, y, sprite.pixels[pixel_i as usize] as i32);
                 }
 
@@ -386,8 +386,9 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
                     }
 
                     in_post = post.0 <= ytex;
-
-                    pixel_i += 1;
+                    if in_post {
+                        pixel_i += 1;
+                    }
                     ytex += 1;
                     dy -= 2 * dy_screen;
                 }

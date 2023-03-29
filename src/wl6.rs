@@ -84,7 +84,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
         .collect::<Vec<_>>();
     let mut pixels_cursor = cursor.clone();
     let mut posts = Vec::new();
-    let mut pixels_end = buf.len() as u64;
+    // let mut pixels_end = buf.len() as u64;
     let mut pixels = 0;
 
     for (i, col_offset) in offsets.iter().enumerate() {
@@ -113,8 +113,8 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
         posts.push((col_posts, pixel_start));
     }
 
-    let num_pixels = pixels_end - pixels_cursor.position();
-    let mut pixels = vec![0; num_pixels as usize];
+    // let num_pixels = pixels_end - pixels_cursor.position();
+    let mut pixels = vec![0; pixels as usize];
     pixels_cursor.read_exact(&mut pixels).unwrap();
     SpritePosts {
         range: first_col..=last_col,
