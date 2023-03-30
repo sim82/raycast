@@ -304,33 +304,35 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
             let mut ytex = 0;
             let (posts, mut pixel_i) = &sprite.posts[(xtex - sprite.range.start()) as usize];
             let mut posts_iter = posts.iter();
-            let Some(mut post) = posts_iter.next() else {continue};
-            let mut in_post = post.start == 0;
+            // if posts is empty, skip the complete y-loop
+            if let Some(mut post) = posts_iter.next() {
+                let mut in_post = post.start == 0;
 
-            // TODO: OPT: inner loop texcoords can be pre-calculated
-            // TODO: same clipping as x direction.
-            let y_start = line_range.start;
-            let y_end = line_range.end.min(VIEW_HEIGHT);
-            'yloop: for y in y_start..y_end {
-                if in_post {
-                    screen.point(x, y, sprite.pixels[pixel_i as usize] as i32);
-                }
-
-                while dy > 0 {
-                    ytex += 1;
+                // TODO: OPT: inner loop texcoords can be pre-calculated
+                // TODO: same clipping as x direction.
+                let y_start = line_range.start;
+                let y_end = line_range.end.min(VIEW_HEIGHT);
+                'yloop: for y in y_start..y_end {
                     if in_post {
-                        pixel_i += 1;
+                        screen.point(x, y, sprite.pixels[pixel_i as usize] as i32);
                     }
-                    if ytex >= post.end {
-                        post = match posts_iter.next() {
-                            Some(post) => post,
-                            None => break 'yloop,
-                        };
+
+                    while dy > 0 {
+                        ytex += 1;
+                        if in_post {
+                            pixel_i += 1;
+                        }
+                        if ytex >= post.end {
+                            post = match posts_iter.next() {
+                                Some(post) => post,
+                                None => break 'yloop,
+                            };
+                        }
+                        in_post = post.start <= ytex;
+                        dy -= 2 * dy_screen;
                     }
-                    in_post = post.start <= ytex;
-                    dy -= 2 * dy_screen;
+                    dy += 2 * dy_tex;
                 }
-                dy += 2 * dy_tex;
             }
         }
         while dx > 0 {
