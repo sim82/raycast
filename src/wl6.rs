@@ -2,7 +2,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
-    ops::RangeInclusive,
+    ops::{Range, RangeInclusive},
     path::Path,
 };
 
@@ -70,7 +70,7 @@ impl VswapFile {
 
 pub struct SpritePosts {
     pub range: RangeInclusive<u16>,
-    pub posts: Vec<(Vec<(u16, u16)>, u16)>,
+    pub posts: Vec<(Vec<Range<u16>>, u16)>,
     pub pixels: Vec<u8>,
 }
 
@@ -100,8 +100,9 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
             }
             let _ = cursor.read_u16::<LittleEndian>().unwrap();
             let start = cursor.read_u16::<LittleEndian>().unwrap();
-            col_posts.push((start / 2, end / 2));
-            pixels += end / 2 - start / 2;
+            let post = (start / 2)..(end / 2);
+            pixels += post.len() as u16;
+            col_posts.push(post);
             // let start = start as usize / 2;
             // let end = end as usize / 2;
 

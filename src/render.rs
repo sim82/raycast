@@ -303,9 +303,9 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
             // let mut pixel = 0;
             let mut ytex = 0;
             let (posts, mut pixel_i) = &sprite.posts[(xtex - sprite.range.start()) as usize];
-            let mut posts = posts.iter();
-            let Some(mut post) = posts.next() else {continue};
-            let mut in_post = post.0 == 0;
+            let mut posts_iter = posts.iter();
+            let Some(mut post) = posts_iter.next() else {continue};
+            let mut in_post = post.start == 0;
 
             // TODO: OPT: inner loop texcoords can be pre-calculated
             // TODO: same clipping as x direction.
@@ -321,13 +321,13 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
                     if in_post {
                         pixel_i += 1;
                     }
-                    if ytex >= post.1 {
-                        post = match posts.next() {
+                    if ytex >= post.end {
+                        post = match posts_iter.next() {
                             Some(post) => post,
                             None => break 'yloop,
                         };
                     }
-                    in_post = post.0 <= ytex;
+                    in_post = post.start <= ytex;
                     dy -= 2 * dy_screen;
                 }
                 dy += 2 * dy_tex;
