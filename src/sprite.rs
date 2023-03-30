@@ -56,7 +56,6 @@ pub fn draw<D: Draw + ?Sized>(
     screen: &mut D,
     zbuffer: &[Fp16],
     resources: &Resources,
-    sprite_render_posts: bool,
 ) {
     for SpriteSceenSetup {
         z,
@@ -65,11 +64,7 @@ pub fn draw<D: Draw + ?Sized>(
         owner: _,
     } in sprite_screen_setup.into_iter()
     {
-        if !sprite_render_posts {
-            render::draw_sprite(screen, zbuffer, resources, id, screen_x, z);
-        } else {
-            render::draw_sprite2(screen, zbuffer, resources, id, screen_x, z);
-        }
+        render::draw_sprite2(screen, zbuffer, resources, id, screen_x, z);
     }
 }
 
