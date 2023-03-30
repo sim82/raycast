@@ -46,6 +46,7 @@ struct InputState {
     open: bool,
     shoot: bool,
     fast_forward_mode: bool,
+    toggle_render_alternative: bool,
 
     // mouse
     dx: i32,
@@ -70,6 +71,7 @@ impl InputState {
                     Scancode::F5 => input_state.save = true,
                     Scancode::F6 => input_state.load = true,
                     Scancode::F7 => input_state.toggle_stop_the_world = true,
+                    Scancode::F9 => input_state.toggle_render_alternative = true,
                     Scancode::Tab => input_state.toggle_automap = true,
                     Scancode::Grave => input_state.toggle_mouse_grab = true,
                     _ => (),
@@ -138,6 +140,7 @@ fn main() -> raycast::prelude::Result<()> {
     let mut stop_the_world_mode = false;
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
+    let mut sprite_render_posts = false;
     // Limit to max ~60 fps update rate
     // window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
 
@@ -265,6 +268,8 @@ fn main() -> raycast::prelude::Result<()> {
 
             player.shoot = input_events.shoot;
 
+            sprite_render_posts ^= input_events.toggle_render_alternative;
+
             let num_ticks = if stop_the_world_mode {
                 0
             } else if fast_forward {
@@ -351,7 +356,16 @@ fn main() -> raycast::prelude::Result<()> {
                 player.shoot_timeout -= 1;
             }
 
-            sprite::draw(sprite_screen_setup, &mut buffer[..], &zbuffer, &resources);
+            let sprite_start = Instant::now();
+            sprite::draw(
+                sprite_screen_setup,
+                &mut buffer[..],
+                &zbuffer,
+                &resources,
+                sprite_render_posts,
+            );
+
+            println!("sprite: {}us", sprite_start.elapsed().as_micros());
 
             if automap {
                 map_dynamic.map.draw_automap(&mut buffer[..]);

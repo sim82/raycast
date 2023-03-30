@@ -341,23 +341,20 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
     let offs = if z > FP16_ZERO { (C << FP16_SCALE) / z.v } else { C };
     let line_range = (MID - offs)..(MID + offs);
 
-    let tex = resources.get_sprite_as_texture(id);
     let sprite = resources.get_sprite(id);
-
     let target_size = 2 * offs;
-    // TODO: re-think the whole thing... it kind of works without explicit clipping to screen bounds, but the redundant in-loop bounds checks are weird and inefficient
 
-    let dx_screen = (line_range.end - line_range.start) - 1;
+    let dx_screen = target_size - 1;
     let dx_tex = 64 - 1;
     let mut dx = 2 * dx_tex - dx_screen;
     let mut xtex = 0;
-    // only fill first (2 * offs, screen-space target size) entries of the texcoord array, using bresenham-style interpolator
-    // let mut pixels = sprite.pixels.iter();
 
-    'outer: for x in (x_mid - offs)..(x_mid + offs) {
-        // let mut pixel_i_cur = pixel_i;
+    let x_start = x_mid - offs;
+    let x_end = (x_mid + offs).min(WIDTH as i32);
 
-        if sprite.range.contains(&xtex) {
+    for x in x_start..x_end {
+        // TODO: correctly clip starting tex-coord (should mostly be the same as in sweep_raycast)
+        if x >= 0 && zbuffer[x as usize] > z && sprite.range.contains(&xtex) {
             let dy_screen = (line_range.end - line_range.start) - 1;
             let dy_tex = 64 - 1;
             let mut dy = 2 * dy_tex - dy_screen;
@@ -368,28 +365,24 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
             let Some(mut post) = posts.next() else {continue};
             let mut in_post = post.0 == 0;
 
+            // TODO: OPT: inner loop texcoords can be pre-calculated
             'yloop: for y in line_range.clone() {
-                // screen.point(x, y, xtex as i32);
-                if in_post && (pixel_i as usize) < sprite.pixels.len() {
-                    // if pixel_i as usize >= sprite.pixels.len() {
-                    //     pixels_cursor      break 'outer;
-                    // }
+                if in_post {
                     screen.point(x, y, sprite.pixels[pixel_i as usize] as i32);
                 }
 
                 while dy > 0 {
+                    ytex += 1;
+                    if in_post {
+                        pixel_i += 1;
+                    }
                     if ytex >= post.1 {
                         post = match posts.next() {
                             Some(post) => post,
                             None => break 'yloop,
                         };
                     }
-
                     in_post = post.0 <= ytex;
-                    if in_post {
-                        pixel_i += 1;
-                    }
-                    ytex += 1;
                     dy -= 2 * dy_screen;
                 }
                 dy += 2 * dy_tex;
@@ -397,8 +390,6 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
         }
         while dx > 0 {
             xtex += 1;
-            // c = xtex as i32;
-            // pixel_i = pixel_i_cur;
             dx -= 2 * dx_screen;
         }
         dx += 2 * dx_tex;
