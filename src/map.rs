@@ -46,6 +46,8 @@ pub struct Map {
     pub map: [[MapTile; MAP_SIZE]; MAP_SIZE],
 }
 
+pub const ROOM_ID_NONE: i32 = 0x6a;
+
 impl Default for Map {
     fn default() -> Self {
         let mut map = [[MapTile::Walkable(0, None); MAP_SIZE]; MAP_SIZE];
@@ -139,6 +141,51 @@ impl Map {
                 }
             }
         }
+    }
+
+    pub fn get_room_connectivity(&self) -> Vec<(i32, i32, i32)> {
+        let mut connections = Vec::new();
+        for y in 1..(MAP_SIZE as i32 - 1) {
+            for x in 1..(MAP_SIZE as i32 - 1) {
+                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    let nx = x + dx;
+                    let ny = y + dy;
+
+                    match (self.lookup_tile(x, y), self.lookup_tile(nx, ny)) {
+                        (MapTile::Walkable(id1, _), MapTile::Walkable(id2, _))
+                            if id1 != id2 && *id1 != ROOM_ID_NONE && *id2 != ROOM_ID_NONE =>
+                        {
+                            println!("rooms touching at {x} {y}: {id1:x} {id2:x}");
+                        }
+                        _ => (),
+                    }
+                }
+
+                for (dx1, dx2, dy1, dy2) in [(1, -1, 0, 0), (0, 0, 1, -1)] {
+                    let nx1 = x + dx1;
+                    let ny1 = y + dy1;
+
+                    let nx2 = x + dx2;
+                    let ny2 = y + dy2;
+
+                    match (
+                        self.lookup_tile(nx1, ny1),
+                        self.lookup_tile(x, y),
+                        self.lookup_tile(nx2, ny2),
+                    ) {
+                        (MapTile::Walkable(id1, _), MapTile::Door(_, _, door_id), MapTile::Walkable(id2, _))
+                            if id1 != id2 && *id1 != ROOM_ID_NONE && *id2 != ROOM_ID_NONE =>
+                        {
+                            // println!("door {door_id} at {x} {y}, connecting {id1:x} {id2:x}");
+                            connections.push((*id1, *id2, *door_id as i32));
+                            connections.push((*id2, *id1, *door_id as i32));
+                        }
+                        _ => (),
+                    }
+                }
+            }
+        }
+        connections
     }
 }
 

@@ -274,6 +274,13 @@ fn main() -> raycast::prelude::Result<()> {
             } else {
                 1
             };
+
+            for room_id in &map_dynamic.notifications {
+                println!("notify room {room_id:x}");
+            }
+
+            map_dynamic.notifications.clear();
+
             for _ in 0..num_ticks {
                 things.player_x = player.x.get_int();
                 things.player_y = player.y.get_int();
@@ -318,6 +325,10 @@ fn main() -> raycast::prelude::Result<()> {
             let mut hit_thing = None;
             if player.shoot && player.shoot_timeout <= 0 {
                 player.shoot_timeout = 30;
+
+                if let Some(room_id) = map_dynamic.get_room_id(player.x.get_int(), player.y.get_int()) {
+                    map_dynamic.notifications.insert(room_id);
+                }
 
                 for sprite in &sprite_screen_setup {
                     const WIDTH_HALF: i32 = (WIDTH as i32) / 2;
@@ -377,6 +388,8 @@ fn main() -> raycast::prelude::Result<()> {
                     }
                 }
             }
+
+            map_dynamic.propagate_notifications();
 
             // }
             // println!(

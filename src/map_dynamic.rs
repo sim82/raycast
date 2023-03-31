@@ -1,16 +1,52 @@
-use crate::{fp16::FP16_FRAC_64, ms::Loadable, prelude::*};
+use crate::{fp16::FP16_FRAC_64, map::ROOM_ID_NONE, ms::Loadable, prelude::*};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     io::Write,
 };
 
+pub struct RoomGraph {
+    adj: Vec<(i32, i32, i32)>,
+}
+
+impl RoomGraph {
+    pub fn new(mut adj: Vec<(i32, i32, i32)>) -> RoomGraph {
+        adj.sort_by_key(|(a, _, _)| *a);
+        RoomGraph { adj }
+    }
+
+    pub fn propagate_notifications(&self, door_states: &[DoorState], notifications: &HashSet<i32>) -> HashSet<i32> {
+        let mut stack = notifications.iter().collect::<Vec<_>>();
+        let mut out = notifications.iter().cloned().collect::<HashSet<_>>();
+        while let Some(room_id) = stack.pop() {
+            let adj_start = self.adj.partition_point(|(src, _, _)| *src < *room_id);
+            // println!("adj: {:x}: {:x?}", room_id, &self.adj[adj_start..]);
+            for (src_id, dest_id, door_id) in &self.adj[adj_start..] {
+                if *src_id != *room_id {
+                    break;
+                }
+                if door_states[*door_id as usize].open_f > FP16_HALF && out.insert(*dest_id) {
+                    stack.push(dest_id);
+                }
+            }
+        }
+        out
+    }
+}
+
 pub struct MapDynamic {
     pub map: Map,
+    pub room_graph: RoomGraph,
     pub door_states: Vec<DoorState>,
     pub pushwall_states: Vec<PushwallState>,
     pub pushwall_patch: HashMap<(i32, i32), MapTile>,
-    pub tmp_door_triggers: HashSet<usize>, // not persistent. accumulated door triggers during thing update and applies them in same frame
+
+    // not persistent. accumulated door triggers during thing update and applies them in same frame
+    pub tmp_door_triggers: HashSet<usize>,
+
+    // notifications are persistent across frame bounds: they are expected to be valid at the start of a frame (i.e. need to be loaded/saved).
+    // they will be overwritten during the frame to be used as input on the next frame
+    pub notifications: HashSet<i32>,
 }
 
 impl MapDynamic {
@@ -33,13 +69,14 @@ impl MapDynamic {
                 }
             }
         }
-
         MapDynamic {
+            room_graph: RoomGraph::new(map.get_room_connectivity()),
             map,
             door_states,
             pushwall_states,
             pushwall_patch: Default::default(),
             tmp_door_triggers: HashSet::new(),
+            notifications: HashSet::new(),
         }
     }
 
@@ -70,15 +107,25 @@ impl MapDynamic {
             }
         }
 
+        let mut notifications = HashSet::new();
+        let notification_count = r.read_i32::<LittleEndian>()?;
+        for _ in 0..notification_count {
+            notifications.insert(r.read_i32::<LittleEndian>()?);
+        }
+
+        map.get_room_connectivity();
+
         assert_eq!(door_count, door_states.len());
         assert_eq!(pushwall_count, pushwall_states.len());
 
         Ok(MapDynamic {
+            room_graph: RoomGraph::new(map.get_room_connectivity()),
             map,
             door_states,
             pushwall_states,
             pushwall_patch: Default::default(),
             tmp_door_triggers: HashSet::new(),
+            notifications,
         })
     }
 
@@ -137,6 +184,13 @@ impl MapDynamic {
             }
         } else {
             *tile
+        }
+    }
+
+    pub fn get_room_id(&self, x: i32, y: i32) -> Option<i32> {
+        match self.lookup_tile(x, y) {
+            MapTile::Walkable(room_id, _) if room_id != ROOM_ID_NONE => Some(room_id),
+            _ => None,
         }
     }
 
@@ -237,6 +291,12 @@ impl MapDynamic {
     pub fn unblock_door(&mut self, door_id: usize, blocker: i32) {
         self.door_states[door_id].blockers.remove(&blocker);
     }
+
+    pub fn propagate_notifications(&mut self) {
+        self.notifications = self
+            .room_graph
+            .propagate_notifications(&self.door_states, &self.notifications);
+    }
 }
 
 impl ms::Writable for MapDynamic {
@@ -250,6 +310,11 @@ impl ms::Writable for MapDynamic {
         for state in &self.pushwall_states {
             state.write(w)?;
         }
+        w.write_i32::<LittleEndian>(self.notifications.len() as i32)?;
+        for room_id in &self.notifications {
+            w.write_i32::<LittleEndian>(*room_id)?;
+        }
+
         Ok(())
     }
 }
