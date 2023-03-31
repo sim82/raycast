@@ -391,6 +391,7 @@ pub struct Enemy {
     pub health: i32,
     pub x: Fp16,
     pub y: Fp16,
+    pub is_notified: bool,
 }
 
 impl ms::Loadable for Enemy {
@@ -402,6 +403,7 @@ impl ms::Loadable for Enemy {
         let health = r.read_i32::<LittleEndian>()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
+        let is_notified = r.read_u8()? != 0;
         Ok(Enemy {
             exec_ctx,
             enemy_type,
@@ -410,6 +412,7 @@ impl ms::Loadable for Enemy {
             health,
             x,
             y,
+            is_notified,
         })
     }
 }
@@ -423,6 +426,7 @@ impl ms::Writable for Enemy {
         w.write_i32::<LittleEndian>(self.health)?;
         self.x.write(w)?;
         self.y.write(w)?;
+        w.write_u8(if self.is_notified { 1 } else { 0 })?;
         Ok(())
     }
 }
@@ -522,6 +526,7 @@ impl Enemy {
             health: 25,
             x: thing_def.x,
             y: thing_def.y,
+            is_notified: false,
         }
     }
 }

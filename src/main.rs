@@ -279,8 +279,6 @@ fn main() -> raycast::prelude::Result<()> {
                 println!("notify room {room_id:x}");
             }
 
-            map_dynamic.notifications.clear();
-
             for _ in 0..num_ticks {
                 things.player_x = player.x.get_int();
                 things.player_y = player.y.get_int();

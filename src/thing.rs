@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -187,6 +189,15 @@ impl Things {
                 (_, Actor::Enemy { enemy }) => {
                     let old_x = enemy.x;
                     let old_y = enemy.y;
+                    match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
+                        Some(room_id) if map_dynamic.notifications.contains(&room_id) && !enemy.is_notified => {
+                            println!("wake up by notification {room_id}");
+                            enemy.set_state("chase");
+                            enemy.is_notified = true;
+                        }
+                        _ => (),
+                    }
+
                     enemy.update(map_dynamic, self, thing.static_index);
 
                     self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
@@ -194,6 +205,8 @@ impl Things {
                 _ => (),
             }
         }
+        // TODO: replace with new notifications generated this frame
+        map_dynamic.notifications.clear();
         self.things = things;
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {
