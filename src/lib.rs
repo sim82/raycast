@@ -6,6 +6,7 @@ pub mod draw;
 pub mod enemy;
 pub mod fa;
 pub mod fp16;
+pub mod mainloop;
 pub mod map;
 pub mod map_dynamic;
 pub mod ms;
@@ -28,6 +29,7 @@ pub mod prelude {
             FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
         },
         fp16::{Fp16, FP16_F, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        mainloop::{InputState, Mainloop, SpawnInfo},
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
         map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},
         ms,
