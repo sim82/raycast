@@ -190,7 +190,10 @@ impl Things {
                 (_, Actor::Enemy { enemy }) => {
                     let old_x = enemy.x;
                     let old_y = enemy.y;
+
                     let was_notify = enemy.notify;
+
+                    // check if enemy gets notified by the room for this frame
                     if !enemy.notify {
                         match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
                             Some(room_id) if map_dynamic.notifications.contains(&room_id) && !enemy.notify => {
@@ -201,7 +204,11 @@ impl Things {
                         }
                     }
                     enemy.update(map_dynamic, self, thing.static_index);
+
+                    // update blockmal link
                     self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+
+                    // if enemy raised the notify flag this frame, forward it to the room
                     if enemy.notify && !was_notify {
                         if let Some(room_id) = map_dynamic.get_room_id(enemy.x.get_int(), enemy.y.get_int()) {
                             new_notifications.insert(room_id);
@@ -211,7 +218,6 @@ impl Things {
                 _ => (),
             }
         }
-        // TODO: replace with new notifications generated this frame
         map_dynamic.notifications = new_notifications;
         self.things = things;
     }

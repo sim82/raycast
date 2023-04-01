@@ -113,8 +113,6 @@ impl MapDynamic {
             notifications.insert(r.read_i32::<LittleEndian>()?);
         }
 
-        map.get_room_connectivity();
-
         assert_eq!(door_count, door_states.len());
         assert_eq!(pushwall_count, pushwall_states.len());
 
