@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
@@ -172,6 +172,7 @@ impl Things {
     pub fn update(&mut self, player: &Player, map_dynamic: &mut MapDynamic) {
         // temporarily take out things during mutation
         let mut things = std::mem::take(&mut self.things);
+        let mut new_notifications = HashSet::new();
         for thing in &mut things {
             let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
@@ -189,24 +190,29 @@ impl Things {
                 (_, Actor::Enemy { enemy }) => {
                     let old_x = enemy.x;
                     let old_y = enemy.y;
-                    match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
-                        Some(room_id) if map_dynamic.notifications.contains(&room_id) && !enemy.is_notified => {
-                            println!("wake up by notification {room_id}");
-                            enemy.set_state("chase");
-                            enemy.is_notified = true;
+                    let was_notify = enemy.notify;
+                    if !enemy.notify {
+                        match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
+                            Some(room_id) if map_dynamic.notifications.contains(&room_id) && !enemy.notify => {
+                                println!("enemy {} notified by room {room_id}", thing.static_index);
+                                enemy.notify = true;
+                            }
+                            _ => (),
                         }
-                        _ => (),
                     }
-
                     enemy.update(map_dynamic, self, thing.static_index);
-
                     self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+                    if enemy.notify && !was_notify {
+                        if let Some(room_id) = map_dynamic.get_room_id(enemy.x.get_int(), enemy.y.get_int()) {
+                            new_notifications.insert(room_id);
+                        }
+                    }
                 }
                 _ => (),
             }
         }
         // TODO: replace with new notifications generated this frame
-        map_dynamic.notifications.clear();
+        map_dynamic.notifications = new_notifications;
         self.things = things;
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {

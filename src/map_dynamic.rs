@@ -278,8 +278,8 @@ impl MapDynamic {
                 self.tmp_door_triggers.insert(door_id);
                 false
             }
-            // only use open door if it is not about to close (is this necessary?)
-            DoorAction::Open(timeout) if timeout > 30 => {
+            // only use open door if it is not about to close
+            DoorAction::Open(timeout) if timeout > 15 || !door_state.blockers.is_empty() => {
                 door_state.blockers.insert(blocker);
                 true
             }

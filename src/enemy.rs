@@ -205,19 +205,19 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
         } else {
             let mut dirtry = [None; 3];
 
-            if (dx > 0) ^ (random::<u8>() < 64) {
+            if (dx > 0) ^ (random::<u8>() < 16) {
                 dirtry[1] = Some(Direction::East);
             } else {
                 dirtry[1] = Some(Direction::West);
             }
 
-            if (dy > 0) ^ (random::<u8>() < 64) {
+            if (dy > 0) ^ (random::<u8>() < 16) {
                 dirtry[2] = Some(Direction::South);
             } else {
                 dirtry[2] = Some(Direction::North);
             }
 
-            if (dy.abs() > dx.abs()) ^ (random::<u8>() < 64) {
+            if (dy.abs() > dx.abs()) ^ (random::<u8>() < 32) {
                 dirtry.swap(1, 2);
             }
             if random::<u8>() < 192 {
@@ -257,8 +257,9 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
 fn think_shoot(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {}
 
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    if check_player_sight(thing, things, map_dynamic, static_index) {
+    if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
         thing.set_state("chase");
+        thing.notify = true;
         return;
     }
 
@@ -270,8 +271,9 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
 }
 
 fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    if check_player_sight(thing, things, map_dynamic, static_index) {
+    if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
         thing.set_state("chase");
+        thing.notify = true;
     }
 }
 
@@ -391,7 +393,7 @@ pub struct Enemy {
     pub health: i32,
     pub x: Fp16,
     pub y: Fp16,
-    pub is_notified: bool,
+    pub notify: bool,
 }
 
 impl ms::Loadable for Enemy {
@@ -403,7 +405,7 @@ impl ms::Loadable for Enemy {
         let health = r.read_i32::<LittleEndian>()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
-        let is_notified = r.read_u8()? != 0;
+        let notify = r.read_u8()? != 0;
         Ok(Enemy {
             exec_ctx,
             enemy_type,
@@ -412,7 +414,7 @@ impl ms::Loadable for Enemy {
             health,
             x,
             y,
-            is_notified,
+            notify,
         })
     }
 }
@@ -426,7 +428,7 @@ impl ms::Writable for Enemy {
         w.write_i32::<LittleEndian>(self.health)?;
         self.x.write(w)?;
         self.y.write(w)?;
-        w.write_u8(if self.is_notified { 1 } else { 0 })?;
+        w.write_u8(if self.notify { 1 } else { 0 })?;
         Ok(())
     }
 }
@@ -526,7 +528,7 @@ impl Enemy {
             health: 25,
             x: thing_def.x,
             y: thing_def.y,
-            is_notified: false,
+            notify: false,
         }
     }
 }
