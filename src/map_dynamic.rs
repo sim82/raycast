@@ -1,7 +1,7 @@
 use crate::{fp16::FP16_FRAC_64, map::ROOM_ID_NONE, ms::Loadable, prelude::*};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     io::Write,
 };
 

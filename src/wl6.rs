@@ -87,7 +87,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
     // let mut pixels_end = buf.len() as u64;
     let mut pixels = 0;
 
-    for (i, col_offset) in offsets.iter().enumerate() {
+    for (_i, col_offset) in offsets.iter().enumerate() {
         // println!("col start {}", col_offset);
         cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
         // pixels_end = pixels_end.min(cursor.position());

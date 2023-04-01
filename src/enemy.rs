@@ -254,7 +254,7 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
     }
 }
 
-fn think_shoot(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {}
+fn think_shoot(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
 
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
@@ -301,7 +301,7 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
                 thing.path_action = None;
             }
         }
-        Some(PathAction::Move { dist, dx: _, dy: _ }) => {
+        Some(PathAction::Move { dist: _, dx: _, dy: _ }) => {
 
             // panic!("PathAction::Move with zero dist.");
         }
