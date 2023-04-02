@@ -125,11 +125,15 @@ fn try_chase_pathaction(
         MapTile::Walkable(_, _) => {
             // on diagonal moves check if both adjecent tiles are at least walkable (it is ok if they are occupied so an enemy can move diagonally
             // between two others, but it can nerver move through a wall corner)
-            if (direction.is_diagonal()
-                && !(map_dynamic.can_walk(thing.x.get_int(), enter_y)
-                    || map_dynamic.can_walk(enter_x, thing.y.get_int())))
-                || things.blockmap.is_occupied(enter_x, enter_y)
-            {
+            let old_x = thing.x.get_int();
+            let old_y = thing.y.get_int();
+            let diagonal_blocked = direction.is_diagonal()
+                && (!map_dynamic.can_walk(old_x, enter_y)
+                    || !map_dynamic.can_walk(enter_x, old_y)
+                    || things.blockmap.is_occupied(old_x, enter_y)
+                    || things.blockmap.is_occupied(enter_x, old_y));
+
+            if diagonal_blocked || things.blockmap.is_occupied(enter_x, enter_y) {
                 None
             } else {
                 Some(PathAction::Move { dist: FP16_ONE, dx, dy })
