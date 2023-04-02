@@ -100,8 +100,8 @@ impl Player {
         // right direction is forward + 90deg
         let dx = (cos * player_vel.forward + sin * player_vel.right) * dt;
         let dy = (sin * player_vel.forward - cos * player_vel.right) * dt;
-
-        while collisions {
+        let max_loops = if collisions { 2 } else { 0 };
+        for _ in 0..max_loops {
             let (tx, ty) = self.get_corners();
 
             // select the three corners of the player box that need to be checked (depends on the quadrant of the actual movement)
@@ -132,18 +132,33 @@ impl Player {
                 // }
             }
 
+            let doorsnap_threshold: Fp16 = 0.05.into();
             if dx.v.abs() > dy.v.abs() {
-                if !can_move_x {
-                    if matches!(
-                        map_dynamic.lookup_tile(self.x.get_int() + dx.v.signum(), self.y.get_int()),
-                        MapTile::Door(_, _, _)
-                    ) {
-                        self.x = FP16_HALF + self.x.get_int().into();
-                        continue;
+                if !can_move_x
+                    && (self.y.fract() > FP16_HALF - doorsnap_threshold
+                        || self.y.fract() < FP16_HALF + doorsnap_threshold)
+                {
+                    match map_dynamic.lookup_tile(self.x.get_int() + dx.v.signum(), self.y.get_int()) {
+                        MapTile::Door(_, _, door_id) if map_dynamic.door_states[door_id].open_f > FP16_HALF => {
+                            self.y = FP16_HALF + self.y.get_int().into();
+                            continue;
+                        }
+                        _ => (),
                     }
                 }
             } else {
-                if !can_move_y {}
+                if !can_move_y
+                    && (self.x.fract() > FP16_HALF - doorsnap_threshold
+                        || self.x.fract() < FP16_HALF + doorsnap_threshold)
+                {
+                    match map_dynamic.lookup_tile(self.x.get_int(), self.y.get_int() + dy.v.signum()) {
+                        MapTile::Door(_, _, door_id) if map_dynamic.door_states[door_id].open_f > FP16_HALF => {
+                            self.x = FP16_HALF + self.x.get_int().into();
+                            continue;
+                        }
+                        _ => (),
+                    }
+                }
             }
 
             if can_move_x {
@@ -152,6 +167,7 @@ impl Player {
             if can_move_y {
                 self.y += dy;
             }
+            break;
         }
     }
 
