@@ -231,9 +231,16 @@ impl Mainloop {
         // println!("player: {:?} {:?} {:?}", self.player_vel, player.x, player.y);
         // println!("player: {:?}", player);
 
+        let ceiling_color = [
+            0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0xbf, 0x4e, 0x4e, 0x4e, 0x1d, 0x8d, 0x4e, 0x1d, 0x2d,
+            0x1d, 0x8d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x2d, 0xdd, 0x1d, 0x1d, 0x98, 0x1d, 0x9d, 0x2d, 0xdd, 0xdd, 0x9d,
+            0x2d, 0x4d, 0x1d, 0xdd, 0x7d, 0x1d, 0x2d, 0x2d, 0xdd, 0xd7, 0x1d, 0x1d, 0x1d, 0x2d, 0x1d, 0x1d, 0x1d, 0x1d,
+            0xdd, 0xdd, 0x7d, 0xdd, 0xdd, 0xdd,
+        ];
         for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
             if i == 0 {
-                chunk.fill(29);
+                // chunk.fill(29);
+                chunk.fill(ceiling_color[self.level_id as usize]);
             } else if i == 1 {
                 chunk.fill(26);
             } else {
@@ -361,7 +368,7 @@ impl Mainloop {
                     thing_defs: self.things.release(),
                 }),
             )
-        } else if input_events.next_level && self.level_id < 60 {
+        } else if input_events.next_level && self.level_id < 59 {
             SpawnInfo::StartLevel(
                 self.level_id + 1,
                 Some(StaticMapData {
