@@ -1,3 +1,7 @@
+// the only clippy lints that are really annying and unnecessary
+#![allow(clippy::collapsible_else_if)]
+#![allow(clippy::collapsible_if)]
+
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub use crate::prelude::*;
@@ -97,38 +101,57 @@ impl Player {
         let dx = (cos * player_vel.forward + sin * player_vel.right) * dt;
         let dy = (sin * player_vel.forward - cos * player_vel.right) * dt;
 
-        let (tx, ty) = self.get_corners();
+        while collisions {
+            let (tx, ty) = self.get_corners();
 
-        // select the three corners of the player box that need to be checked (depends on the quadrant of the actual movement)
-        let tis = if dx >= FP16_ZERO && dy >= FP16_ZERO {
-            [0, 1, 3]
-        } else if dx < FP16_ZERO && dy >= FP16_ZERO {
-            [1, 2, 0]
-        } else if dx < FP16_ZERO && dy < FP16_ZERO {
-            [1, 2, 3]
-        } else {
-            [0, 2, 3]
-        };
+            // select the three corners of the player box that need to be checked (depends on the quadrant of the actual movement)
+            let tis = if dx >= FP16_ZERO && dy >= FP16_ZERO {
+                [0, 1, 3]
+            } else if dx < FP16_ZERO && dy >= FP16_ZERO {
+                [1, 2, 0]
+            } else if dx < FP16_ZERO && dy < FP16_ZERO {
+                [1, 2, 3]
+            } else {
+                [0, 2, 3]
+            };
 
-        let mut can_move_x = true;
-        let mut can_move_y = true;
-        if collisions {
+            let mut can_move_x = true;
+            let mut can_move_y = true;
             for ti in tis {
                 let x = tx[ti] + dx;
                 let y = ty[ti] + dy;
 
                 // if !map.can_walk(x.get_int(), y.get_int()) {
                 // println!("collision {}", ti + 1);
-                can_move_x &= map_dynamic.can_walk(x.get_int(), ty[ti].get_int());
-                can_move_y &= map_dynamic.can_walk(tx[ti].get_int(), y.get_int());
+
+                let test_x = map_dynamic.can_walk(x.get_int(), ty[ti].get_int());
+                let test_y = map_dynamic.can_walk(tx[ti].get_int(), y.get_int());
+
+                can_move_x &= test_x;
+                can_move_y &= test_y;
                 // }
             }
-        }
-        if can_move_x {
-            self.x += dx;
-        }
-        if can_move_y {
-            self.y += dy;
+
+            if dx.v.abs() > dy.v.abs() {
+                if !can_move_x {
+                    if matches!(
+                        map_dynamic.lookup_tile(self.x.get_int() + dx.v.signum(), self.y.get_int()),
+                        MapTile::Door(_, _, _)
+                    ) {
+                        self.x = FP16_HALF + self.x.get_int().into();
+                        continue;
+                    }
+                }
+            } else {
+                if !can_move_y {}
+            }
+
+            if can_move_x {
+                self.x += dx;
+            }
+            if can_move_y {
+                self.y += dy;
+            }
         }
     }
 
