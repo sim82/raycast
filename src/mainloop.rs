@@ -6,6 +6,7 @@ use rand::random;
 use crate::{
     ms::{Loadable, Writable},
     prelude::*,
+    sprite::SpriteSceenSetup,
     wl6::MapsFile,
     Resources,
 };
@@ -110,6 +111,7 @@ impl Mainloop {
                         trigger: false,
                         shoot: false,
                         shoot_timeout: 0,
+                        weapon: Default::default(), // TODO
                     })
                     .unwrap_or_default();
             }
@@ -266,12 +268,10 @@ impl Mainloop {
 
         // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
         // if frame % 4 == 0 {
-        let sprite_screen_setup = sprite::setup_screen_pos_for_player(self.things.get_sprites(), &self.player);
+        let mut sprite_screen_setup = sprite::setup_screen_pos_for_player(self.things.get_sprites(), &self.player);
 
         let mut hit_thing = None;
-        if self.player.shoot && self.player.shoot_timeout <= 0 {
-            self.player.shoot_timeout = 30;
-
+        if self.player.weapon.run(input_events.shoot) {
             if let Some(room_id) = self
                 .map_dynamic
                 .get_room_id(self.player.x.get_int(), self.player.y.get_int())
@@ -309,6 +309,8 @@ impl Mainloop {
                 }
             }
         }
+
+        sprite_screen_setup.push(self.player.weapon.get_sprite());
         if self.player.shoot_timeout > 0 {
             self.player.shoot_timeout -= 1;
         }

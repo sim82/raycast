@@ -47,7 +47,7 @@ pub struct SpriteDef {
 pub struct SpriteSceenSetup {
     pub z: Fp16,
     pub screen_x: i32,
-    id: i32,
+    pub id: i32,
     pub owner: usize,
 }
 

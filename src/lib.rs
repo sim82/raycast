@@ -16,8 +16,8 @@ pub mod sprite;
 pub mod state_bc;
 pub mod thing;
 pub mod thing_def;
+pub mod weapon;
 pub mod wl6;
-
 pub mod prelude {
 
     pub use crate::{
@@ -39,6 +39,7 @@ pub mod prelude {
         state_bc::{Action, ExecCtx, StateBc, Think},
         thing::{Actor, Thing, Things},
         thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
+        weapon::{Weapon, WeaponType},
         Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
     };
 }

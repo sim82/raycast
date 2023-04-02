@@ -12,6 +12,7 @@ pub struct Player {
     pub trigger: bool,
     pub shoot: bool,
     pub shoot_timeout: i32,
+    pub weapon: Weapon,
 }
 
 #[derive(Debug)]
@@ -30,6 +31,7 @@ impl Default for Player {
             trigger: false,
             shoot: false,
             shoot_timeout: 0,
+            weapon: Default::default(),
         }
     }
 }
@@ -66,6 +68,7 @@ impl Loadable for Player {
             trigger,
             shoot,
             shoot_timeout,
+            weapon: Default::default(), // FIXME
         })
     }
 }

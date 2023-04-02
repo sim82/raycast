@@ -356,6 +356,7 @@ fn raycast_test() {
         trigger: false,
         shoot: false,
         shoot_timeout: 0,
+        weapon: Default::default(),
     };
     let col = 10;
     sweep_raycast(
