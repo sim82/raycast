@@ -13,7 +13,7 @@ byteorder = "1"
 anyhow = "1"
 sdl2 = "0.35.2"
 rand = { version = "0.8" }
-
+softbuffer = { version = "0.2", default-features = false, features = ["x11"] }
 [dev-dependencies]
 nom = "7"
 
