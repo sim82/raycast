@@ -57,9 +57,6 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
 fn main() -> raycast::prelude::Result<()> {
     let mut buffer: Vec<u8> = vec![0; WIDTH * HEIGHT];
 
-    let resources = Resources::load_wl6("vswap.wl6");
-    let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
-
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
@@ -78,6 +75,9 @@ fn main() -> raycast::prelude::Result<()> {
     let mut events = sdl_context
         .event_pump()
         .unwrap_or_else(|_| panic!("faild to get event pump"));
+
+    let resources = Resources::load_wl6("vswap.wl6");
+    let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
     let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
     let mut mouse_grabbed = false;

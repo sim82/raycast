@@ -21,7 +21,7 @@ pub enum SpawnInfo {
     LoadSavegame(Option<StaticMapData>),
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct InputState {
     // one-shot events
     pub quit: bool,
