@@ -187,12 +187,11 @@ impl Things {
                         // println!("collected: {:?} ", thing_def);
                     }
                 }
-                (_, Actor::Enemy { enemy }) => {
+                (_, Actor::Enemy { enemy }) if !enemy.dead => {
                     let old_x = enemy.x;
                     let old_y = enemy.y;
 
                     let was_notify = enemy.notify;
-
                     // check if enemy gets notified by the room for this frame
                     if !enemy.notify {
                         match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
@@ -206,7 +205,11 @@ impl Things {
                     enemy.update(map_dynamic, self, thing.static_index);
 
                     // update blockmal link
-                    self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+                    if !enemy.dead {
+                        self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+                    } else {
+                        self.blockmap.remove(thing.static_index, old_x, old_y);
+                    }
 
                     // if enemy raised the notify flag this frame, forward it to the room
                     if enemy.notify && !was_notify {
@@ -214,6 +217,9 @@ impl Things {
                             new_notifications.insert(room_id);
                         }
                     }
+                }
+                (_, Actor::Enemy { enemy }) if enemy.dead => {
+                    enemy.update(map_dynamic, self, thing.static_index);
                 }
                 _ => (),
             }

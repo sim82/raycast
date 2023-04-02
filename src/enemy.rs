@@ -123,7 +123,13 @@ fn try_chase_pathaction(
             Some(PathAction::WaitForDoor { door_id })
         }
         MapTile::Walkable(_, _) => {
-            if things.blockmap.is_occupied(enter_x, enter_y) {
+            // on diagonal moves check if both adjecent tiles are at least walkable (it is ok if they are occupied so an enemy can move diagonally
+            // between two others, but it can nerver move through a wall corner)
+            if (direction.is_diagonal()
+                && !(map_dynamic.can_walk(thing.x.get_int(), enter_y)
+                    || map_dynamic.can_walk(enter_x, thing.y.get_int())))
+                || things.blockmap.is_occupied(enter_x, enter_y)
+            {
                 None
             } else {
                 Some(PathAction::Move { dist: FP16_ONE, dx, dy })
@@ -156,93 +162,142 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
     }
 
     if thing.path_action.is_none() {
-        let dx = things.player_x - thing.x.get_int();
-        let dy = things.player_y - thing.y.get_int();
-
-        if dodge {
-            //
-            // arange 5 direction choices in order of preference
-            // the four cardinal directions plus the diagonal straight towards
-            // the player
-            //
-            let mut dirtry = [None; 5];
-            if dx > 0 {
-                dirtry[1] = Some(Direction::East);
-                dirtry[3] = Some(Direction::West);
-            } else {
-                dirtry[1] = Some(Direction::West);
-                dirtry[3] = Some(Direction::East);
-            }
-
-            if dy > 0 {
-                dirtry[2] = Some(Direction::South);
-                dirtry[4] = Some(Direction::North);
-            } else {
-                dirtry[2] = Some(Direction::North);
-                dirtry[4] = Some(Direction::South);
-            }
-
-            dirtry[0] =
-                match (dirtry[1], dirtry[2]) {
-                    (Some(Direction::North), Some(Direction::East))
-                    | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
-                    (Some(Direction::North), Some(Direction::West))
-                    | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
-                    (Some(Direction::South), Some(Direction::East))
-                    | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
-                    (Some(Direction::South), Some(Direction::West))
-                    | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
-                    _ => None,
-                };
-
-            for dir in dirtry.iter().filter_map(|x| *x) {
-                thing.path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
-                if thing.path_action.is_some() {
-                    thing.direction = dir;
-                    break;
-                }
-            }
+        let cont = if dodge {
+            select_dodge_action(things, thing, map_dynamic)
         } else {
-            let mut dirtry = [None; 3];
+            select_chase_action(things, thing, map_dynamic)
+        };
 
-            if (dx > 0) ^ (random::<u8>() < 16) {
-                dirtry[1] = Some(Direction::East);
-            } else {
-                dirtry[1] = Some(Direction::West);
-            }
-
-            if (dy > 0) ^ (random::<u8>() < 16) {
-                dirtry[2] = Some(Direction::South);
-            } else {
-                dirtry[2] = Some(Direction::North);
-            }
-
-            if (dy.abs() > dx.abs()) ^ (random::<u8>() < 32) {
-                dirtry.swap(1, 2);
-            }
-            if random::<u8>() < 192 {
-                dirtry[0] = match (dirtry[1], dirtry[2]) {
-                    (Some(Direction::North), Some(Direction::East))
-                    | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
-                    (Some(Direction::North), Some(Direction::West))
-                    | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
-                    (Some(Direction::South), Some(Direction::East))
-                    | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
-                    (Some(Direction::South), Some(Direction::West))
-                    | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
-                    _ => None,
-                };
-            }
-            for dir in dirtry.iter().filter_map(|x| *x) {
-                // println!("chase try: {dir:?}");
-                thing.path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
-                if thing.path_action.is_some() {
-                    thing.direction = dir;
-                    break;
-                }
-            }
+        if let Some((path_action, dir)) = cont {
+            thing.path_action = Some(path_action);
+            thing.direction = dir;
         }
     }
+    move_default(thing, map_dynamic, static_index, FP16_FRAC_64);
+}
+
+fn select_chase_action(
+    things: &Things,
+    thing: &mut Enemy,
+    map_dynamic: &mut MapDynamic,
+) -> Option<(PathAction, Direction)> {
+    let dx = things.player_x - thing.x.get_int();
+    let dy = things.player_y - thing.y.get_int();
+    let mut dirtry = [None; 3];
+
+    if (dx > 0) ^ (random::<u8>() < 16) {
+        dirtry[1] = Some(Direction::East);
+    } else {
+        dirtry[1] = Some(Direction::West);
+    }
+
+    if (dy > 0) ^ (random::<u8>() < 16) {
+        dirtry[2] = Some(Direction::South);
+    } else {
+        dirtry[2] = Some(Direction::North);
+    }
+
+    if (dy.abs() > dx.abs()) ^ (random::<u8>() < 32) {
+        dirtry.swap(1, 2);
+    }
+    if random::<u8>() < 192 {
+        dirtry[0] = match (dirtry[1], dirtry[2]) {
+            (Some(Direction::North), Some(Direction::East)) | (Some(Direction::East), Some(Direction::North)) => {
+                Some(Direction::NorthEast)
+            }
+            (Some(Direction::North), Some(Direction::West)) | (Some(Direction::West), Some(Direction::North)) => {
+                Some(Direction::NorthWest)
+            }
+            (Some(Direction::South), Some(Direction::East)) | (Some(Direction::East), Some(Direction::South)) => {
+                Some(Direction::SouthEast)
+            }
+            (Some(Direction::South), Some(Direction::West)) | (Some(Direction::West), Some(Direction::South)) => {
+                Some(Direction::SouthWest)
+            }
+            _ => None,
+        };
+    }
+
+    for dir in dirtry.iter().filter_map(|x| *x) {
+        // println!("chase try: {dir:?}");
+        let path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
+        if let Some(path_action) = path_action {
+            return Some((path_action, dir));
+        }
+    }
+    None
+}
+
+fn select_dodge_action(
+    things: &Things,
+    thing: &mut Enemy,
+    map_dynamic: &mut MapDynamic,
+) -> Option<(PathAction, Direction)> {
+    let dx = things.player_x - thing.x.get_int();
+    let dy = things.player_y - thing.y.get_int();
+    //
+    // arange 5 direction choices in order of preference
+    // the four cardinal directions plus the diagonal straight towards
+    // the player
+    //
+    let mut dirtry = [None; 5];
+    if dx > 0 {
+        dirtry[1] = Some(Direction::East);
+        dirtry[3] = Some(Direction::West);
+    } else {
+        dirtry[1] = Some(Direction::West);
+        dirtry[3] = Some(Direction::East);
+    }
+
+    if dy > 0 {
+        dirtry[2] = Some(Direction::South);
+        dirtry[4] = Some(Direction::North);
+    } else {
+        dirtry[2] = Some(Direction::North);
+        dirtry[4] = Some(Direction::South);
+    }
+
+    dirtry[0] = match (dirtry[1], dirtry[2]) {
+        (Some(Direction::North), Some(Direction::East)) | (Some(Direction::East), Some(Direction::North)) => {
+            Some(Direction::NorthEast)
+        }
+        (Some(Direction::North), Some(Direction::West)) | (Some(Direction::West), Some(Direction::North)) => {
+            Some(Direction::NorthWest)
+        }
+        (Some(Direction::South), Some(Direction::East)) | (Some(Direction::East), Some(Direction::South)) => {
+            Some(Direction::SouthEast)
+        }
+        (Some(Direction::South), Some(Direction::West)) | (Some(Direction::West), Some(Direction::South)) => {
+            Some(Direction::SouthWest)
+        }
+        _ => None,
+    };
+
+    for dir in dirtry.iter().filter_map(|x| *x) {
+        let path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
+        if let Some(path_action) = path_action {
+            return Some((path_action, dir));
+        }
+    }
+    None
+}
+
+fn think_dogchase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
+    if thing.path_action.is_none() {
+        // absurd fact: dogs never dogdge
+        if let Some((path_action, dir)) = select_chase_action(things, thing, map_dynamic) {
+            thing.path_action = Some(path_action);
+            thing.direction = dir;
+        }
+    }
+
+    let dx = thing.x.get_int().abs_diff(things.player_x);
+    let dy = thing.y.get_int().abs_diff(things.player_y);
+
+    if dx <= 1 && dy <= 1 {
+        thing.set_state("jump");
+    }
+
     move_default(thing, map_dynamic, static_index, FP16_FRAC_64);
 }
 
@@ -255,6 +310,7 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
 }
 
 fn think_shoot(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
+fn think_bite(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
 
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
@@ -311,6 +367,8 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
                     dist: FP16_ONE,
                     door_id: *door_id,
                 })
+            } else if thing.enemy_type.get_capabilities().can_open_doors {
+                thing.path_action = None;
             }
         }
         Some(PathAction::MoveThroughDoor { dist, door_id }) => {
@@ -333,6 +391,10 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
             // println!("no PathAction.")
         }
     }
+}
+
+fn action_die(enemy: &mut Enemy) {
+    enemy.dead = true;
 }
 
 #[derive(Debug)]
@@ -394,6 +456,7 @@ pub struct Enemy {
     pub x: Fp16,
     pub y: Fp16,
     pub notify: bool,
+    pub dead: bool,
 }
 
 impl ms::Loadable for Enemy {
@@ -406,6 +469,7 @@ impl ms::Loadable for Enemy {
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
         let notify = r.read_u8()? != 0;
+        let dead = r.read_u8()? != 0;
         Ok(Enemy {
             exec_ctx,
             enemy_type,
@@ -415,6 +479,7 @@ impl ms::Loadable for Enemy {
             x,
             y,
             notify,
+            dead,
         })
     }
 }
@@ -429,6 +494,7 @@ impl ms::Writable for Enemy {
         self.x.write(w)?;
         self.y.write(w)?;
         w.write_u8(if self.notify { 1 } else { 0 })?;
+        w.write_u8(if self.dead { 1 } else { 0 })?;
         Ok(())
     }
 }
@@ -461,8 +527,15 @@ impl Enemy {
             .jump_label(&label)
             .unwrap_or_else(|err| panic!("failed to jump to state {label}: {err:?}"));
         println!("state: {self:?}");
+        self.dead = name == "dead";
     }
     pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
+        // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
+        match self.exec_ctx.state.take_action() {
+            Action::None => (),
+            Action::Die => action_die(self),
+        }
+
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
@@ -473,6 +546,8 @@ impl Enemy {
             Think::Path => think_path(self, map_dynamic, things, static_index),
             Think::Chase => think_chase(self, map_dynamic, things, static_index),
             Think::Shoot => think_shoot(self, map_dynamic, things, static_index),
+            Think::Bite => think_bite(self, map_dynamic, things, static_index),
+            Think::DogChase => think_dogchase(self, map_dynamic, things, static_index),
         }
 
         // self.states[self.cur].2();
@@ -529,6 +604,7 @@ impl Enemy {
             x: thing_def.x,
             y: thing_def.y,
             notify: false,
+            dead: false,
         }
     }
 }

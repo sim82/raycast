@@ -37,7 +37,15 @@ impl BlockMap {
         assert!(self.map[old_yi][old_xi].len() < old_size);
         self.map[yi][xi].push(static_index);
     }
+    pub fn remove(&mut self, static_index: usize, old_x: Fp16, old_y: Fp16) {
+        let old_xi = old_x.get_int() as usize;
+        let old_yi = old_y.get_int() as usize;
+        // println!("blockmap update: {static_index} {old_xi} {old_yi} -> {xi} {yi}");
 
+        let old_size = self.map[old_yi][old_xi].len();
+        self.map[old_yi][old_xi].retain(|i| *i != static_index);
+        assert!(self.map[old_yi][old_xi].len() < old_size);
+    }
     pub fn insert(&mut self, static_index: usize, x: Fp16, y: Fp16) {
         let xi = x.get_int();
         let yi = y.get_int();

@@ -48,6 +48,10 @@ impl ms::Writable for EnemyType {
     }
 }
 
+pub struct EnemyCapabilities {
+    pub can_open_doors: bool,
+}
+
 const START_BROWN: i32 = 51;
 const NUM_HUMANOID: i32 = 49;
 const NUM_CANINE: i32 = 39;
@@ -114,6 +118,13 @@ impl EnemyType {
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
+        }
+    }
+
+    pub fn get_capabilities(&self) -> EnemyCapabilities {
+        match self {
+            EnemyType::Woof => EnemyCapabilities { can_open_doors: false },
+            _ => EnemyCapabilities { can_open_doors: false },
         }
     }
 }

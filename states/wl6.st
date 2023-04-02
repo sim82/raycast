@@ -22,7 +22,7 @@ chase:
 die:
     state BROWN_DIE_1, false, 15, None, None, next
     state BROWN_DIE_2, false, 15, None, None, next
-    state BROWN_DIE_3, false, 15, None, None, next
+    state BROWN_DIE_3, false, 15, None, Die, next
 dead:
     state BROWN_DEAD, false, 0, None, None, dead
 shoot:
@@ -57,7 +57,7 @@ die:
     state BLUE_DIE_2, false, 15, None, None, next
     state BLUE_DIE_3, false, 15, None, None, next
 dead:
-    state BLUE_DEAD, false, 0, None, None, dead
+    state BLUE_DEAD, false, 0, None, Die, dead
 
 shoot:
     state BLUE_SHOOT1, false, 20, None, None, next
@@ -97,7 +97,7 @@ die:
     state WHITE_DIE_2, false, 15, None, None, next
     state WHITE_DIE_3, false, 15, None, None, next
 dead:
-    state WHITE_DEAD, false, 0, None, None, dead
+    state WHITE_DEAD, false, 0, None, Die, dead
 shoot:
     state WHITE_SHOOT1, false, 20, None, None, next
     state WHITE_SHOOT2, false, 20, Shoot, None, next
@@ -130,7 +130,7 @@ die:
     state ROTTEN_DIE_2, false, 15, None, None, next
     state ROTTEN_DIE_3, false, 15, None, None, next
 dead:
-    state ROTTEN_DEAD, false, 0, None, None, dead
+    state ROTTEN_DEAD, false, 0, None, Die, dead
 
 shoot:
     state ROTTEN_SHOOT1, false, 20, None, None, next
@@ -153,22 +153,24 @@ pain1:
 pain2:
     state FURRY_DIE_1, false, 10, None, None, chase
 chase:
-    state FURRY_W1_1, true, 10, Chase, None, next
+    state FURRY_W1_1, true, 10, DogChase, None, next
     state FURRY_W1_1, true, 3, None, None, next
-    state FURRY_W2_1, true, 8, Chase, None, next
-    state FURRY_W3_1, true, 10, Chase, None, next
+    state FURRY_W2_1, true, 8, DogChase, None, next
+    state FURRY_W3_1, true, 10, DogChase, None, next
     state FURRY_W3_1, true, 3, None, None, next
-    state FURRY_W4_1, true, 8, Chase, None, chase
+    state FURRY_W4_1, true, 8, DogChase, None, chase
 die:
     state FURRY_DIE_1, false, 15, None, None, next
     state FURRY_DIE_2, false, 15, None, None, next
     state FURRY_DIE_3, false, 15, None, None, next
 dead:
-    state FURRY_DEAD, false, 0, None, None, dead
-shoot:
-    state FURRY_JUMP1, false, 20, None, None, next
-    state FURRY_JUMP2, false, 20, Shoot, None, next
-    state FURRY_JUMP3, false, 20, None, None, chase
+    state FURRY_DEAD, false, 0, None, Die, dead
+jump:
+    state FURRY_JUMP1, false, 10, None, None, next
+    state FURRY_JUMP2, false, 10, Bite, None, next
+    state FURRY_JUMP3, false, 10, None, None, next
+    state FURRY_JUMP1, false, 10, None, None, next
+    state FURRY_W1_1, false, 10, None, None, chase
 }
 
 enum

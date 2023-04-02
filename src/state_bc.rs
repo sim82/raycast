@@ -15,6 +15,8 @@ pub enum Think {
     Path,
     Chase,
     Shoot,
+    Bite,
+    DogChase,
 }
 
 impl Think {
@@ -25,6 +27,8 @@ impl Think {
             "Path" => Think::Path,
             "Chase" => Think::Chase,
             "Shoot" => Think::Shoot,
+            "Bite" => Think::Bite,
+            "DogChase" => Think::DogChase,
             _ => panic!("unhandled Think identifier {name}"),
         }
     }
@@ -38,7 +42,9 @@ impl ms::Loadable for Think {
             2 => Think::Path,
             3 => Think::Chase,
             4 => Think::Shoot,
-            x => return Err(anyhow!("unhandled Think dicriminator {x}")),
+            5 => Think::Bite,
+            6 => Think::DogChase,
+            x => return Err(anyhow!("unhandled Think discriminator {x}")),
         })
     }
 }
@@ -51,35 +57,48 @@ impl ms::Writable for Think {
             Think::Path => 2,
             Think::Chase => 3,
             Think::Shoot => 4,
+            Think::Bite => 5,
+            Think::DogChase => 6,
         };
         w.write_u8(v)?;
         Ok(())
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub enum Action {
     #[default]
     None,
+    Die,
 }
 
 impl Action {
     pub fn from_identifier(name: &str) -> Self {
         match name {
             "None" => Action::None,
+            "Die" => Action::Die,
             _ => panic!("unhandled Action identifier {name}"),
         }
     }
 }
 
 impl ms::Loadable for Action {
-    fn read_from(_r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(Action::None)
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => Action::None,
+            1 => Action::Die,
+            x => return Err(anyhow!("unhandled Action dicriminator {x}")),
+        })
     }
 }
 
 impl ms::Writable for Action {
-    fn write(&self, _w: &mut dyn std::io::Write) -> Result<()> {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        let v = match self {
+            Action::None => 0,
+            Action::Die => 1,
+        };
+        w.write_u8(v)?;
         Ok(())
     }
 }
@@ -94,7 +113,7 @@ pub struct StateBc {
     pub next: i32,
 }
 
-pub const STATE_BC_SIZE: i32 = 14;
+pub const STATE_BC_SIZE: i32 = 15;
 
 impl ms::Loadable for StateBc {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
@@ -136,6 +155,14 @@ impl StateBc {
             think,
             action,
             next: next * STATE_BC_SIZE,
+        }
+    }
+
+    pub fn take_action(&mut self) -> Action {
+        if self.action != Action::None {
+            std::mem::take(&mut self.action)
+        } else {
+            Action::None
         }
     }
 }
@@ -226,6 +253,10 @@ impl ExecImage {
 
     pub fn read_state_by_label(&self, label: &str) -> Result<StateBc> {
         let ptr = self.labels.get(label).ok_or(anyhow!("unknown label {label}"))?;
-        self.read_state(*ptr)
+        let res = self.read_state(*ptr);
+        if res.is_err() {
+            println!("while read from: 0x{ptr:x}");
+        }
+        res
     }
 }
