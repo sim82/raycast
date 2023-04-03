@@ -193,6 +193,7 @@ attack:
     state SPR_PISTOLATK2, false, 3, None, None, next
     state SPR_PISTOLATK3, false, 10, None, None, next
     state SPR_PISTOLATK4, false, 10, None, None, ready
+
 }
 
 states weapon_machinegun {
@@ -210,11 +211,11 @@ repeat:
 
 states weapon_chaingun {
 lower:
-    state SPR_CHAINATK4, false, 2, None, None, ready
+    state SPR_CHAINATK4, false, 4, None, None, ready
 ready:
     state SPR_CHAINREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_CHAINATK1, false, 4, None, Die, next
+    state SPR_CHAINATK1, false, 6, None, Die, next
 repeat:
     state SPR_CHAINATK2, false, 3, None, Die, next
     state SPR_CHAINATK3, false, 3, Path, Die, repeat
