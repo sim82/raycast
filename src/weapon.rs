@@ -2,6 +2,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use crate::prelude::*;
 use crate::sprite::SpriteSceenSetup;
+use anyhow::anyhow;
 
 #[derive(Debug)]
 pub enum WeaponType {
@@ -9,6 +10,46 @@ pub enum WeaponType {
     Gun,
     Machinegun,
     Chaingun,
+}
+
+impl WeaponType {
+    pub fn from_weapon_id(id: i32) -> Result<WeaponType> {
+        Ok(match id {
+            1 => WeaponType::Knife,
+            2 => WeaponType::Gun,
+            3 => WeaponType::Machinegun,
+            4 => WeaponType::Chaingun,
+            x => return Err(anyhow!("unhandled weapon type {x}")),
+        })
+    }
+
+    pub fn map_state_label(&self, state: &str) -> String {
+        match self {
+            WeaponType::Knife => format!("weapon_knife::{state}"),
+            WeaponType::Gun => format!("weapon_gun::{state}"),
+            WeaponType::Machinegun => format!("weapon_machinegun::{state}"),
+            WeaponType::Chaingun => format!("weapon_chaingun::{state}"),
+        }
+    }
+}
+
+impl ms::Loadable for WeaponType {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        WeaponType::from_weapon_id(r.read_i32::<LittleEndian>()?)
+    }
+}
+
+impl ms::Writable for WeaponType {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        let v = match self {
+            WeaponType::Knife => 1,
+            WeaponType::Gun => 2,
+            WeaponType::Machinegun => 3,
+            WeaponType::Chaingun => 4,
+        };
+        w.write_i32::<LittleEndian>(v)?;
+        Ok(())
+    }
 }
 
 impl WeaponType {
@@ -34,13 +75,19 @@ impl Default for Weapon {
             // selected_weapon: WeaponType::Gun,
             selected_weapon: WeaponType::Machinegun,
             ammo: 9999,
-            exec_ctx: ExecCtx::new("weapon_chaingun::ready").unwrap(),
+            exec_ctx: ExecCtx::new("weapon_gun::ready").unwrap(),
         }
     }
 }
 
 impl Weapon {
-    pub fn run(&mut self, fire: bool) -> bool {
+    pub fn run(&mut self, fire: bool, new_weapon_type: Option<i32>) -> bool {
+        if let Some(new_weapon_type) = new_weapon_type {
+            if let Ok(weapon_type) = WeaponType::from_weapon_id(new_weapon_type) {
+                self.selected_weapon = weapon_type;
+            }
+        }
+
         let shoot = match self.exec_ctx.state.take_action() {
             Action::None => false,
             Action::Die => true,
@@ -54,7 +101,18 @@ impl Weapon {
         match self.exec_ctx.state.think {
             Think::Stand if fire => {
                 self.exec_ctx
-                    .jump_label("weapon_chaingun::attack")
+                    .jump_label(&self.selected_weapon.map_state_label("attack"))
+                    .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
+            }
+            Think::Stand if !fire => {
+                // simple solution for 'queueing' weapon changes during attack frames
+                self.exec_ctx
+                    .jump_label(&self.selected_weapon.map_state_label("ready"))
+                    .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
+            }
+            Think::Path if !fire => {
+                self.exec_ctx
+                    .jump_label(&self.selected_weapon.map_state_label("lower"))
                     .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
             }
             _ => (),
@@ -76,7 +134,7 @@ impl ms::Loadable for Weapon {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         Ok(Self {
             ammo: r.read_i32::<LittleEndian>()?,
-            selected_weapon: WeaponType::Gun,
+            selected_weapon: WeaponType::read_from(r)?,
             exec_ctx: ExecCtx::read_from(r)?,
         })
     }
@@ -85,6 +143,7 @@ impl ms::Loadable for Weapon {
 impl ms::Writable for Weapon {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         w.write_i32::<LittleEndian>(self.ammo)?;
+        self.selected_weapon.write(w)?;
         self.exec_ctx.write(w)?;
         Ok(())
     }

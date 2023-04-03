@@ -21,6 +21,10 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
                 Scancode::F9 => input_state.toggle_render_alternative = true, // can be used e.g. to toggle between different draw impls at runtime
                 Scancode::Tab => input_state.toggle_automap = true,
                 Scancode::Grave => input_state.toggle_mouse_grab = true,
+                Scancode::Num1 => input_state.select_weapon = Some(1),
+                Scancode::Num2 => input_state.select_weapon = Some(2),
+                Scancode::Num3 => input_state.select_weapon = Some(3),
+                Scancode::Num4 => input_state.select_weapon = Some(4),
                 _ => (),
             },
             Event::MouseMotion { xrel, yrel, .. } => {

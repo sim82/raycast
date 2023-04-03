@@ -34,6 +34,7 @@ pub struct InputState {
     pub toggle_automap: bool,
     pub toggle_stop_the_world: bool,
     pub toggle_mouse_grab: bool,
+    pub select_weapon: Option<i32>,
 
     // press state
     pub forward: bool,
@@ -271,7 +272,7 @@ impl Mainloop {
         let mut sprite_screen_setup = sprite::setup_screen_pos_for_player(self.things.get_sprites(), &self.player);
 
         let mut hit_thing = None;
-        if self.player.weapon.run(input_events.shoot) {
+        if self.player.weapon.run(input_events.shoot, input_events.select_weapon) {
             if let Some(room_id) = self
                 .map_dynamic
                 .get_room_id(self.player.x.get_int(), self.player.y.get_int())

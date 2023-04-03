@@ -173,17 +173,19 @@ jump:
     state FURRY_W1_1, false, 10, None, None, chase
 }
 
-states weapon_gun {
+states weapon_knife {
+lower:
 ready:
-    state SPR_PISTOLREADY, false, 0, Stand, None, ready
+    state SPR_KNIFEREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_PISTOLATK1, false, 3, None, Die, next
-    state SPR_PISTOLATK2, false, 3, None, None, next
-    state SPR_PISTOLATK3, false, 10, None, None, next
-    state SPR_PISTOLATK4, false, 10, None, None, ready
+    state SPR_KNIFEATK1, false, 3, None, Die, next
+    state SPR_KNIFEATK2, false, 3, None, None, next
+    state SPR_KNIFEATK3, false, 10, None, None, next
+    state SPR_KNIFEATK4, false, 10, None, None, ready
 }
 
 states weapon_gun {
+lower:
 ready:
     state SPR_PISTOLREADY, false, 0, Stand, None, ready
 attack:
@@ -194,24 +196,28 @@ attack:
 }
 
 states weapon_machinegun {
+lower:
+    state SPR_MACHINEGUNATK4, false, 3, None, None, ready
 ready:
     state SPR_MACHINEGUNREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_MACHINEGUNATK1, false, 2, None, Die, next
-    state SPR_MACHINEGUNATK2, false, 2, None, None, next
-    state SPR_MACHINEGUNATK3, false, 2, None, None, next
-    state SPR_MACHINEGUNATK4, false, 2, None, None, ready
+    state SPR_MACHINEGUNATK1, false, 3, None, None, next
+repeat:
+    state SPR_MACHINEGUNATK2, false, 4, None, Die, next
+    state SPR_MACHINEGUNATK3, false, 4, Path, None, repeat
 }
 
 
 states weapon_chaingun {
+lower:
+    state SPR_CHAINATK4, false, 2, None, None, ready
 ready:
     state SPR_CHAINREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_CHAINATK1, false, 2, None, Die, next
-    state SPR_CHAINATK2, false, 2, None, None, next
-    state SPR_CHAINATK3, false, 2, None, Die, next
-    state SPR_CHAINATK4, false, 2, None, None, ready
+    state SPR_CHAINATK1, false, 4, None, Die, next
+repeat:
+    state SPR_CHAINATK2, false, 3, None, Die, next
+    state SPR_CHAINATK3, false, 3, Path, Die, repeat
 }
 
 enum
