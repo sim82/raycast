@@ -1,3 +1,5 @@
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+
 use crate::prelude::*;
 use crate::sprite::SpriteSceenSetup;
 
@@ -21,61 +23,69 @@ impl WeaponType {
 }
 #[derive(Debug)]
 pub struct Weapon {
-    pub timeout: i32,
     pub selected_weapon: WeaponType,
     pub ammo: i32,
+    pub exec_ctx: ExecCtx,
 }
 
 impl Default for Weapon {
     fn default() -> Self {
         Self {
-            timeout: 0,
             // selected_weapon: WeaponType::Gun,
             selected_weapon: WeaponType::Machinegun,
             ammo: 9999,
+            exec_ctx: ExecCtx::new("weapon_chaingun::ready").unwrap(),
         }
     }
 }
 
 impl Weapon {
     pub fn run(&mut self, fire: bool) -> bool {
-        if fire && self.timeout <= 0 && self.ammo > 0 {
-            self.ammo -= 1;
-            self.timeout = self.selected_weapon.get_timeout();
-            return true;
-        }
+        let shoot = match self.exec_ctx.state.take_action() {
+            Action::None => false,
+            Action::Die => true,
+        };
 
-        if self.timeout > 0 {
-            self.timeout -= 1;
+        if self.exec_ctx.state.ticks <= 0 {
+            self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
-        false
+        self.exec_ctx.state.ticks -= 1;
+
+        match self.exec_ctx.state.think {
+            Think::Stand if fire => {
+                self.exec_ctx
+                    .jump_label("weapon_chaingun::attack")
+                    .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
+            }
+            _ => (),
+        }
+        shoot
     }
 
     pub fn get_sprite(&self) -> SpriteSceenSetup {
-        let id = match self.selected_weapon {
-            WeaponType::Knife => todo!(),
-            WeaponType::Gun => {
-                422 + if self.timeout == 0 {
-                    0
-                } else {
-                    4 - (self.timeout / 7).min(4)
-                }
-            }
-            WeaponType::Machinegun => {
-                427 + if self.timeout == 0 {
-                    0
-                } else {
-                    4 - (self.timeout / 2).min(431)
-                }
-            }
-            WeaponType::Chaingun => todo!(),
-        };
-        println!("weapon: {id}");
         SpriteSceenSetup {
             z: FP16_ZERO,
             screen_x: WIDTH as i32 / 2,
-            id,
+            id: self.exec_ctx.state.id,
             owner: 0,
         }
+    }
+}
+
+impl ms::Loadable for Weapon {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(Self {
+            ammo: r.read_i32::<LittleEndian>()?,
+            selected_weapon: WeaponType::Gun,
+            exec_ctx: ExecCtx::read_from(r)?,
+        })
+    }
+}
+
+impl ms::Writable for Weapon {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.ammo)?;
+        self.exec_ctx.write(w)?;
+        Ok(())
     }
 }

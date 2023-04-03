@@ -48,6 +48,7 @@ impl Writable for Player {
         w.write_u8(if self.trigger { 1 } else { 0 })?;
         w.write_u8(if self.shoot { 1 } else { 0 })?;
         w.write_i32::<LittleEndian>(self.shoot_timeout)?;
+        self.weapon.write(w)?;
         Ok(())
     }
 }
@@ -64,7 +65,7 @@ impl Loadable for Player {
         let trigger = r.read_u8()? != 0;
         let shoot = r.read_u8()? != 0;
         let shoot_timeout = r.read_i32::<LittleEndian>()?;
-
+        let weapon = Weapon::read_from(r)?;
         Ok(Self {
             x,
             y,
@@ -72,7 +73,7 @@ impl Loadable for Player {
             trigger,
             shoot,
             shoot_timeout,
-            weapon: Default::default(), // FIXME
+            weapon,
         })
     }
 }
