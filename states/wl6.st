@@ -221,6 +221,19 @@ repeat:
     state SPR_CHAINATK3, false, 3, Path, Die, repeat
 }
 
+states door {
+closed:
+    state DEMO, false, 0, Stand, None, closed
+opened: 
+    state DEMO, false, 300, Path, None, close
+close:
+    state DEMO, false, 64, Chase, None, closed
+open:
+    state DEMO, false, 64, DogChase, None, opened
+blocked: 
+    state DEMO, false, 0, None, None, blocked
+}
+
 enum
 {
     DEMO,
