@@ -225,13 +225,13 @@ states door {
 closed:
     state DEMO, false, 0, Stand, None, closed
 opened: 
-    state DEMO, false, 300, Path, None, close
+    state DEMO, false, 300, Path, None, blocked
 close:
     state DEMO, false, 64, Chase, None, closed
 open:
     state DEMO, false, 64, DogChase, None, opened
 blocked: 
-    state DEMO, false, 0, None, None, blocked
+    state DEMO, false, 0, Shoot, None, blocked
 }
 
 enum

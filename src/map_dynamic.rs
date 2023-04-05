@@ -15,7 +15,7 @@ impl RoomGraph {
         RoomGraph { adj }
     }
 
-    pub fn propagate_notifications(&self, door_states: &[DoorState], notifications: &HashSet<i32>) -> HashSet<i32> {
+    pub fn propagate_notifications(&self, door_states: &[Door], notifications: &HashSet<i32>) -> HashSet<i32> {
         let mut stack = notifications.iter().collect::<Vec<_>>();
         let mut out = notifications.iter().cloned().collect::<HashSet<_>>();
         while let Some(room_id) = stack.pop() {
@@ -37,7 +37,7 @@ impl RoomGraph {
 pub struct MapDynamic {
     pub map: Map,
     pub room_graph: RoomGraph,
-    pub door_states: Vec<DoorState>,
+    pub door_states: Vec<Door>,
     pub pushwall_states: Vec<PushwallState>,
     pub pushwall_patch: HashMap<(i32, i32), MapTile>,
 
@@ -84,7 +84,7 @@ impl MapDynamic {
         let s = r.read_i32::<LittleEndian>()?;
         let mut door_states = Vec::new();
         for _ in 0..s {
-            door_states.push(DoorState::read_from(r)?);
+            door_states.push(Door::read_from(r)?);
         }
 
         let s = r.read_i32::<LittleEndian>()?;
@@ -155,7 +155,8 @@ impl MapDynamic {
         match tile {
             MapTile::Walkable(_, _) => true,
             MapTile::Door(_, _, state_index) => {
-                matches!(self.door_states[*state_index].action, DoorAction::Open(_))
+                // matches!(self.door_states[*state_index].action, DoorAction::Open(_))
+                self.door_states[*state_index].open_f == FP16_ONE
             }
             MapTile::PushWall(_, state_index) => {
                 !matches!(self.pushwall_states[*state_index].action, PushwallAction::Closed)
@@ -271,17 +272,27 @@ impl MapDynamic {
 
     pub fn try_open_and_block_door(&mut self, door_id: usize, blocker: i32) -> bool {
         let door_state = &mut self.door_states[door_id];
-        match door_state.action {
-            DoorAction::Closed => {
-                self.tmp_door_triggers.insert(door_id);
-                false
-            }
-            // only use open door if it is not about to close
-            DoorAction::Open(timeout) if timeout > 15 || !door_state.blockers.is_empty() => {
-                door_state.blockers.insert(blocker);
-                true
-            }
-            _ => false,
+        // match door_state.action {
+        //     DoorAction::Closed => {
+        //         self.tmp_door_triggers.insert(door_id);
+        //         false
+        //     }
+        //     // only use open door if it is not about to close
+        //     DoorAction::Open(timeout) if timeout > 15 || !door_state.blockers.is_empty() => {
+        //         door_state.blockers.insert(blocker);
+        //         true
+        //     }
+        //     _ => false,
+        // }
+
+        if door_state.open_f == FP16_ZERO {
+            self.tmp_door_triggers.insert(door_id);
+            false
+        } else if door_state.open_f == FP16_ONE {
+            door_state.blockers.insert(blocker);
+            true
+        } else {
+            false
         }
 
         // return false;

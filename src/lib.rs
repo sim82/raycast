@@ -24,6 +24,7 @@ pub mod prelude {
 
     pub use crate::{
         block_map::BlockMap,
+        door::Door,
         draw::Draw,
         enemy::Enemy,
         fa::{

@@ -116,6 +116,8 @@ struct StatesBlock {
 // }
 
 fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, usize>) {
+    let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
+
     let mut states = Vec::new();
     let mut label_ptrs = BTreeMap::new(); // keep them sorted in the output file
 

@@ -10,3 +10,4 @@ map.txt
 .cargo/
 *.bc
 *.lb
+src/*.bak
