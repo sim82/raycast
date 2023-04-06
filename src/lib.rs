@@ -6,6 +6,7 @@ pub mod door;
 pub mod draw;
 pub mod enemy;
 pub mod fa;
+pub mod font;
 pub mod fp16;
 pub mod mainloop;
 pub mod map;
