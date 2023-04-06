@@ -132,23 +132,27 @@ pub const FONT8X8_BASIC: [[u8; 8]; 128] = [
     [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00], // U+007F
 ];
 
-pub struct Codepoint(pub char);
-
-impl Codepoint {
-    pub fn draw<D: Draw + ?Sized>(&self, buffer: &mut D, x: i32, y: i32) {
-        let i = self.0 as usize;
-        if !(0..128).contains(&i) {
-            return;
-        }
-        let bitmap = &FONT8X8_BASIC[i];
-        for (yo, line) in bitmap.iter().enumerate() {
-            let mut mask = 0b1;
-            for xo in 0..8 {
-                if (line & mask) != 0 {
-                    buffer.point(x + xo, y + yo as i32, 22);
-                }
-                mask <<= 1;
+pub fn draw_char8x8<D: Draw + ?Sized>(c: char, buffer: &mut D, x: i32, y: i32) {
+    let i = c as usize;
+    if !(0..128).contains(&i) {
+        return;
+    }
+    let bitmap = &FONT8X8_BASIC[i];
+    for (yo, mut line) in bitmap.iter().cloned().enumerate() {
+        let mut x = x;
+        while line != 0 {
+            if (line & 0b1) != 0 {
+                buffer.point(x, y + yo as i32, 22);
             }
+            x += 1;
+            line >>= 1;
         }
+    }
+}
+
+pub fn draw_string8x8<D: Draw + ?Sized>(s: &str, buffer: &mut D, mut x: i32, y: i32) {
+    for c in s.chars() {
+        draw_char8x8(c, buffer, x, y);
+        x += 8;
     }
 }

@@ -4,7 +4,6 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
 // use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use crate::{
-    font::Codepoint,
     ms::{Loadable, Writable},
     prelude::*,
     sprite::SpriteSceenSetup,
@@ -329,10 +328,7 @@ impl Mainloop {
 
         buffer.point(320 / 2, 80, 4);
 
-        for (i, c) in ('a'..='z').enumerate() {
-            let cp = Codepoint(c);
-            cp.draw(&mut buffer[..], i as i32 * 8, 100);
-        }
+        draw_string8x8("Get Psyched!", &mut buffer[..], 100, 160);
 
         if self.player.shoot {
             if let Some(hit_thing) = hit_thing {
