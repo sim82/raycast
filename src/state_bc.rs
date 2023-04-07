@@ -70,6 +70,8 @@ pub enum Action {
     #[default]
     None,
     Die,
+    Shoot,
+    Bite,
 }
 
 impl Action {
@@ -77,6 +79,8 @@ impl Action {
         match name {
             "None" => Action::None,
             "Die" => Action::Die,
+            "Shoot" => Action::Shoot,
+            "Bite" => Action::Bite,
             _ => panic!("unhandled Action identifier {name}"),
         }
     }
@@ -87,6 +91,8 @@ impl ms::Loadable for Action {
         Ok(match r.read_u8()? {
             0 => Action::None,
             1 => Action::Die,
+            2 => Action::Shoot,
+            3 => Action::Bite,
             x => return Err(anyhow!("unhandled Action dicriminator {x}")),
         })
     }
@@ -97,6 +103,8 @@ impl ms::Writable for Action {
         let v = match self {
             Action::None => 0,
             Action::Die => 1,
+            Action::Shoot => 2,
+            Action::Bite => 3,
         };
         w.write_u8(v)?;
         Ok(())

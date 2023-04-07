@@ -220,7 +220,7 @@ impl Things {
                             _ => (),
                         }
                     }
-                    enemy.update(map_dynamic, self, thing.static_index);
+                    enemy.update(map_dynamic, self, thing.static_index, player);
 
                     // update blockmal link
                     if !enemy.dead {
@@ -237,7 +237,7 @@ impl Things {
                     }
                 }
                 (_, Actor::Enemy { enemy }) if enemy.dead => {
-                    enemy.update(map_dynamic, self, thing.static_index);
+                    enemy.update(map_dynamic, self, thing.static_index, player);
                 }
                 _ => (),
             }

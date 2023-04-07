@@ -313,8 +313,40 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
     }
 }
 
-fn think_shoot(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
-fn think_bite(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
+fn action_shoot(
+    thing: &mut Enemy,
+    map_dynamic: &mut MapDynamic,
+    _things: &Things,
+    _static_indexx: usize,
+    player: &mut Player,
+) {
+    if !bresenham_trace(
+        thing.x.get_int(),
+        thing.y.get_int(),
+        player.x.get_int(),
+        player.y.get_int(),
+        |x, y| match map_dynamic.lookup_tile(x, y) {
+            MapTile::Walkable(_, _) => true,
+            MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
+            _ => false,
+        },
+    ) {
+        return;
+    }
+
+    let dx = thing.x.get_int() - player.x.get_int();
+    let dy = thing.y.get_int() - player.y.get_int();
+    let dist = dx.min(dy);
+
+    if random::<u8>() as i32 > dist * 20 {
+        let boost = 2 - dx.max(dy).min(2);
+        let base_hitpoints = 7;
+        let hitpoints = base_hitpoints + ((boost * 5) * (random::<u8>() as i32)) / 255;
+        player.health -= hitpoints;
+    }
+}
+
+fn action_bite(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
 
 fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
     if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
@@ -533,11 +565,13 @@ impl Enemy {
         println!("state: {self:?}");
         self.dead = name == "dead";
     }
-    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
+    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize, player: &mut Player) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
         match self.exec_ctx.state.take_action() {
             Action::None => (),
             Action::Die => action_die(self),
+            Action::Shoot => action_shoot(self, map_dynamic, things, static_index, player),
+            Action::Bite => action_bite(self, map_dynamic, things, static_index),
         }
 
         if self.exec_ctx.state.ticks <= 0 {
@@ -549,8 +583,8 @@ impl Enemy {
             Think::Stand => think_stand(self, map_dynamic, things, static_index),
             Think::Path => think_path(self, map_dynamic, things, static_index),
             Think::Chase => think_chase(self, map_dynamic, things, static_index),
-            Think::Shoot => think_shoot(self, map_dynamic, things, static_index),
-            Think::Bite => think_bite(self, map_dynamic, things, static_index),
+            Think::Shoot => (), // FIXME: remove
+            Think::Bite => (),  // FIXME: remove
             Think::DogChase => think_dogchase(self, map_dynamic, things, static_index),
         }
 

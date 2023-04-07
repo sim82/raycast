@@ -27,7 +27,7 @@ dead:
     state BROWN_DEAD, false, 0, None, None, dead
 shoot:
     state BROWN_SHOOT1, false, 20, None, None, next
-    state BROWN_SHOOT2, false, 20, Shoot, None, next
+    state BROWN_SHOOT2, false, 20, None, Shoot, next
     state BROWN_SHOOT3, false, 20, None, None, chase
 }
 
@@ -61,13 +61,13 @@ dead:
 
 shoot:
     state BLUE_SHOOT1, false, 20, None, None, next
-    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT2, false, 10, None, Shoot, next
     state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT2, false, 10, None, Shoot, next
     state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT2, false, 10, None, Shoot, next
     state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, Shoot, None, next
+    state BLUE_SHOOT2, false, 10, None, Shoot, next
     state BLUE_SHOOT3, false, 10, None, None, chase
 }
 
@@ -100,7 +100,7 @@ dead:
     state WHITE_DEAD, false, 0, None, Die, dead
 shoot:
     state WHITE_SHOOT1, false, 20, None, None, next
-    state WHITE_SHOOT2, false, 20, Shoot, None, next
+    state WHITE_SHOOT2, false, 20, None, Shoot, next
     state WHITE_SHOOT3, false, 20, None, None, chase
 }
 
@@ -134,7 +134,7 @@ dead:
 
 shoot:
     state ROTTEN_SHOOT1, false, 20, None, None, next
-    state ROTTEN_SHOOT2, false, 20, Shoot, None, next
+    state ROTTEN_SHOOT2, false, 20, None, Shoot, next
     state ROTTEN_SHOOT3, false, 20, None, None, chase
 }
 
@@ -167,7 +167,7 @@ dead:
     state FURRY_DEAD, false, 0, None, Die, dead
 jump:
     state FURRY_JUMP1, false, 10, None, None, next
-    state FURRY_JUMP2, false, 10, Bite, None, next
+    state FURRY_JUMP2, false, 10, None, Bite, next
     state FURRY_JUMP3, false, 10, None, None, next
     state FURRY_JUMP1, false, 10, None, None, next
     state FURRY_W1_1, false, 10, None, None, chase
@@ -178,7 +178,7 @@ lower:
 ready:
     state SPR_KNIFEREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_KNIFEATK1, false, 3, None, Die, next
+    state SPR_KNIFEATK1, false, 3, None, Shoot, next
     state SPR_KNIFEATK2, false, 3, None, None, next
     state SPR_KNIFEATK3, false, 10, None, None, next
     state SPR_KNIFEATK4, false, 10, None, None, ready
@@ -192,7 +192,7 @@ ready:
 attack:
     state SPR_PISTOLATK1, false, 2, Path, None, next
 repeat:
-    state SPR_PISTOLATK2, false, 3, Path, Die, next
+    state SPR_PISTOLATK2, false, 3, Path, Shoot, next
     state SPR_PISTOLATK3, false, 10, None, None, lower
 }
 
@@ -204,7 +204,7 @@ ready:
 attack:
     state SPR_MACHINEGUNATK1, false, 4, Path, None, next
 repeat:
-    state SPR_MACHINEGUNATK2, false, 4, Path, Die, next
+    state SPR_MACHINEGUNATK2, false, 4, Path, Shoot, next
     state SPR_MACHINEGUNATK3, false, 4, Path, None, repeat
 }
 
@@ -218,8 +218,8 @@ attack:
     state SPR_CHAINATK4, false, 4, Path, None, next
     state SPR_CHAINATK1, false, 4, Path, None, next
 repeat:
-    state SPR_CHAINATK2, false, 4, Path, Die, next
-    state SPR_CHAINATK3, false, 4, Path, Die, repeat
+    state SPR_CHAINATK2, false, 4, Path, Shoot, next
+    state SPR_CHAINATK3, false, 4, Path, Shoot, repeat
 }
 
 states door {

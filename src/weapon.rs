@@ -81,17 +81,14 @@ impl Default for Weapon {
 }
 
 impl Weapon {
-    pub fn run(&mut self, mut fire: bool, new_weapon_type: Option<i32>) -> bool {
+    pub fn run(&mut self, fire: bool, new_weapon_type: Option<i32>) -> bool {
         if let Some(new_weapon_type) = new_weapon_type {
             if let Ok(weapon_type) = WeaponType::from_weapon_id(new_weapon_type) {
                 self.selected_weapon = weapon_type;
             }
         }
 
-        let mut shoot = match self.exec_ctx.state.take_action() {
-            Action::None => false,
-            Action::Die => true,
-        };
+        let shoot = matches!(self.exec_ctx.state.take_action(), Action::Shoot);
 
         if shoot && self.selected_weapon != WeaponType::Knife {
             self.ammo -= 1;

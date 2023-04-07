@@ -113,7 +113,7 @@ impl Mainloop {
                         shoot: false,
                         shoot_timeout: 0,
                         weapon: Default::default(), // TODO
-                        health: 20,
+                        health: 100,
                     })
                     .unwrap_or_default();
             }
