@@ -182,17 +182,27 @@ impl Things {
                     let dx = player.x - thing_def.x + FP16_HALF;
                     let dy = player.y - thing_def.y + FP16_HALF;
                     if dx.get_int().abs() == 0 && dy.get_int().abs() == 0 {
-                        match _id {
-                            49 if player.weapon.ammo <= 92 => {
-                                player.weapon.ammo += 8;
+                        match collectible {
+                            Collectible::Ammo if player.weapon.ammo < 100 => {
+                                player.weapon.ammo = (player.weapon.ammo + 8).min(100);
+                                *collected = true;
+                            }
+                            Collectible::Food | Collectible::Medkit | Collectible::DogFood if player.health < 100 => {
+                                let add = match collectible {
+                                    Collectible::Food => 8,
+                                    Collectible::DogFood => 4,
+                                    Collectible::Medkit => 25,
+                                    _ => 0,
+                                };
+                                player.health = (player.health + add).min(100);
                                 *collected = true;
                             }
                             _ => (),
                         }
-                        if *collected {
-                            println!("collected: {thing_def:?} {collectible:?}");
-                            // println!("collected: {:?} ", thing_def);
-                        }
+                        // if *collected {
+                        println!("collected: {thing_def:?} {collectible:?}");
+                        // println!("collected: {:?} ", thing_def);
+                        // }
                     }
                 }
                 (_, Actor::Enemy { enemy }) if !enemy.dead => {
