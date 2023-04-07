@@ -17,6 +17,7 @@ pub struct Player {
     pub shoot: bool,
     pub shoot_timeout: i32,
     pub weapon: Weapon,
+    pub health: i32,
 }
 
 #[derive(Debug)]
@@ -36,6 +37,7 @@ impl Default for Player {
             shoot: false,
             shoot_timeout: 0,
             weapon: Default::default(),
+            health: 100,
         }
     }
 }
@@ -49,6 +51,7 @@ impl Writable for Player {
         w.write_u8(if self.shoot { 1 } else { 0 })?;
         w.write_i32::<LittleEndian>(self.shoot_timeout)?;
         self.weapon.write(w)?;
+        w.write_i32::<LittleEndian>(self.health)?;
         Ok(())
     }
 }
@@ -66,6 +69,7 @@ impl Loadable for Player {
         let shoot = r.read_u8()? != 0;
         let shoot_timeout = r.read_i32::<LittleEndian>()?;
         let weapon = Weapon::read_from(r)?;
+        let health = r.read_i32::<LittleEndian>()?;
         Ok(Self {
             x,
             y,
@@ -74,6 +78,7 @@ impl Loadable for Player {
             shoot,
             shoot_timeout,
             weapon,
+            health,
         })
     }
 }

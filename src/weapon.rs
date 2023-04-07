@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::sprite::SpriteSceenSetup;
 use anyhow::anyhow;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum WeaponType {
     Knife,
     Gun,
@@ -74,24 +74,28 @@ impl Default for Weapon {
         Self {
             // selected_weapon: WeaponType::Gun,
             selected_weapon: WeaponType::Machinegun,
-            ammo: 9999,
+            ammo: 99,
             exec_ctx: ExecCtx::new("weapon_gun::ready").unwrap(),
         }
     }
 }
 
 impl Weapon {
-    pub fn run(&mut self, fire: bool, new_weapon_type: Option<i32>) -> bool {
+    pub fn run(&mut self, mut fire: bool, new_weapon_type: Option<i32>) -> bool {
         if let Some(new_weapon_type) = new_weapon_type {
             if let Ok(weapon_type) = WeaponType::from_weapon_id(new_weapon_type) {
                 self.selected_weapon = weapon_type;
             }
         }
 
-        let shoot = match self.exec_ctx.state.take_action() {
+        let mut shoot = match self.exec_ctx.state.take_action() {
             Action::None => false,
             Action::Die => true,
         };
+
+        if shoot && self.selected_weapon != WeaponType::Knife {
+            self.ammo -= 1;
+        }
 
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
@@ -99,17 +103,25 @@ impl Weapon {
         self.exec_ctx.state.ticks -= 1;
 
         match self.exec_ctx.state.think {
+            // weapon idle + fire -> attack state
             Think::Stand if fire => {
                 self.exec_ctx
                     .jump_label(&self.selected_weapon.map_state_label("attack"))
                     .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
             }
+            // weapon idle + no fire -> restart ready state of selected weapon (i.e. change weapon if requested)
             Think::Stand if !fire => {
-                // simple solution for 'queueing' weapon changes during attack frames
                 self.exec_ctx
                     .jump_label(&self.selected_weapon.map_state_label("ready"))
                     .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
             }
+            // weapon in attack state + ammo depleted -> restart attack state (keep weapon raised, but don't proceed further)
+            Think::Path if fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0 => {
+                self.exec_ctx
+                    .jump_label(&self.selected_weapon.map_state_label("attack"))
+                    .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
+            }
+            // weapon in attack state + no fire -> lower weapon, proceed to idle
             Think::Path if !fire => {
                 self.exec_ctx
                     .jump_label(&self.selected_weapon.map_state_label("lower"))

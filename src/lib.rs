@@ -8,6 +8,7 @@ pub mod enemy;
 pub mod fa;
 pub mod font;
 pub mod fp16;
+pub mod hud;
 pub mod mainloop;
 pub mod map;
 pub mod map_dynamic;
@@ -34,6 +35,7 @@ pub mod prelude {
         },
         font::{draw_char8x8, draw_string8x8},
         fp16::{Fp16, FP16_F, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        hud,
         mainloop::{InputState, Mainloop, SpawnInfo},
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
         map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},

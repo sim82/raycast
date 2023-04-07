@@ -113,6 +113,7 @@ impl Mainloop {
                         shoot: false,
                         shoot_timeout: 0,
                         weapon: Default::default(), // TODO
+                        health: 100,
                     })
                     .unwrap_or_default();
             }
@@ -328,7 +329,8 @@ impl Mainloop {
 
         buffer.point(320 / 2, 80, 4);
 
-        draw_string8x8("Get Psyched!", &mut buffer[..], 100, 160);
+        // draw_string8x8("Get Psyched!", &mut buffer[..], 100, 160);
+        hud::draw_status_bar(&mut buffer[..], &self.player);
 
         if self.player.shoot {
             if let Some(hit_thing) = hit_thing {
