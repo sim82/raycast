@@ -186,17 +186,14 @@ attack:
 
 states weapon_gun {
 lower:
-    state SPR_PISTOLATK4, false, 5, None, None, next
+    state SPR_PISTOLATK4, false, 10, None, None, next
 ready:
     state SPR_PISTOLREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_PISTOLATK1, false, 3, Path, None, next
+    state SPR_PISTOLATK1, false, 2, Path, None, next
 repeat:
     state SPR_PISTOLATK2, false, 3, Path, Die, next
-    state SPR_PISTOLATK3, false, 10, Path, None, next
-    state SPR_PISTOLATK4, false, 10, Path, None, attack
-
-
+    state SPR_PISTOLATK3, false, 10, None, None, lower
 }
 
 states weapon_machinegun {
@@ -205,7 +202,7 @@ lower:
 ready:
     state SPR_MACHINEGUNREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_MACHINEGUNATK1, false, 3, Path, None, next
+    state SPR_MACHINEGUNATK1, false, 4, Path, None, next
 repeat:
     state SPR_MACHINEGUNATK2, false, 4, Path, Die, next
     state SPR_MACHINEGUNATK3, false, 4, Path, None, repeat
@@ -218,10 +215,11 @@ lower:
 ready:
     state SPR_CHAINREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_CHAINATK1, false, 6, Path, None, next
+    state SPR_CHAINATK4, false, 4, Path, None, next
+    state SPR_CHAINATK1, false, 4, Path, None, next
 repeat:
-    state SPR_CHAINATK2, false, 3, Path, Die, next
-    state SPR_CHAINATK3, false, 3, Path, Die, repeat
+    state SPR_CHAINATK2, false, 4, Path, Die, next
+    state SPR_CHAINATK3, false, 4, Path, Die, repeat
 }
 
 states door {
