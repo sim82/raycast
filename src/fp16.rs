@@ -14,6 +14,8 @@ pub const FP16_F: f32 = (1 << FP16_SCALE) as f32;
 
 pub const FP16_ZERO: Fp16 = Fp16 { v: 0 };
 pub const FP16_ONE: Fp16 = Fp16 { v: 1 << FP16_SCALE };
+pub const FP16_FOUR: Fp16 = Fp16 { v: 4 << FP16_SCALE };
+
 pub const FP16_HALF: Fp16 = Fp16 {
     v: (1 << FP16_SCALE) / 2,
 };

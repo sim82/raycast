@@ -320,12 +320,13 @@ fn action_shoot(
     _static_indexx: usize,
     player: &mut Player,
 ) {
+    println!("shoot");
     if !bresenham_trace(
-        thing.x.get_int(),
-        thing.y.get_int(),
-        player.x.get_int(),
-        player.y.get_int(),
-        |x, y| match map_dynamic.lookup_tile(x, y) {
+        (thing.x * 4).get_int(),
+        (thing.y * 4).get_int(),
+        (player.x * 4).get_int(),
+        (player.y * 4).get_int(),
+        |x, y| match map_dynamic.lookup_tile(x / 4, y / 4) {
             MapTile::Walkable(_, _) => true,
             MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
             _ => false,
@@ -336,7 +337,7 @@ fn action_shoot(
 
     let dx = thing.x.get_int() - player.x.get_int();
     let dy = thing.y.get_int() - player.y.get_int();
-    let dist = dx.min(dy);
+    let dist = dx.max(dy);
 
     if random::<u8>() as i32 > dist * 20 {
         let boost = 2 - dx.max(dy).min(2);

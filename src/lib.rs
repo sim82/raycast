@@ -34,7 +34,7 @@ pub mod prelude {
             FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
         },
         font::{draw_char8x8, draw_string8x8},
-        fp16::{Fp16, FP16_F, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        fp16::{Fp16, FP16_F, FP16_FOUR, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
         hud,
         mainloop::{InputState, Mainloop, SpawnInfo},
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
