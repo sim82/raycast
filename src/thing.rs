@@ -169,7 +169,7 @@ impl Things {
         }
     }
 
-    pub fn update(&mut self, player: &Player, map_dynamic: &mut MapDynamic) {
+    pub fn update(&mut self, player: &mut Player, map_dynamic: &mut MapDynamic) {
         // temporarily take out things during mutation
         let mut things = std::mem::take(&mut self.things);
         let mut new_notifications = HashSet::new();
@@ -182,9 +182,17 @@ impl Things {
                     let dx = player.x - thing_def.x + FP16_HALF;
                     let dy = player.y - thing_def.y + FP16_HALF;
                     if dx.get_int().abs() == 0 && dy.get_int().abs() == 0 {
-                        println!("collected: {thing_def:?} {collectible:?}");
-                        *collected = true;
-                        // println!("collected: {:?} ", thing_def);
+                        match _id {
+                            49 if player.weapon.ammo <= 92 => {
+                                player.weapon.ammo += 8;
+                                *collected = true;
+                            }
+                            _ => (),
+                        }
+                        if *collected {
+                            println!("collected: {thing_def:?} {collectible:?}");
+                            // println!("collected: {:?} ", thing_def);
+                        }
                     }
                 }
                 (_, Actor::Enemy { enemy }) if !enemy.dead => {

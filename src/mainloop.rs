@@ -226,7 +226,7 @@ impl Mainloop {
         for _ in 0..num_ticks {
             self.things.player_x = self.player.x.get_int();
             self.things.player_y = self.player.y.get_int();
-            self.things.update(&self.player, &mut self.map_dynamic);
+            self.things.update(&mut self.player, &mut self.map_dynamic);
             self.map_dynamic.update(&self.player);
         }
         self.player
