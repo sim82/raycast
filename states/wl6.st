@@ -193,9 +193,9 @@ lower:
 ready:
     state SPR_PISTOLREADY, false, 0, Stand, None, ready
 attack:
-    state SPR_PISTOLATK1, false, 2, Path, None, next
+    state SPR_PISTOLATK1, false, 1, Path, None, next
 repeat:
-    state SPR_PISTOLATK2, false, 3, Path, Shoot, next
+    state SPR_PISTOLATK2, false, 3, None, Shoot, next
     state SPR_PISTOLATK3, false, 10, None, None, lower
 }
 
@@ -207,7 +207,7 @@ ready:
 attack:
     state SPR_MACHINEGUNATK1, false, 4, Path, None, next
 repeat:
-    state SPR_MACHINEGUNATK2, false, 4, Path, Shoot, next
+    state SPR_MACHINEGUNATK2, false, 4, None, Shoot, next
     state SPR_MACHINEGUNATK3, false, 4, Path, None, repeat
 }
 
@@ -221,7 +221,7 @@ attack:
     state SPR_CHAINATK4, false, 4, Path, None, next
     state SPR_CHAINATK1, false, 4, Path, None, next
 repeat:
-    state SPR_CHAINATK2, false, 4, Path, Shoot, next
+    state SPR_CHAINATK2, false, 4, None, Shoot, next
     state SPR_CHAINATK3, false, 4, Path, Shoot, repeat
 }
 
