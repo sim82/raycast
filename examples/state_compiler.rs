@@ -326,6 +326,16 @@ fn main() {
     //         states_block.codegen(&enums);
     //     }
 
+    {
+        let mut enum_file = std::fs::File::create(format!("{outname}.enums")).unwrap();
+        // write!(enum_file, "{enums:?}").unwrap();
+        let _ = writeln!(enum_file, "const ENUM_NAMES: [(&str, i32); {}] = [", enums.len());
+        // let _ = writeln!(enum_file, "[");
+        for (name, id) in enums.iter() {
+            let _ = write!(enum_file, "(\"{name}\", {id}), ");
+        }
+        let _ = write!(enum_file, "\n];");
+    }
     codegen(&outname, &state_blocks, &enums);
 }
 

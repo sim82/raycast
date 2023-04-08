@@ -25,6 +25,9 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
                 Scancode::Num2 => input_state.select_weapon = Some(2),
                 Scancode::Num3 => input_state.select_weapon = Some(3),
                 Scancode::Num4 => input_state.select_weapon = Some(4),
+                Scancode::LeftBracket => input_state.misc_selection -= 1,
+                Scancode::RightBracket => input_state.misc_selection += 1,
+
                 _ => (),
             },
             Event::MouseMotion { xrel, yrel, .. } => {
@@ -67,11 +70,7 @@ fn main() -> raycast::prelude::Result<()> {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window(
-            "rust-sdl2_gfx: draw line & FPSManager",
-            WIDTH as u32 * 4,
-            HEIGHT as u32 * 4,
-        )
+        .window("Raycastle3D", WIDTH as u32 * 4, HEIGHT as u32 * 4)
         .position_centered()
         .build()?;
 
@@ -86,8 +85,11 @@ fn main() -> raycast::prelude::Result<()> {
     let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
+    let mut last_misc_selection = 0;
     loop {
-        let input_state = input_state_from_sdl_events(&mut events);
+        let mut input_state = input_state_from_sdl_events(&mut events);
+        input_state.misc_selection += last_misc_selection;
+        last_misc_selection = input_state.misc_selection;
         mainloop.use_mouse_move = mouse_grabbed;
         mainloop.run(&input_state, &mut buffer, &resources);
         if input_state.quit {

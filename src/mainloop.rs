@@ -11,6 +11,8 @@ use crate::{
     Resources,
 };
 
+include!("out.img.enums");
+
 pub struct StaticMapData {
     pub level_id: i32,
     pub map: Map,
@@ -52,6 +54,8 @@ pub struct InputState {
     // mouse
     pub dx: i32,
     pub dy: i32,
+
+    pub misc_selection: i32,
 }
 
 impl InputState {
@@ -313,6 +317,23 @@ impl Mainloop {
         }
 
         sprite_screen_setup.push(self.player.weapon.get_sprite());
+
+        if input_events.misc_selection > 0 {
+            sprite_screen_setup.push(SpriteSceenSetup {
+                z: FP16_ZERO,
+                screen_x: WIDTH as i32 / 2,
+                id: input_events.misc_selection,
+                owner: 0,
+            });
+            let name = ENUM_NAMES
+                .iter()
+                .find(|(_, id)| *id == input_events.misc_selection)
+                .unwrap()
+                .0;
+
+            draw_string8x8(name, &mut buffer[..], 100, 160);
+        }
+
         if self.player.shoot_timeout > 0 {
             self.player.shoot_timeout -= 1;
         }
