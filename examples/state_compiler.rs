@@ -115,7 +115,7 @@ struct StatesBlock {
 //     }
 // }
 
-fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &HashMap<String, usize>) {
+fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String, usize>) {
     let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
 
     let mut states = Vec::new();
@@ -310,7 +310,7 @@ fn main() {
     let (_input, toplevel_elements) = many1(parse_toplevel)(&input).expect("failed to parse toplevel elements");
     // println!("elements: {toplevel_elements:?}");
 
-    let mut enums = HashMap::new();
+    let mut enums = BTreeMap::new();
     let mut state_blocks = Vec::new();
     for tle in toplevel_elements {
         match tle {

@@ -568,6 +568,7 @@ impl Enemy {
     }
     pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize, player: &mut Player) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
+        // this is different from wolf3d where actions execute on state exit (don't understand why...)
         match self.exec_ctx.state.take_action() {
             Action::None => (),
             Action::Die => action_die(self),
