@@ -61,14 +61,14 @@ dead:
 
 shoot:
     state BLUE_SHOOT1, false, 20, None, None, next
-    state BLUE_SHOOT2, false, 10, None, Shoot, next
-    state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, None, Shoot, next
-    state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, None, Shoot, next
-    state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, None, Shoot, next
-    state BLUE_SHOOT3, false, 10, None, None, chase
+    state BLUE_SHOOT2, false, 10, None, None, next
+    state BLUE_SHOOT3, false, 10, None, Shoot, next
+    state BLUE_SHOOT2, false, 10, None, None, next
+    state BLUE_SHOOT3, false, 10, None, Shoot, next
+    state BLUE_SHOOT2, false, 10, None, None, next
+    state BLUE_SHOOT3, false, 10, None, Shoot, next
+    state BLUE_SHOOT2, false, 10, None, None, next
+    state BLUE_SHOOT3, false, 10, None, Shoot, chase
 }
 
 states white {
@@ -96,6 +96,7 @@ die:
     state WHITE_DIE_1, false, 15, None, None, next
     state WHITE_DIE_2, false, 15, None, None, next
     state WHITE_DIE_3, false, 15, None, None, next
+    state WHITE_DIE_4, false, 15, None, None, next
 dead:
     state WHITE_DEAD, false, 0, None, Die, dead
 shoot:
@@ -129,13 +130,15 @@ die:
     state ROTTEN_DIE_1, false, 15, None, None, next
     state ROTTEN_DIE_2, false, 15, None, None, next
     state ROTTEN_DIE_3, false, 15, None, None, next
+    state ROTTEN_DIE_4, false, 15, None, None, next
 dead:
     state ROTTEN_DEAD, false, 0, None, Die, dead
 
 shoot:
     state ROTTEN_SHOOT1, false, 20, None, None, next
-    state ROTTEN_SHOOT2, false, 20, None, None, next
-    state ROTTEN_SHOOT3, false, 20, None, Shoot, chase
+    state ROTTEN_SHOOT2, false, 20, None, Shoot, next
+    state ROTTEN_SHOOT3, false, 20, None, None, next
+    state ROTTEN_SHOOT4, false, 20, None, Shoot, chase
 }
 
 states furry {

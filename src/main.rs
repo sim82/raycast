@@ -3,6 +3,7 @@ use sdl2::{event::Event, keyboard::Scancode, mouse::MouseButton, pixels::PixelFo
 
 fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
     let mut input_state = InputState::default();
+
     for event in events.poll_iter() {
         match event {
             Event::Quit { .. } => input_state.quit = true,
@@ -38,6 +39,9 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
         }
     }
     let keyboard_state = events.keyboard_state();
+    if keyboard_state.is_scancode_pressed(Scancode::LShift) {
+        input_state.misc_selection *= 10;
+    };
     input_state.forward = keyboard_state.is_scancode_pressed(Scancode::W);
     input_state.backward = keyboard_state.is_scancode_pressed(Scancode::S);
     const HOLD_STRAFE: bool = true;
