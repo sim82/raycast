@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::{enemy::Enemy, ms::Loadable, prelude::*};
+use crate::{enemy::Enemy, ms::Loadable, prelude::*, thing_def::Difficulty};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -162,9 +162,23 @@ impl Things {
         let mut things = Vec::new();
         let mut blockmap = BlockMap::default();
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
-            let thing = match thing_def.thing_type {
-                ThingType::Enemy(direction, difficulty, enemy_type, state) => {
-                    let enemy = Enemy::spawn(direction, difficulty, enemy_type, state, thing_def);
+            let thing = match &thing_def.thing_type {
+                // ThingType::Enemy(direction, difficulty, enemy_type, state) => {
+                //     let enemy = Enemy::spawn(*direction, *difficulty, *enemy_type, *state, thing_def);
+
+                //     blockmap.insert(i, enemy.x, enemy.y);
+                //     Thing {
+                //         unique_id: i,
+                //         actor: Actor::Enemy { enemy },
+                //     }
+                // }
+                ThingType::Enemy2(enemy_spawn_info) => {
+                    let enemy = Enemy::spawn2(
+                        enemy_spawn_info.direction,
+                        Difficulty::Easy, // TODO: store in spawn info
+                        &enemy_spawn_info.state,
+                        thing_def,
+                    );
 
                     blockmap.insert(i, enemy.x, enemy.y);
                     Thing {
@@ -173,12 +187,12 @@ impl Things {
                     }
                 }
                 ThingType::Prop(sprite_index) => {
-                    let actor = try_to_collectible(sprite_index)
+                    let actor = try_to_collectible(*sprite_index)
                         .map(|collectible| Actor::Item {
                             collected: false,
                             item: Item {
                                 collectible,
-                                id: sprite_index,
+                                id: *sprite_index,
                                 x: thing_def.x,
                                 y: thing_def.y,
                             },

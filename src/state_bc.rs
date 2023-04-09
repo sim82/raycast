@@ -111,7 +111,7 @@ impl ms::Writable for Action {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EnemySpawnInfo {
     pub id: i32,
     pub direction: Direction,

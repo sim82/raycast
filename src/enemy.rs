@@ -1,4 +1,4 @@
-use crate::{fp16::FP16_FRAC_64, prelude::*, thing_def::EnemyType};
+use crate::{fp16::FP16_FRAC_64, prelude::*, thing_def::get_capabilities_by_name};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
@@ -404,7 +404,7 @@ fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: u
                     dist: FP16_ONE,
                     door_id: *door_id,
                 })
-            } else if thing.enemy_type.get_capabilities().can_open_doors {
+            } else if get_capabilities_by_name(&thing.enemy_type_name).can_open_doors {
                 thing.path_action = None;
             }
         }
@@ -486,7 +486,8 @@ impl ms::Writable for PathAction {
 
 pub struct Enemy {
     exec_ctx: ExecCtx,
-    enemy_type: EnemyType,
+    // enemy_type: EnemyType,
+    enemy_type_name: String,
     direction: Direction,
     path_action: Option<PathAction>,
     pub health: i32,
@@ -499,7 +500,8 @@ pub struct Enemy {
 impl ms::Loadable for Enemy {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
         let exec_ctx = ExecCtx::read_from(r)?;
-        let enemy_type = EnemyType::read_from(r)?;
+        // let enemy_type = EnemyType::read_from(r)?;
+        let enemy_type_name = String::read_from(r)?;
         let direction = Direction::read_from(r)?;
         let path_action = Option::<PathAction>::read_from(r)?;
         let health = r.read_i32::<LittleEndian>()?;
@@ -509,7 +511,7 @@ impl ms::Loadable for Enemy {
         let dead = r.read_u8()? != 0;
         Ok(Enemy {
             exec_ctx,
-            enemy_type,
+            enemy_type_name,
             direction,
             path_action,
             health,
@@ -524,7 +526,8 @@ impl ms::Loadable for Enemy {
 impl ms::Writable for Enemy {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         self.exec_ctx.write(w)?;
-        self.enemy_type.write(w)?;
+        // self.enemy_type.write(w)?;
+        self.enemy_type_name.write(w)?;
         self.direction.write(w)?;
         self.path_action.write(w)?;
         w.write_i32::<LittleEndian>(self.health)?;
@@ -536,23 +539,6 @@ impl ms::Writable for Enemy {
     }
 }
 
-trait LabelMapper {
-    fn map_label(&self, label: &str) -> String;
-}
-
-impl LabelMapper for EnemyType {
-    fn map_label(&self, name: &str) -> String {
-        match self {
-            EnemyType::Brown => format!("brown::{name}"),
-            EnemyType::Blue => format!("blue::{name}"),
-            EnemyType::White => format!("white::{name}"),
-            EnemyType::Rotten => format!("rotten::{name}"),
-            EnemyType::Woof => format!("furry::{name}"),
-            EnemyType::Hans => format!("hans::{name}"),
-        }
-    }
-}
-
 impl Enemy {
     // pub fn set_state(&mut self, states: &'static [State]) {
     //     self.states = states;
@@ -560,7 +546,8 @@ impl Enemy {
     //     self.timeout = self.states[0].1;
     // }
     pub fn set_state(&mut self, name: &str) {
-        let label = self.enemy_type.map_label(name);
+        // let label = self.enemy_type.map_label(name);
+        let label = format!("{}::{}", self.enemy_type_name, name);
         self.exec_ctx
             .jump_label(&label)
             .unwrap_or_else(|err| panic!("failed to jump to state {label}: {err:?}"));
@@ -615,32 +602,56 @@ impl Enemy {
         (id, self.x, self.y)
     }
 
-    pub fn spawn(
+    // pub fn spawn(
+    //     direction: Direction,
+    //     _difficulty: crate::thing_def::Difficulty,
+    //     enemy_type: EnemyType,
+    //     state: crate::thing_def::EnemyState,
+    //     thing_def: &ThingDef,
+    // ) -> Enemy {
+    //     let (start_label, path_action) = match state {
+    //         crate::thing_def::EnemyState::Standing => ("stand", None),
+    //         crate::thing_def::EnemyState::Patrolling => (
+    //             "path",
+    //             None,
+    //             // Some(PathAction::Move {
+    //             //     dist: FP16_ONE,
+    //             //     dx: direction.x_offs(),
+    //             //     dy: direction.y_offs(),
+    //             // }),
+    //         ),
+    //     };
+    //     let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
+
+    //     Enemy {
+    //         direction,
+    //         path_action,
+    //         exec_ctx,
+    //         // enemy_type,
+    //         health: 25,
+    //         x: thing_def.x,
+    //         y: thing_def.y,
+    //         notify: false,
+    //         dead: false,
+    //     }
+    // }
+
+    pub fn spawn2(
         direction: Direction,
-        _difficulty: crate::thing_def::Difficulty,
-        enemy_type: EnemyType,
-        state: crate::thing_def::EnemyState,
+        difficulty: crate::thing_def::Difficulty,
+        start_state: &str,
         thing_def: &ThingDef,
     ) -> Enemy {
-        let (start_label, path_action) = match state {
-            crate::thing_def::EnemyState::Standing => ("stand", None),
-            crate::thing_def::EnemyState::Patrolling => (
-                "path",
-                None,
-                // Some(PathAction::Move {
-                //     dist: FP16_ONE,
-                //     dx: direction.x_offs(),
-                //     dy: direction.y_offs(),
-                // }),
-            ),
-        };
-        let exec_ctx = ExecCtx::new(&enemy_type.map_label(start_label)).unwrap();
+        let exec_ctx = ExecCtx::new(start_state).unwrap();
+        // FIXME: hack. find better solution for 'enemy type name'
+        let enemy_type_name = start_state.split("::").next().unwrap().to_string();
 
         Enemy {
             direction,
-            path_action,
+            path_action: None,
             exec_ctx,
-            enemy_type,
+            // enemy_type,
+            enemy_type_name,
             health: 25,
             x: thing_def.x,
             y: thing_def.y,
@@ -650,8 +661,9 @@ impl Enemy {
     }
 
     pub fn get_bonus_item(&self) -> Option<Item> {
-        match self.enemy_type {
-            EnemyType::Brown | EnemyType::Blue | EnemyType::White | EnemyType::Rotten => {
+        // fixme: store bonus item generically in spawn info
+        match self.enemy_type_name.as_str() {
+            "brown" | "blue" | "white" | "rotten" => {
                 Some(Item {
                     collectible: Collectible::Ammo,
                     id: 49, // FIXME: dragging around the sprite index is a bit clumsy...
@@ -659,7 +671,7 @@ impl Enemy {
                     y: self.y,
                 })
             }
-            EnemyType::Hans => {
+            "hans" => {
                 Some(Item {
                     collectible: Collectible::Key(1),
                     id: 44, // FIXME: dragging around the sprite index is a bit clumsy...

@@ -4,7 +4,6 @@ use crate::{fa::FA_FRAC_PI_4, prelude::*};
 use anyhow::anyhow;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
-
 #[derive(Clone, Copy, Debug)]
 pub enum Difficulty {
     Easy,
@@ -12,54 +11,60 @@ pub enum Difficulty {
     Hard,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum EnemyType {
-    Brown,
-    Blue,
-    White,
-    Rotten,
-    Woof,
-    Hans,
-}
+// #[derive(Clone, Copy, Debug)]
+// pub enum EnemyType {
+//     Brown,
+//     Blue,
+//     White,
+//     Rotten,
+//     Woof,
+//     Hans,
+// }
 
-impl ms::Loadable for EnemyType {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
-            0 => EnemyType::Brown,
-            1 => EnemyType::Blue,
-            2 => EnemyType::White,
-            3 => EnemyType::Rotten,
-            4 => EnemyType::Woof,
-            5 => EnemyType::Hans,
-            x => return Err(anyhow!("unhandled EnemyType discriminator {x}")),
-        })
-    }
-}
+// impl ms::Loadable for EnemyType {
+//     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+//         Ok(match r.read_u8()? {
+//             0 => EnemyType::Brown,
+//             1 => EnemyType::Blue,
+//             2 => EnemyType::White,
+//             3 => EnemyType::Rotten,
+//             4 => EnemyType::Woof,
+//             5 => EnemyType::Hans,
+//             x => return Err(anyhow!("unhandled EnemyType discriminator {x}")),
+//         })
+//     }
+// }
 
-impl ms::Writable for EnemyType {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_u8(match self {
-            EnemyType::Brown => 0,
-            EnemyType::Blue => 1,
-            EnemyType::White => 2,
-            EnemyType::Rotten => 3,
-            EnemyType::Woof => 4,
-            EnemyType::Hans => 5,
-        })?;
-        Ok(())
-    }
-}
+// impl ms::Writable for EnemyType {
+//     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+//         w.write_u8(match self {
+//             EnemyType::Brown => 0,
+//             EnemyType::Blue => 1,
+//             EnemyType::White => 2,
+//             EnemyType::Rotten => 3,
+//             EnemyType::Woof => 4,
+//             EnemyType::Hans => 5,
+//         })?;
+//         Ok(())
+//     }
+// }
 
 pub struct EnemyCapabilities {
     pub can_open_doors: bool,
 }
 
-impl EnemyType {
-    pub fn get_capabilities(&self) -> EnemyCapabilities {
-        match self {
-            EnemyType::Woof => EnemyCapabilities { can_open_doors: false },
-            _ => EnemyCapabilities { can_open_doors: false },
-        }
+// impl EnemyType {
+//     pub fn get_capabilities(&self) -> EnemyCapabilities {
+//         match self {
+//             EnemyType::Woof => EnemyCapabilities { can_open_doors: false },
+//             _ => EnemyCapabilities { can_open_doors: false },
+//         }
+//     }
+// }
+
+pub fn get_capabilities_by_name(name: &str) -> EnemyCapabilities {
+    EnemyCapabilities {
+        can_open_doors: name != "furry",
     }
 }
 
@@ -107,10 +112,11 @@ pub enum EnemyState {
     Patrolling,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum ThingType {
     PlayerStart(i32),
-    Enemy(Direction, Difficulty, EnemyType, EnemyState),
+    // Enemy(Direction, Difficulty, EnemyType, EnemyState),
+    Enemy2(EnemySpawnInfo),
     Prop(i32),
 }
 
@@ -277,13 +283,14 @@ impl ThingDefs {
             for x in 0..64 {
                 let c = plane_iter.next().unwrap();
 
-                if let Some(spawn_info) = SPAWN_INFO_WL6.find_spawn_info(*c) {
-                    println!( "spawn info: {spawn_info:?}")
+                let thing_type = if let Some(spawn_info) = SPAWN_INFO_WL6.find_spawn_info(*c) {
+                    println!("spawn info: {spawn_info:?}");
+                    ThingType::Enemy2(spawn_info.clone())
                 }
-
-                let thing_type = if let Some(enemy) = ThingDefs::map_enemy(*c) {
-                    enemy
-                } else {
+                // let thing_type = if let Some(enemy) = ThingDefs::map_enemy(*c) {
+                //     enemy
+                // }
+                else {
                     match *c {
                         19 => ThingType::PlayerStart(FA_PI_FRAC_PI_2), // NORTH means facing -y
                         20 => ThingType::PlayerStart(0),
@@ -325,32 +332,32 @@ impl ThingDefs {
         }
     }
 
-#[rustfmt::skip]
-    fn map_enemy(t: u16) -> Option<ThingType> {
-    Some(match t {
-        // easy
-        108..=115 => ThingType::Enemy(ThingDefs::oa(t - 108), Difficulty::Easy, EnemyType::Brown, ThingDefs::os(t - 108)),
-        116..=123 => ThingType::Enemy(ThingDefs::oa(t - 116), Difficulty::Easy, EnemyType::White, ThingDefs::os(t - 116)),
-        126..=133 => ThingType::Enemy(ThingDefs::oa(t - 126), Difficulty::Easy, EnemyType::Blue, ThingDefs::os(t - 126)),
-        134..=141 => ThingType::Enemy(ThingDefs::oa(t - 134), Difficulty::Easy, EnemyType::Woof, ThingDefs::os(t - 134)),
-        216..=223 => ThingType::Enemy(ThingDefs::oa(t - 216), Difficulty::Easy, EnemyType::Rotten, ThingDefs::os(t - 216)),
-        // medium
-        144..=151 => ThingType::Enemy(ThingDefs::oa(t - 144), Difficulty::Medium, EnemyType::Brown, ThingDefs::os(t - 144)),
-        152..=159 => ThingType::Enemy(ThingDefs::oa(t - 152), Difficulty::Medium, EnemyType::White, ThingDefs::os(t - 152)),
-        162..=169 => ThingType::Enemy(ThingDefs::oa(t - 162), Difficulty::Medium, EnemyType::Blue, ThingDefs::os(t - 162)),
-        170..=177 => ThingType::Enemy(ThingDefs::oa(t - 170), Difficulty::Medium, EnemyType::Woof, ThingDefs::os(t - 170)),
-        234..=241 => ThingType::Enemy(ThingDefs::oa(t - 234), Difficulty::Medium, EnemyType::Rotten, ThingDefs::os(t - 234)),
-        // hard
-        180..=187 => ThingType::Enemy(ThingDefs::oa(t - 180), Difficulty::Hard, EnemyType::Brown, ThingDefs::os(t - 180)),
-        188..=195 => ThingType::Enemy(ThingDefs::oa(t - 188), Difficulty::Hard, EnemyType::White, ThingDefs::os(t - 188)),
-        198..=205 => ThingType::Enemy(ThingDefs::oa(t - 198), Difficulty::Hard, EnemyType::Blue, ThingDefs::os(t - 198)),
-        206..=213 => ThingType::Enemy(ThingDefs::oa(t - 206), Difficulty::Hard, EnemyType::Woof, ThingDefs::os(t - 206)),
-        252..=259 => ThingType::Enemy(ThingDefs::oa(t - 252), Difficulty::Hard, EnemyType::Rotten, ThingDefs::os(t - 252)),
+    // #[rustfmt::skip]
+    //     fn map_enemy(t: u16) -> Option<ThingType> {
+    //         Some(match t {
+    //             // easy
+    //             108..=115 => ThingType::Enemy(ThingDefs::oa(t - 108), Difficulty::Easy, EnemyType::Brown, ThingDefs::os(t - 108)),
+    //             116..=123 => ThingType::Enemy(ThingDefs::oa(t - 116), Difficulty::Easy, EnemyType::White, ThingDefs::os(t - 116)),
+    //             126..=133 => ThingType::Enemy(ThingDefs::oa(t - 126), Difficulty::Easy, EnemyType::Blue, ThingDefs::os(t - 126)),
+    //             134..=141 => ThingType::Enemy(ThingDefs::oa(t - 134), Difficulty::Easy, EnemyType::Woof, ThingDefs::os(t - 134)),
+    //             216..=223 => ThingType::Enemy(ThingDefs::oa(t - 216), Difficulty::Easy, EnemyType::Rotten, ThingDefs::os(t - 216)),
+    //             // medium
+    //             144..=151 => ThingType::Enemy(ThingDefs::oa(t - 144), Difficulty::Medium, EnemyType::Brown, ThingDefs::os(t - 144)),
+    //             152..=159 => ThingType::Enemy(ThingDefs::oa(t - 152), Difficulty::Medium, EnemyType::White, ThingDefs::os(t - 152)),
+    //             162..=169 => ThingType::Enemy(ThingDefs::oa(t - 162), Difficulty::Medium, EnemyType::Blue, ThingDefs::os(t - 162)),
+    //             170..=177 => ThingType::Enemy(ThingDefs::oa(t - 170), Difficulty::Medium, EnemyType::Woof, ThingDefs::os(t - 170)),
+    //             234..=241 => ThingType::Enemy(ThingDefs::oa(t - 234), Difficulty::Medium, EnemyType::Rotten, ThingDefs::os(t - 234)),
+    //             // hard
+    //             180..=187 => ThingType::Enemy(ThingDefs::oa(t - 180), Difficulty::Hard, EnemyType::Brown, ThingDefs::os(t - 180)),
+    //             188..=195 => ThingType::Enemy(ThingDefs::oa(t - 188), Difficulty::Hard, EnemyType::White, ThingDefs::os(t - 188)),
+    //             198..=205 => ThingType::Enemy(ThingDefs::oa(t - 198), Difficulty::Hard, EnemyType::Blue, ThingDefs::os(t - 198)),
+    //             206..=213 => ThingType::Enemy(ThingDefs::oa(t - 206), Difficulty::Hard, EnemyType::Woof, ThingDefs::os(t - 206)),
+    //             252..=259 => ThingType::Enemy(ThingDefs::oa(t - 252), Difficulty::Hard, EnemyType::Rotten, ThingDefs::os(t - 252)),
 
-        0xd6 => ThingType::Enemy(Direction::South, Difficulty::Easy, EnemyType::Hans, EnemyState::Standing), 
-        _ => return None,
-    })
-}
+    //             0xd6 => ThingType::Enemy(Direction::South, Difficulty::Easy, EnemyType::Hans, EnemyState::Standing),
+    //             _ => return None,
+    //         })
+    //     }
 
     pub fn get_player_start(&self) -> Option<(Fp16, Fp16, i32)> {
         for thing in &self.thing_defs {
