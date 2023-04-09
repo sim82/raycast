@@ -43,7 +43,7 @@ pub mod prelude {
         player::{Player, PlayerVel},
         render,
         sprite::{self, Directionality, SpriteDef, SpriteIndex},
-        state_bc::{Action, ExecCtx, StateBc, Think},
+        state_bc::{Action, EnemySpawnInfo, ExecCtx, StateBc, Think},
         thing::{Actor, Collectible, Item, Thing, Things},
         thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
         weapon::{Weapon, WeaponType},

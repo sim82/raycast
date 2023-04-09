@@ -111,6 +111,31 @@ impl ms::Writable for Action {
     }
 }
 
+#[derive(Debug)]
+pub struct EnemySpawnInfo {
+    pub id: i32,
+    pub direction: Direction,
+    pub state: String,
+}
+
+impl ms::Loadable for EnemySpawnInfo {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        let id = r.read_i32::<LittleEndian>()?;
+        let direction = Direction::read_from(r)?;
+        let state = String::read_from(r)?;
+        Ok(Self { id, direction, state })
+    }
+}
+
+impl ms::Writable for EnemySpawnInfo {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.id)?;
+        self.direction.write(w)?;
+        self.state.write(w)?;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct StateBc {
     pub id: i32,
@@ -176,25 +201,12 @@ impl StateBc {
 }
 
 const WL6_IMAGE: &[u8] = include_bytes!("out.img");
+const WL6_SPAWN_INFO: &[u8] = include_bytes!("out.spawn");
 
 lazy_static! {
-    // static ref IMG_BROWN: ExecImage = ExecImage::load("brown_gen.bc").unwrap();
-    // static ref IMG_BLUE: ExecImage = ExecImage::load("blue_gen.bc").unwrap();
-    // static ref IMG_WHITE: ExecImage = ExecImage::load("white_gen.bc").unwrap();
-    // static ref IMG_ROTTEN: ExecImage = ExecImage::load("rotten_gen.bc").unwrap();
-    // static ref IMG_FURRY: ExecImage = ExecImage::load("furry_gen.bc").unwrap();
     static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
+    static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
 }
-
-// fn get_exec_image(enemy_type: EnemyType) -> &'static ExecImage {
-//     match enemy_type {
-//         EnemyType::Brown => &IMG_BROWN,
-//         EnemyType::White => &IMG_WHITE,
-//         EnemyType::Blue => &IMG_BLUE,
-//         EnemyType::Woof => &IMG_FURRY,
-//         EnemyType::Rotten => &IMG_ROTTEN,
-//     }
-// }
 
 #[derive(Debug)]
 pub struct ExecImage {
@@ -206,6 +218,11 @@ pub struct ExecImage {
 pub struct ExecCtx {
     pub image: &'static ExecImage,
     pub state: StateBc,
+}
+
+#[derive(Debug)]
+pub struct SpawnInfos {
+    pub spawn_infos: Vec<EnemySpawnInfo>,
 }
 
 impl ExecCtx {
@@ -266,5 +283,19 @@ impl ExecImage {
             println!("while read from: 0x{ptr:x}");
         }
         res
+    }
+}
+
+impl SpawnInfos {
+    pub fn from_bytes(buf: &[u8]) -> Result<Self> {
+        let mut spawn_infos = Vec::new();
+        let mut f = Cursor::new(buf);
+        let num = f.read_i32::<LittleEndian>()?;
+
+        for _ in 0..num {
+            spawn_infos.push(EnemySpawnInfo::read_from(&mut f)?)
+        }
+
+        Ok(Self { spawn_infos })
     }
 }

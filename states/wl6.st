@@ -1,4 +1,12 @@
 
+spawn brown {
+    directional 108, stand
+    directional 112, path
+    directional 144, stand
+    directional 148, path
+    directional 180, stand
+    directional 184, path
+}
 
 states brown {
 stand:

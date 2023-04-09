@@ -20,6 +20,7 @@ use raycast::{ms::Writable, prelude::*, state_bc};
 enum ToplevelElement {
     EnumDecl(EnumDecl),
     StatesBlock(StatesBlock),
+    SpawnBlock(SpawnBlock),
 }
 
 #[derive(Debug)]
@@ -42,78 +43,15 @@ enum StatesBlockElement {
 
 #[derive(Debug)]
 struct StatesBlock {
-    // bc_name: String,
-    // lb_name: String,
     name: String,
     elements: Vec<StatesBlockElement>,
 }
-// impl StatesBlock {
-//     fn codegen(&self, enums: &HashMap<String, usize>) {
-//         let mut states = Vec::new();
-//         let mut label_ptrs = HashMap::new();
-//         // pass 1: resolve label offsets
-//         let mut ip = 0;
-//         for element in &self.elements {
-//             match element {
-//                 StatesBlockElement::Label(name) => {
-//                     label_ptrs.insert(name, ip);
-//                 }
-//                 StatesBlockElement::State {
-//                     id: _,
-//                     directional: _,
-//                     ticks: _,
-//                     think: _,
-//                     action: _,
-//                     next: _,
-//                 } => ip += enemy::STATE_BC_SIZE,
-//             }
-//         }
-//         // pass2: generate code
-//         let mut ip = 0;
-//         for element in &self.elements {
-//             if let StatesBlockElement::State {
-//                 id,
-//                 directional,
-//                 ticks,
-//                 think,
-//                 action,
-//                 next,
-//             } = element
-//             {
-//                 let id = *enums.get(id).unwrap_or_else(|| panic!("unknown identifier {id}")) as i32;
-//                 let next_ptr = if next == "next" {
-//                     ip + enemy::STATE_BC_SIZE
-//                 } else {
-//                     *label_ptrs
-//                         .get(next)
-//                         .unwrap_or_else(|| panic!("unknown label name {next}"))
-//                 };
-//                 states.push(StateBc {
-//                     id,
-//                     ticks: *ticks,
-//                     directional: *directional,
-//                     think: Think::from_identifier(think),
-//                     action: Action::from_identifier(action),
-//                     next: next_ptr,
-//                 });
-//                 ip += enemy::STATE_BC_SIZE;
-//             }
-//         }
 
-//         let mut f = std::fs::File::create(&self.lb_name).expect("failed to open lb file");
-//         f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
-//         for (name, ptr) in &label_ptrs {
-//             let b = name.as_bytes();
-//             f.write_u8(b.len() as u8).unwrap();
-//             let _ = f.write(b).unwrap();
-//             f.write_i32::<LittleEndian>(*ptr).unwrap();
-//         }
-//         let mut f = std::fs::File::create(&self.bc_name).expect("failed to open bc file");
-//         for state in states {
-//             state.write(&mut f).unwrap();
-//         }
-//     }
-// }
+#[derive(Debug)]
+struct SpawnBlock {
+    name: String,
+    infos: Vec<EnemySpawnInfo>,
+}
 
 fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String, usize>) {
     let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
@@ -297,13 +235,50 @@ fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
     ))
 }
 
+fn spawn_block_element(input: &str) -> IResult<&str, Vec<EnemySpawnInfo>> {
+    let (input, _) = ws(tag("directional"))(input)?;
+    let (input, start_id) = ws(decimal)(input)?;
+    let (input, _) = char(',')(input)?;
+    let (input, state) = ws(identifier)(input)?;
+    let mut infos = Vec::new();
+
+    for (i, direction) in [Direction::East, Direction::North, Direction::West, Direction::South]
+        .iter()
+        .enumerate()
+    {
+        infos.push(EnemySpawnInfo {
+            id: start_id + i as i32,
+            direction: *direction,
+            state: state.clone(),
+        })
+    }
+    Ok((input, infos))
+}
+
+fn parse_spawn_block(input: &str) -> IResult<&str, ToplevelElement> {
+    let (input, _) = ws(tag("spawn"))(input)?;
+    let (input, name) = ws(take_while(is_identifier))(input)?;
+    let (input, mut elements) = delimited(ws(char('{')), many0(spawn_block_element), ws(char('}')))(input)?;
+
+    let infos = elements.drain(..).flatten().collect();
+
+    Ok((
+        input,
+        ToplevelElement::SpawnBlock(SpawnBlock {
+            name: name.to_string(),
+            infos,
+        }),
+    ))
+}
+
 fn parse_toplevel(input: &str) -> IResult<&str, ToplevelElement> {
-    alt((parse_enum_decl, parse_states_block))(input)
+    alt((parse_enum_decl, parse_states_block, parse_spawn_block))(input)
 }
 
 fn main() {
     let filename = std::env::args().nth(1).expect("missing input file");
     let outname = std::env::args().nth(2).expect("missing output file");
+    let spawn_name = std::env::args().nth(3).expect("missing spawn info file");
 
     let input = std::fs::read_to_string(filename).expect("failed to read input file");
 
@@ -312,6 +287,7 @@ fn main() {
 
     let mut enums = BTreeMap::new();
     let mut state_blocks = Vec::new();
+    let mut spawn_infos = Vec::new();
     for tle in toplevel_elements {
         match tle {
             ToplevelElement::EnumDecl(mut enum_decl) => {
@@ -320,6 +296,12 @@ fn main() {
                 }
             }
             ToplevelElement::StatesBlock(state_block) => state_blocks.push(state_block),
+            ToplevelElement::SpawnBlock(spawn_block) => {
+                for mut spawn_info in spawn_block.infos {
+                    spawn_info.state = format!("{}::{}", spawn_block.name, spawn_info.state);
+                    spawn_infos.push(spawn_info);
+                }
+            }
         }
     }
     //     for states_block in state_blocks {
@@ -337,6 +319,16 @@ fn main() {
         let _ = write!(enum_file, "\n];");
     }
     codegen(&outname, &state_blocks, &enums);
+
+    {
+        let mut spawn_info_file = std::fs::File::create(spawn_name).unwrap();
+        spawn_info_file
+            .write_i32::<LittleEndian>(spawn_infos.len() as i32)
+            .unwrap();
+        for spawn_info in &spawn_infos {
+            spawn_info.write(&mut spawn_info_file).unwrap();
+        }
+    }
 }
 
 #[test]

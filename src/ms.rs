@@ -33,3 +33,23 @@ impl<T: Loadable> Loadable for Option<T> {
         })
     }
 }
+
+impl Writable for String {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        let bytes = self.as_bytes();
+        assert!(bytes.len() <= 255);
+
+        w.write_u8(bytes.len() as u8)?;
+        w.write_all(bytes)?;
+        Ok(())
+    }
+}
+
+impl Loadable for String {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        let len = r.read_u8()? as usize;
+        let mut name = vec![0u8; len];
+        r.read_exact(&mut name)?;
+        Ok(String::from_utf8(name)?)
+    }
+}
