@@ -548,6 +548,7 @@ impl LabelMapper for EnemyType {
             EnemyType::White => format!("white::{name}"),
             EnemyType::Rotten => format!("rotten::{name}"),
             EnemyType::Woof => format!("furry::{name}"),
+            EnemyType::Hans => format!("hans::{name}"),
         }
     }
 }
@@ -654,6 +655,14 @@ impl Enemy {
                 Some(Item {
                     collectible: Collectible::Ammo,
                     id: 49, // FIXME: dragging around the sprite index is a bit clumsy...
+                    x: self.x,
+                    y: self.y,
+                })
+            }
+            EnemyType::Hans => {
+                Some(Item {
+                    collectible: Collectible::Key(1),
+                    id: 44, // FIXME: dragging around the sprite index is a bit clumsy...
                     x: self.x,
                     y: self.y,
                 })

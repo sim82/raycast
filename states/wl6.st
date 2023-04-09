@@ -1,41 +1,4 @@
 
-states grofaz {
-stand:
-    state GROFAZ_W1, false, 0, Stand, None, stand
-path:
-    state GROFAZ_W1, false, 20, Path, None, next
-    state GROFAZ_W1, false, 5, None, None, next
-    state GROFAZ_W2, false, 15, Path, None, next
-    state GROFAZ_W3, false, 20, Path, None, next
-    state GROFAZ_W3, false, 5, None, None, next
-    state GROFAZ_W4, false, 15, Path, None, path
-pain1:
-    state GROFAZ_DIE1, false, 10, None, None, chase
-pain2:
-    state GROFAZ_DIE1, false, 10, None, None, chase
-chase:
-    state GROFAZ_W1, false, 10, Chase, None, next
-    state GROFAZ_W1, false, 3, None, None, next
-    state GROFAZ_W2, false, 8, Chase, None, next
-    state GROFAZ_W3, false, 10, Chase, None, next
-    state GROFAZ_W3, false, 3, None, None, next
-    state GROFAZ_W4, false, 8, Chase, None, chase
-die:
-    state GROFAZ_DIE1, false, 15, None, None, next
-    state GROFAZ_DIE2, false, 15, None, None, next
-    state GROFAZ_DIE3, false, 15, None, None, next
-    state GROFAZ_DIE4, false, 15, None, None, next
-    state GROFAZ_DIE5, false, 15, None, None, next
-    state GROFAZ_DIE6, false, 15, None, None, next
-    state GROFAZ_DIE7, false, 15, None, Die, next
-dead:
-    state GROFAZ_DEAD, false, 0, None, None, dead
-shoot:
-    state GROFAZ_SHOOT1, false, 20, None, None, next
-    state GROFAZ_SHOOT2, false, 20, None, None, next
-    state GROFAZ_SHOOT3, false, 20, None, Shoot, chase
-}
-
 
 states brown {
 stand:
@@ -214,6 +177,79 @@ jump:
     state FURRY_JUMP1, false, 10, None, None, next
     state FURRY_W1_1, false, 10, None, None, chase
 }
+
+
+states hans {
+stand:
+    state BOSS_W1, false, 0, Stand, None, stand
+path:
+    state BOSS_W1, false, 20, Path, None, next
+    state BOSS_W1, false, 5, None, None, next
+    state BOSS_W2, false, 15, Path, None, next
+    state BOSS_W3, false, 20, Path, None, next
+    state BOSS_W3, false, 5, None, None, next
+    state BOSS_W4, false, 15, Path, None, path
+pain1:
+    state BOSS_DIE1, false, 10, None, None, chase
+pain2:
+    state BOSS_DIE1, false, 10, None, None, chase
+chase:
+    state BOSS_W1, false, 10, Chase, None, next
+    state BOSS_W1, false, 3, None, None, next
+    state BOSS_W2, false, 8, Chase, None, next
+    state BOSS_W3, false, 10, Chase, None, next
+    state BOSS_W3, false, 3, None, None, next
+    state BOSS_W4, false, 8, Chase, None, chase
+die:
+    state BOSS_DIE1, false, 15, None, None, next
+    state BOSS_DIE2, false, 15, None, None, next
+    state BOSS_DIE3, false, 15, None, Die, dead
+dead:
+    state BOSS_DEAD, false, 0, None, None, dead
+shoot:
+    state BOSS_SHOOT1, false, 20, None, None, next
+    state BOSS_SHOOT2, false, 20, None, None, next
+    state BOSS_SHOOT3, false, 20, None, Shoot, chase
+}
+
+states grofaz {
+stand:
+    state GROFAZ_W1, false, 0, Stand, None, stand
+path:
+    state GROFAZ_W1, false, 20, Path, None, next
+    state GROFAZ_W1, false, 5, None, None, next
+    state GROFAZ_W2, false, 15, Path, None, next
+    state GROFAZ_W3, false, 20, Path, None, next
+    state GROFAZ_W3, false, 5, None, None, next
+    state GROFAZ_W4, false, 15, Path, None, path
+pain1:
+    state GROFAZ_DIE1, false, 10, None, None, chase
+pain2:
+    state GROFAZ_DIE1, false, 10, None, None, chase
+chase:
+    state GROFAZ_W1, false, 10, Chase, None, next
+    state GROFAZ_W1, false, 3, None, None, next
+    state GROFAZ_W2, false, 8, Chase, None, next
+    state GROFAZ_W3, false, 10, Chase, None, next
+    state GROFAZ_W3, false, 3, None, None, next
+    state GROFAZ_W4, false, 8, Chase, None, chase
+die:
+    state GROFAZ_DIE1, false, 15, None, None, next
+    state GROFAZ_DIE2, false, 15, None, None, next
+    state GROFAZ_DIE3, false, 15, None, None, next
+    state GROFAZ_DIE4, false, 15, None, None, next
+    state GROFAZ_DIE5, false, 15, None, None, next
+    state GROFAZ_DIE6, false, 15, None, None, next
+    state GROFAZ_DIE7, false, 15, None, Die, next
+dead:
+    state GROFAZ_DEAD, false, 0, None, None, dead
+shoot:
+    state GROFAZ_SHOOT1, false, 20, None, None, next
+    state GROFAZ_SHOOT2, false, 20, None, None, next
+    state GROFAZ_SHOOT3, false, 20, None, Shoot, chase
+}
+
+
 
 states weapon_knife {
 lower:

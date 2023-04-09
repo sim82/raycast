@@ -20,6 +20,7 @@ pub enum EnemyType {
     White,
     Rotten,
     Woof,
+    Hans,
 }
 
 impl ms::Loadable for EnemyType {
@@ -30,6 +31,7 @@ impl ms::Loadable for EnemyType {
             2 => EnemyType::White,
             3 => EnemyType::Rotten,
             4 => EnemyType::Woof,
+            5 => EnemyType::Hans,
             x => return Err(anyhow!("unhandled EnemyType discriminator {x}")),
         })
     }
@@ -43,6 +45,7 @@ impl ms::Writable for EnemyType {
             EnemyType::White => 2,
             EnemyType::Rotten => 3,
             EnemyType::Woof => 4,
+            EnemyType::Hans => 5,
         })?;
         Ok(())
     }
@@ -65,6 +68,7 @@ impl EnemyType {
             EnemyType::Blue => START_BROWN + NUM_HUMANOID + NUM_CANINE,
             EnemyType::Woof => START_BROWN + NUM_HUMANOID,
             EnemyType::Rotten => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE,
+            EnemyType::Hans => todo!(),
         }
     }
 
@@ -118,6 +122,8 @@ impl EnemyType {
                 AnimationPhase::Dead => todo!(),
                 AnimationPhase::Shoot => todo!(),
             },
+            EnemyType::Hans => todo!(),
+
         }
     }
 
@@ -408,6 +414,8 @@ impl ThingDefs {
         198..=205 => ThingType::Enemy(ThingDefs::oa(t - 198), Difficulty::Hard, EnemyType::Blue, ThingDefs::os(t - 198)),
         206..=213 => ThingType::Enemy(ThingDefs::oa(t - 206), Difficulty::Hard, EnemyType::Woof, ThingDefs::os(t - 206)),
         252..=259 => ThingType::Enemy(ThingDefs::oa(t - 252), Difficulty::Hard, EnemyType::Rotten, ThingDefs::os(t - 252)),
+
+        0xd6 => ThingType::Enemy(Direction::South, Difficulty::Easy, EnemyType::Hans, EnemyState::Standing), 
         _ => return None,
     })
 }
