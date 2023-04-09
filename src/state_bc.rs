@@ -205,7 +205,7 @@ const WL6_SPAWN_INFO: &[u8] = include_bytes!("out.spawn");
 
 lazy_static! {
     static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
-    static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
+    pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
 }
 
 #[derive(Debug)]
@@ -297,5 +297,8 @@ impl SpawnInfos {
         }
 
         Ok(Self { spawn_infos })
+    }
+    pub fn find_spawn_info(&self, id: u16) -> Option<&EnemySpawnInfo> {
+        self.spawn_infos.iter().find(|&info| info.id == id as i32)
     }
 }

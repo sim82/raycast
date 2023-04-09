@@ -277,6 +277,10 @@ impl ThingDefs {
             for x in 0..64 {
                 let c = plane_iter.next().unwrap();
 
+                if let Some(spawn_info) = SPAWN_INFO_WL6.find_spawn_info(*c) {
+                    println!( "spawn info: {spawn_info:?}")
+                }
+
                 let thing_type = if let Some(enemy) = ThingDefs::map_enemy(*c) {
                     enemy
                 } else {
