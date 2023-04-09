@@ -99,12 +99,12 @@ impl ms::Loadable for Actor {
 
 pub struct Thing {
     pub actor: Actor,
-    pub static_index: usize,
+    pub unique_id: usize,
 }
 
 impl ms::Writable for Thing {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.static_index as i32)?; // FIXME
+        w.write_i32::<LittleEndian>(self.unique_id as i32)?; // FIXME
         self.actor.write(w)?;
         Ok(())
     }
@@ -112,9 +112,9 @@ impl ms::Writable for Thing {
 
 impl ms::Loadable for Thing {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let static_index = r.read_i32::<LittleEndian>()? as usize;
+        let unique_id = r.read_i32::<LittleEndian>()? as usize;
         let actor = Actor::read_from(r)?;
-        Ok(Self { actor, static_index })
+        Ok(Self { actor, unique_id })
     }
 }
 
@@ -168,7 +168,7 @@ impl Things {
 
                     blockmap.insert(i, enemy.x, enemy.y);
                     Thing {
-                        static_index: i,
+                        unique_id: i,
                         actor: Actor::Enemy { enemy },
                     }
                 }
@@ -184,7 +184,7 @@ impl Things {
                             },
                         })
                         .unwrap_or_default();
-                    Thing { static_index: i, actor }
+                    Thing { unique_id: i, actor }
                 }
                 ThingType::PlayerStart(_) => continue,
             };
@@ -247,19 +247,19 @@ impl Things {
                     if !enemy.notify {
                         match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
                             Some(room_id) if map_dynamic.notifications.contains(&room_id) && !enemy.notify => {
-                                println!("enemy {} notified by room {room_id}", thing.static_index);
+                                println!("enemy {} notified by room {room_id}", thing.unique_id);
                                 enemy.notify = true;
                             }
                             _ => (),
                         }
                     }
-                    enemy.update(map_dynamic, self, thing.static_index, player);
+                    enemy.update(map_dynamic, self, thing.unique_id, player);
 
                     // update blockmal link
                     if !enemy.dead {
-                        self.blockmap.update(thing.static_index, old_x, old_y, enemy.x, enemy.y);
+                        self.blockmap.update(thing.unique_id, old_x, old_y, enemy.x, enemy.y);
                     } else {
-                        self.blockmap.remove(thing.static_index, old_x, old_y);
+                        self.blockmap.remove(thing.unique_id, old_x, old_y);
                     }
 
                     // if enemy raised the notify flag this frame, forward it to the room
@@ -270,7 +270,7 @@ impl Things {
                     }
                 }
                 Actor::Enemy { enemy } if enemy.dead => {
-                    enemy.update(map_dynamic, self, thing.static_index, player);
+                    enemy.update(map_dynamic, self, thing.unique_id, player);
                 }
                 _ => (),
             }
@@ -301,7 +301,7 @@ impl Things {
                         owner: i,
                     }),
                     Actor::None => {
-                        let thing_def = self.thing_defs.thing_defs.get(thing.static_index);
+                        let thing_def = self.thing_defs.thing_defs.get(thing.unique_id);
                         if let Some(ThingDef {
                             thing_type: ThingType::Prop(id),
                             x,
