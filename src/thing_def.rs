@@ -4,7 +4,6 @@ use crate::{fa::FA_FRAC_PI_4, prelude::*};
 use anyhow::anyhow;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 
-pub mod anim_def;
 
 #[derive(Clone, Copy, Debug)]
 pub enum Difficulty {
@@ -61,71 +60,71 @@ const NUM_CANINE: i32 = 39;
 const NUM_ROTTOID: i32 = 51;
 
 impl EnemyType {
-    pub fn sprite_offset(&self) -> i32 {
-        match self {
-            EnemyType::Brown => START_BROWN,
-            EnemyType::White => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE + NUM_ROTTOID,
-            EnemyType::Blue => START_BROWN + NUM_HUMANOID + NUM_CANINE,
-            EnemyType::Woof => START_BROWN + NUM_HUMANOID,
-            EnemyType::Rotten => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE,
-            EnemyType::Hans => todo!(),
-        }
-    }
+    // pub fn sprite_offset(&self) -> i32 {
+    //     match self {
+    //         EnemyType::Brown => START_BROWN,
+    //         EnemyType::White => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE + NUM_ROTTOID,
+    //         EnemyType::Blue => START_BROWN + NUM_HUMANOID + NUM_CANINE,
+    //         EnemyType::Woof => START_BROWN + NUM_HUMANOID,
+    //         EnemyType::Rotten => START_BROWN + 2 * NUM_HUMANOID + NUM_CANINE,
+    //         EnemyType::Hans => todo!(),
+    //     }
+    // }
 
-    pub fn animation_frames(&self, phase: AnimationPhase) -> &'static [i32] {
-        match self {
-            EnemyType::Brown => match phase {
-                AnimationPhase::Stand => &*anim_def::BROWN_STAND,
-                AnimationPhase::Walk => &*anim_def::BROWN_WALK,
-                AnimationPhase::Pain => &*anim_def::BROWN_PAIN,
-                AnimationPhase::Die => &*anim_def::BROWN_DIE,
-                AnimationPhase::Dead => todo!(),
-                AnimationPhase::Shoot => todo!(),
-            },
-            EnemyType::White => match phase {
-                AnimationPhase::Stand => &*anim_def::WHITE_STAND,
-                AnimationPhase::Walk => &*anim_def::WHITE_WALK,
-                AnimationPhase::Pain => &*anim_def::WHITE_PAIN,
-                AnimationPhase::Die => todo!(),
-                AnimationPhase::Dead => todo!(),
-                AnimationPhase::Shoot => todo!(),
-            },
-            EnemyType::Blue => match phase {
-                AnimationPhase::Stand => &*anim_def::BLUE_STAND,
-                AnimationPhase::Walk => &*anim_def::BLUE_WALK,
-                AnimationPhase::Pain => &*anim_def::BLUE_PAIN,
-                AnimationPhase::Die => todo!(),
-                AnimationPhase::Dead => todo!(),
-                AnimationPhase::Shoot => todo!(),
-            },
-            EnemyType::Woof => match phase {
-                AnimationPhase::Stand => &*anim_def::WOOF_STAND,
-                AnimationPhase::Walk => &*anim_def::WOOF_WALK,
-                AnimationPhase::Pain =>
-                /*&*anim_def::WOOF_PAIN*/
-                {
-                    todo!()
-                }
-                AnimationPhase::Die => todo!(),
-                AnimationPhase::Dead => todo!(),
-                AnimationPhase::Shoot => todo!(),
-            },
-            EnemyType::Rotten => match phase {
-                AnimationPhase::Stand => &*anim_def::ROTTEN_STAND,
-                AnimationPhase::Walk => &*anim_def::BLUE_PAIN,
-                AnimationPhase::Pain =>
-                /*&*anim_def::ROTTEN_PAIN*/
-                {
-                    todo!()
-                }
-                AnimationPhase::Die => todo!(),
-                AnimationPhase::Dead => todo!(),
-                AnimationPhase::Shoot => todo!(),
-            },
-            EnemyType::Hans => todo!(),
+    // pub fn animation_frames(&self, phase: AnimationPhase) -> &'static [i32] {
+    //     match self {
+    //         EnemyType::Brown => match phase {
+    //             AnimationPhase::Stand => &*anim_def::BROWN_STAND,
+    //             AnimationPhase::Walk => &*anim_def::BROWN_WALK,
+    //             AnimationPhase::Pain => &*anim_def::BROWN_PAIN,
+    //             AnimationPhase::Die => &*anim_def::BROWN_DIE,
+    //             AnimationPhase::Dead => todo!(),
+    //             AnimationPhase::Shoot => todo!(),
+    //         },
+    //         EnemyType::White => match phase {
+    //             AnimationPhase::Stand => &*anim_def::WHITE_STAND,
+    //             AnimationPhase::Walk => &*anim_def::WHITE_WALK,
+    //             AnimationPhase::Pain => &*anim_def::WHITE_PAIN,
+    //             AnimationPhase::Die => todo!(),
+    //             AnimationPhase::Dead => todo!(),
+    //             AnimationPhase::Shoot => todo!(),
+    //         },
+    //         EnemyType::Blue => match phase {
+    //             AnimationPhase::Stand => &*anim_def::BLUE_STAND,
+    //             AnimationPhase::Walk => &*anim_def::BLUE_WALK,
+    //             AnimationPhase::Pain => &*anim_def::BLUE_PAIN,
+    //             AnimationPhase::Die => todo!(),
+    //             AnimationPhase::Dead => todo!(),
+    //             AnimationPhase::Shoot => todo!(),
+    //         },
+    //         EnemyType::Woof => match phase {
+    //             AnimationPhase::Stand => &*anim_def::WOOF_STAND,
+    //             AnimationPhase::Walk => &*anim_def::WOOF_WALK,
+    //             AnimationPhase::Pain =>
+    //             /*&*anim_def::WOOF_PAIN*/
+    //             {
+    //                 todo!()
+    //             }
+    //             AnimationPhase::Die => todo!(),
+    //             AnimationPhase::Dead => todo!(),
+    //             AnimationPhase::Shoot => todo!(),
+    //         },
+    //         EnemyType::Rotten => match phase {
+    //             AnimationPhase::Stand => &*anim_def::ROTTEN_STAND,
+    //             AnimationPhase::Walk => &*anim_def::BLUE_PAIN,
+    //             AnimationPhase::Pain =>
+    //             /*&*anim_def::ROTTEN_PAIN*/
+    //             {
+    //                 todo!()
+    //             }
+    //             AnimationPhase::Die => todo!(),
+    //             AnimationPhase::Dead => todo!(),
+    //             AnimationPhase::Shoot => todo!(),
+    //         },
+    //         EnemyType::Hans => todo!(),
 
-        }
-    }
+    //     }
+    // }
 
     pub fn get_capabilities(&self) -> EnemyCapabilities {
         match self {
