@@ -44,7 +44,7 @@ pub mod prelude {
         render,
         sprite::{self, Directionality, SpriteDef, SpriteIndex},
         state_bc::{Action, ExecCtx, StateBc, Think},
-        thing::{Actor, Thing, Things},
+        thing::{Actor, Collectible, Item, Thing, Things},
         thing_def::{AnimationPhase, Direction, ThingDef, ThingDefs, ThingType},
         weapon::{Weapon, WeaponType},
         Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,

@@ -647,6 +647,20 @@ impl Enemy {
             dead: false,
         }
     }
+
+    pub fn get_bonus_item(&self) -> Option<Item> {
+        match self.enemy_type {
+            EnemyType::Brown | EnemyType::Blue | EnemyType::White | EnemyType::Rotten => {
+                Some(Item {
+                    collectible: Collectible::Ammo,
+                    id: 49, // FIXME: dragging around the sprite index is a bit clumsy...
+                    x: self.x,
+                    y: self.y,
+                })
+            }
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Debug for Enemy {

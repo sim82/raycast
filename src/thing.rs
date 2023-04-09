@@ -6,10 +6,10 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 #[derive(Debug)]
 pub struct Item {
-    collectible: Collectible,
-    id: i32,
-    x: Fp16,
-    y: Fp16,
+    pub collectible: Collectible,
+    pub id: i32,
+    pub x: Fp16,
+    pub y: Fp16,
 }
 
 impl ms::Loadable for Item {
@@ -262,15 +262,10 @@ impl Things {
                         self.blockmap.update(thing.unique_id, old_x, old_y, enemy.x, enemy.y);
                     } else {
                         self.blockmap.remove(thing.unique_id, old_x, old_y);
-                        spawn_actors.push(Actor::Item {
-                            collected: false,
-                            item: Item {
-                                collectible: Collectible::Ammo,
-                                id: 49, // FIXME: dragging around the sprite index is a bit clumsy...
-                                x: enemy.x,
-                                y: enemy.y,
-                            },
-                        });
+
+                        if let Some(item) = enemy.get_bonus_item() {
+                            spawn_actors.push(Actor::Item { collected: false, item });
+                        }
                     }
 
                     // if enemy raised the notify flag this frame, forward it to the room
