@@ -1,11 +1,11 @@
 
 spawn brown {
-    directional 108, stand
-    directional 112, path
-    directional 144, stand
-    directional 148, path
-    directional 180, stand
-    directional 184, path
+    directional 108, stand, ammo
+    directional 112, path, ammo
+    directional 144, stand, ammo
+    directional 148, path, ammo
+    directional 180, stand, ammo
+    directional 184, path, ammo
 }
 
 states brown {
@@ -43,12 +43,12 @@ shoot:
 
 
 spawn blue {
-    directional 126, stand
-    directional 130, path
-    directional 162, stand
-    directional 166, path
-    directional 198, stand
-    directional 202, path
+    directional 126, stand, ammo
+    directional 130, path, ammo
+    directional 162, stand, ammo
+    directional 166, path, ammo
+    directional 198, stand, ammo
+    directional 202, path, ammo
 }
 
 states blue {
@@ -93,12 +93,12 @@ shoot:
 
 
 spawn white {
-    directional 116, stand
-    directional 120, path
-    directional 152, stand
-    directional 156, path
-    directional 188, stand
-    directional 192, path
+    directional 116, stand, ammo
+    directional 120, path, ammo
+    directional 152, stand, ammo
+    directional 156, path, ammo
+    directional 188, stand, ammo
+    directional 192, path, ammo
 }
 
 states white {
@@ -137,12 +137,12 @@ shoot:
 
 
 spawn rotten {
-    directional 216, stand
-    directional 220, path
-    directional 234, stand
-    directional 238, path
-    directional 252, stand
-    directional 256, path
+    directional 216, stand, ammo
+    directional 220, path, ammo
+    directional 234, stand, ammo
+    directional 238, path, ammo
+    directional 252, stand, ammo
+    directional 256, path, ammo
 }
 
 states rotten {
@@ -183,12 +183,12 @@ shoot:
 
 
 spawn furry {
-    directional 134, stand
-    directional 138, path
-    directional 170, stand
-    directional 174, path
-    directional 206, stand
-    directional 210, path
+    directional 134, stand, none
+    directional 138, path, none
+    directional 170, stand, none
+    directional 174, path, none
+    directional 206, stand, none
+    directional 210, path, none
 }
 
 states furry {
@@ -228,7 +228,7 @@ jump:
 
 
 spawn hans {
-    undirectional 214, stand
+    undirectional 214, stand, silver_key
 }
 
 states hans {

@@ -4,7 +4,7 @@ use crate::{enemy::Enemy, ms::Loadable, prelude::*, thing_def::Difficulty};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Item {
     pub collectible: Collectible,
     pub id: i32,
@@ -163,22 +163,8 @@ impl Things {
         let mut blockmap = BlockMap::default();
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
             let thing = match &thing_def.thing_type {
-                // ThingType::Enemy(direction, difficulty, enemy_type, state) => {
-                //     let enemy = Enemy::spawn(*direction, *difficulty, *enemy_type, *state, thing_def);
-
-                //     blockmap.insert(i, enemy.x, enemy.y);
-                //     Thing {
-                //         unique_id: i,
-                //         actor: Actor::Enemy { enemy },
-                //     }
-                // }
-                ThingType::Enemy2(enemy_spawn_info) => {
-                    let enemy = Enemy::spawn2(
-                        enemy_spawn_info.direction,
-                        Difficulty::Easy, // TODO: store in spawn info
-                        &enemy_spawn_info.state,
-                        thing_def,
-                    );
+                ThingType::Enemy(enemy_spawn_info) => {
+                    let enemy = Enemy::spawn(enemy_spawn_info, thing_def);
 
                     blockmap.insert(i, enemy.x, enemy.y);
                     Thing {
@@ -277,8 +263,22 @@ impl Things {
                     } else {
                         self.blockmap.remove(thing.unique_id, old_x, old_y);
 
-                        if let Some(item) = enemy.get_bonus_item() {
-                            spawn_actors.push(Actor::Item { collected: false, item });
+                        let thing_def = self.thing_defs.thing_defs.get(thing.unique_id);
+                        println!("spawn: {thing_def:?}");
+                        match thing_def {
+                            Some(ThingDef {
+                                thing_type:
+                                    ThingType::Enemy(EnemySpawnInfo {
+                                        bonus_item: Some(item), ..
+                                    }),
+                                ..
+                            }) => {
+                                let mut item = item.clone();
+                                item.x = enemy.x;
+                                item.y = enemy.y;
+                                spawn_actors.push(Actor::Item { collected: false, item });
+                            }
+                            _ => (),
                         }
                     }
 
@@ -364,7 +364,7 @@ impl Things {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Collectible {
     DogFood,
     Key(i32),

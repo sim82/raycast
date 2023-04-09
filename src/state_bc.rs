@@ -116,6 +116,7 @@ pub struct EnemySpawnInfo {
     pub id: i32,
     pub direction: Direction,
     pub state: String,
+    pub bonus_item: Option<Item>,
 }
 
 impl ms::Loadable for EnemySpawnInfo {
@@ -123,7 +124,13 @@ impl ms::Loadable for EnemySpawnInfo {
         let id = r.read_i32::<LittleEndian>()?;
         let direction = Direction::read_from(r)?;
         let state = String::read_from(r)?;
-        Ok(Self { id, direction, state })
+        let bonus_item = Option::<Item>::read_from(r)?;
+        Ok(Self {
+            id,
+            direction,
+            state,
+            bonus_item,
+        })
     }
 }
 
@@ -132,6 +139,7 @@ impl ms::Writable for EnemySpawnInfo {
         w.write_i32::<LittleEndian>(self.id)?;
         self.direction.write(w)?;
         self.state.write(w)?;
+        self.bonus_item.write(w)?;
         Ok(())
     }
 }

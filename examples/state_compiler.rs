@@ -235,11 +235,32 @@ fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
     ))
 }
 
+fn bonus_item(name: &str) -> Option<Item> {
+    match name {
+        "ammo" => Some(Item {
+            collectible: Collectible::Ammo,
+            id: 49,
+            x: FP16_ZERO,
+            y: FP16_ZERO,
+        }),
+        "silver_key" => Some(Item {
+            collectible: Collectible::Key(0),
+            id: 43,
+            x: FP16_ZERO,
+            y: FP16_ZERO,
+        }),
+        _ => None,
+    }
+}
+
 fn spawn_block_directional_element(input: &str) -> IResult<&str, Vec<EnemySpawnInfo>> {
     let (input, _) = ws(tag("directional"))(input)?;
     let (input, start_id) = ws(decimal)(input)?;
     let (input, _) = char(',')(input)?;
     let (input, state) = ws(identifier)(input)?;
+    let (input, _) = char(',')(input)?;
+    let (input, bonus_item_name) = ws(identifier)(input)?;
+
     let mut infos = Vec::new();
 
     for (i, direction) in [Direction::East, Direction::North, Direction::West, Direction::South]
@@ -250,6 +271,7 @@ fn spawn_block_directional_element(input: &str) -> IResult<&str, Vec<EnemySpawnI
             id: start_id + i as i32,
             direction: *direction,
             state: state.clone(),
+            bonus_item: bonus_item(&bonus_item_name),
         })
     }
     Ok((input, infos))
@@ -259,12 +281,16 @@ fn spawn_block_undirectional_element(input: &str) -> IResult<&str, Vec<EnemySpaw
     let (input, id) = ws(decimal)(input)?;
     let (input, _) = char(',')(input)?;
     let (input, state) = ws(identifier)(input)?;
+    let (input, _) = char(',')(input)?;
+    let (input, bonus_item_name) = ws(identifier)(input)?;
+
     let mut infos = Vec::new();
 
     infos.push(EnemySpawnInfo {
         id,
         direction: Direction::South, // FIXME: not really undirectional
         state: state.clone(),
+        bonus_item: bonus_item(&bonus_item_name),
     });
     Ok((input, infos))
 }

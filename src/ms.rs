@@ -38,7 +38,6 @@ impl Writable for String {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         let bytes = self.as_bytes();
         assert!(bytes.len() <= 255);
-
         w.write_u8(bytes.len() as u8)?;
         w.write_all(bytes)?;
         Ok(())

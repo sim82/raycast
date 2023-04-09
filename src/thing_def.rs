@@ -115,8 +115,7 @@ pub enum EnemyState {
 #[derive(Clone, Debug)]
 pub enum ThingType {
     PlayerStart(i32),
-    // Enemy(Direction, Difficulty, EnemyType, EnemyState),
-    Enemy2(EnemySpawnInfo),
+    Enemy(EnemySpawnInfo),
     Prop(i32),
 }
 
@@ -285,7 +284,7 @@ impl ThingDefs {
 
                 let thing_type = if let Some(spawn_info) = SPAWN_INFO_WL6.find_spawn_info(*c) {
                     println!("spawn info: {spawn_info:?}");
-                    ThingType::Enemy2(spawn_info.clone())
+                    ThingType::Enemy(spawn_info.clone())
                 }
                 // let thing_type = if let Some(enemy) = ThingDefs::map_enemy(*c) {
                 //     enemy
