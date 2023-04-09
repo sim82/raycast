@@ -235,7 +235,7 @@ fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
     ))
 }
 
-fn spawn_block_element(input: &str) -> IResult<&str, Vec<EnemySpawnInfo>> {
+fn spawn_block_directional_element(input: &str) -> IResult<&str, Vec<EnemySpawnInfo>> {
     let (input, _) = ws(tag("directional"))(input)?;
     let (input, start_id) = ws(decimal)(input)?;
     let (input, _) = char(',')(input)?;
@@ -254,11 +254,32 @@ fn spawn_block_element(input: &str) -> IResult<&str, Vec<EnemySpawnInfo>> {
     }
     Ok((input, infos))
 }
+fn spawn_block_undirectional_element(input: &str) -> IResult<&str, Vec<EnemySpawnInfo>> {
+    let (input, _) = ws(tag("undirectional"))(input)?;
+    let (input, id) = ws(decimal)(input)?;
+    let (input, _) = char(',')(input)?;
+    let (input, state) = ws(identifier)(input)?;
+    let mut infos = Vec::new();
+
+    infos.push(EnemySpawnInfo {
+        id,
+        direction: Direction::South, // FIXME: not really undirectional
+        state: state.clone(),
+    });
+    Ok((input, infos))
+}
 
 fn parse_spawn_block(input: &str) -> IResult<&str, ToplevelElement> {
     let (input, _) = ws(tag("spawn"))(input)?;
     let (input, name) = ws(take_while(is_identifier))(input)?;
-    let (input, mut elements) = delimited(ws(char('{')), many0(spawn_block_element), ws(char('}')))(input)?;
+    let (input, mut elements) = delimited(
+        ws(char('{')),
+        many0(alt((
+            spawn_block_directional_element,
+            spawn_block_undirectional_element,
+        ))),
+        ws(char('}')),
+    )(input)?;
 
     let infos = elements.drain(..).flatten().collect();
 

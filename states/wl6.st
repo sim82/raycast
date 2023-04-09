@@ -41,6 +41,16 @@ shoot:
     state BROWN_SHOOT3, false, 20, None, Shoot, chase
 }
 
+
+spawn blue {
+    directional 126, stand
+    directional 130, path
+    directional 162, stand
+    directional 166, path
+    directional 198, stand
+    directional 202, path
+}
+
 states blue {
 stand:
     state BLUE_S_1, true, 0, Stand, None, stand
@@ -81,6 +91,16 @@ shoot:
     state BLUE_SHOOT3, false, 10, None, Shoot, chase
 }
 
+
+spawn white {
+    directional 116, stand
+    directional 120, path
+    directional 152, stand
+    directional 156, path
+    directional 188, stand
+    directional 192, path
+}
+
 states white {
 stand:
     state WHITE_S_1, true, 0, Stand, None, stand
@@ -113,6 +133,16 @@ shoot:
     state WHITE_SHOOT1, false, 20, None, None, next
     state WHITE_SHOOT2, false, 20, None, None, next
     state WHITE_SHOOT3, false, 20, None, Shoot, chase
+}
+
+
+spawn rotten {
+    directional 216, stand
+    directional 220, path
+    directional 234, stand
+    directional 238, path
+    directional 252, stand
+    directional 256, path
 }
 
 states rotten {
@@ -151,6 +181,16 @@ shoot:
     state ROTTEN_SHOOT4, false, 20, None, Shoot, chase
 }
 
+
+spawn furry {
+    directional 134, stand
+    directional 138, path
+    directional 170, stand
+    directional 174, path
+    directional 206, stand
+    directional 210, path
+}
+
 states furry {
 stand:
     state FURRY_W1_1, true, 20, Path, None, stand
@@ -186,6 +226,10 @@ jump:
     state FURRY_W1_1, false, 10, None, None, chase
 }
 
+
+spawn hans {
+    undirectional 214, stand
+}
 
 states hans {
 stand:
