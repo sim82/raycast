@@ -145,9 +145,9 @@ fn try_chase_pathaction(
     }
 }
 
-fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
+fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
     let mut dodge = false;
-    if check_player_sight(thing, things, map_dynamic, static_index) {
+    if check_player_sight(thing, things, map_dynamic, unique_id) {
         let d = things
             .player_x
             .abs_diff(thing.x.get_int())
@@ -177,7 +177,7 @@ fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things,
             thing.direction = dir;
         }
     }
-    move_default(thing, map_dynamic, static_index, FP16_FRAC_64);
+    move_default(thing, map_dynamic, unique_id, FP16_FRAC_64);
 }
 
 fn select_chase_action(
@@ -286,7 +286,7 @@ fn select_dodge_action(
     None
 }
 
-fn think_dogchase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
+fn think_dogchase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
     if thing.path_action.is_none() {
         // absurd fact: dogs never dogdge
         if let Some((path_action, dir)) = select_chase_action(things, thing, map_dynamic) {
@@ -302,7 +302,7 @@ fn think_dogchase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Thin
         thing.set_state("jump");
     }
 
-    move_default(thing, map_dynamic, static_index, FP16_FRAC_64);
+    move_default(thing, map_dynamic, unique_id, FP16_FRAC_64);
 }
 
 fn boost_shoot_chance(path_action: &PathAction) -> bool {
@@ -317,7 +317,7 @@ fn action_shoot(
     thing: &mut Enemy,
     map_dynamic: &mut MapDynamic,
     _things: &Things,
-    _static_indexx: usize,
+    _unique_id: usize,
     player: &mut Player,
 ) {
     println!("shoot");
@@ -347,10 +347,10 @@ fn action_shoot(
     }
 }
 
-fn action_bite(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _static_indexx: usize) {}
+fn action_bite(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _unique_id: usize) {}
 
-fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
+fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+    if thing.notify || check_player_sight(thing, things, map_dynamic, unique_id) {
         thing.set_state("chase");
         thing.notify = true;
         return;
@@ -360,11 +360,11 @@ fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, 
         thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
         thing.path_action = try_find_pathaction(thing, map_dynamic, things);
     }
-    move_default(thing, map_dynamic, static_index, FP16_FRAC_128);
+    move_default(thing, map_dynamic, unique_id, FP16_FRAC_128);
 }
 
-fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize) {
-    if thing.notify || check_player_sight(thing, things, map_dynamic, static_index) {
+fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+    if thing.notify || check_player_sight(thing, things, map_dynamic, unique_id) {
         thing.set_state("chase");
         thing.notify = true;
     }
@@ -566,14 +566,14 @@ impl Enemy {
         println!("state: {self:?}");
         self.dead = name == "dead";
     }
-    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, static_index: usize, player: &mut Player) {
+    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize, player: &mut Player) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
         // this is different from wolf3d where actions execute on state exit (don't understand why...)
         match self.exec_ctx.state.take_action() {
             Action::None => (),
             Action::Die => action_die(self),
-            Action::Shoot => action_shoot(self, map_dynamic, things, static_index, player),
-            Action::Bite => action_bite(self, map_dynamic, things, static_index),
+            Action::Shoot => action_shoot(self, map_dynamic, things, unique_id, player),
+            Action::Bite => action_bite(self, map_dynamic, things, unique_id),
         }
 
         if self.exec_ctx.state.ticks <= 0 {
@@ -582,12 +582,12 @@ impl Enemy {
 
         match self.exec_ctx.state.think {
             Think::None => (),
-            Think::Stand => think_stand(self, map_dynamic, things, static_index),
-            Think::Path => think_path(self, map_dynamic, things, static_index),
-            Think::Chase => think_chase(self, map_dynamic, things, static_index),
+            Think::Stand => think_stand(self, map_dynamic, things, unique_id),
+            Think::Path => think_path(self, map_dynamic, things, unique_id),
+            Think::Chase => think_chase(self, map_dynamic, things, unique_id),
             Think::Shoot => (), // FIXME: remove
             Think::Bite => (),  // FIXME: remove
-            Think::DogChase => think_dogchase(self, map_dynamic, things, static_index),
+            Think::DogChase => think_dogchase(self, map_dynamic, things, unique_id),
         }
 
         // self.states[self.cur].2();

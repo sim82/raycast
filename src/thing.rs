@@ -206,6 +206,8 @@ impl Things {
         // temporarily take out things during mutation
         let mut things = std::mem::take(&mut self.things);
         let mut new_notifications = HashSet::new();
+        let mut spawn_actors = Vec::new();
+
         for thing in &mut things {
             // let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
@@ -260,6 +262,15 @@ impl Things {
                         self.blockmap.update(thing.unique_id, old_x, old_y, enemy.x, enemy.y);
                     } else {
                         self.blockmap.remove(thing.unique_id, old_x, old_y);
+                        spawn_actors.push(Actor::Item {
+                            collected: false,
+                            item: Item {
+                                collectible: Collectible::Ammo,
+                                id: 49, // FIXME: dragging around the sprite index is a bit clumsy...
+                                x: enemy.x,
+                                y: enemy.y,
+                            },
+                        });
                     }
 
                     // if enemy raised the notify flag this frame, forward it to the room
@@ -276,6 +287,13 @@ impl Things {
             }
         }
         map_dynamic.notifications = new_notifications;
+
+        for actor in spawn_actors {
+            things.push(Thing {
+                actor,
+                unique_id: things.len(), // TODO: rethink: as long as nothing is ever deleted from things this is probably good enough
+            })
+        }
         self.things = things;
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {
