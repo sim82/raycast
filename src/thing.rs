@@ -4,11 +4,39 @@ use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
+#[derive(Debug)]
+pub struct Item {
+    collectible: Collectible,
+    id: i32,
+    x: Fp16,
+    y: Fp16,
+}
+
+impl ms::Loadable for Item {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let collectible = Collectible::read_from(r)?;
+        let id = r.read_i32::<LittleEndian>()?;
+        let x = Fp16::read_from(r)?;
+        let y = Fp16::read_from(r)?;
+        Ok(Self { collectible, id, x, y })
+    }
+}
+
+impl ms::Writable for Item {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        self.collectible.write(w)?;
+        w.write_i32::<LittleEndian>(self.id)?;
+        self.x.write(w)?;
+        self.y.write(w)?;
+        Ok(())
+    }
+}
+
 #[derive(Debug, Default)]
 pub enum Actor {
     Item {
         collected: bool,
-        collectible: Collectible,
+        item: Item,
     },
     Enemy {
         enemy: Enemy,
@@ -38,10 +66,10 @@ impl Actor {
 impl ms::Writable for Actor {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
-            Actor::Item { collected, collectible } => {
+            Actor::Item { collected, item } => {
                 w.write_u8(0)?;
                 w.write_u8(if *collected { 1 } else { 0 })?;
-                collectible.write(w)?;
+                item.write(w)?;
             }
             Actor::Enemy { enemy } => {
                 w.write_u8(1)?;
@@ -58,7 +86,7 @@ impl ms::Loadable for Actor {
         Ok(match r.read_u8()? {
             0 => Actor::Item {
                 collected: r.read_u8()? != 0,
-                collectible: Collectible::read_from(r)?,
+                item: Item::read_from(r)?,
             },
             1 => Actor::Enemy {
                 enemy: Enemy::read_from(r)?,
@@ -148,7 +176,12 @@ impl Things {
                     let actor = try_to_collectible(sprite_index)
                         .map(|collectible| Actor::Item {
                             collected: false,
-                            collectible,
+                            item: Item {
+                                collectible,
+                                id: sprite_index,
+                                x: thing_def.x,
+                                y: thing_def.y,
+                            },
                         })
                         .unwrap_or_default();
                     Thing { static_index: i, actor }
@@ -174,21 +207,21 @@ impl Things {
         let mut things = std::mem::take(&mut self.things);
         let mut new_notifications = HashSet::new();
         for thing in &mut things {
-            let thing_def = &self.thing_defs.thing_defs[thing.static_index];
+            // let thing_def = &self.thing_defs.thing_defs[thing.static_index];
             #[allow(clippy::single_match)]
-            match (thing_def.thing_type, &mut thing.actor) {
-                (ThingType::Prop(_id), Actor::Item { collected, collectible }) if !*collected => {
+            match &mut thing.actor {
+                Actor::Item { collected, item } if !*collected => {
                     // (ThingType::Prop(_id), _) => {
-                    let dx = player.x - thing_def.x + FP16_HALF;
-                    let dy = player.y - thing_def.y + FP16_HALF;
+                    let dx = player.x - item.x + FP16_HALF;
+                    let dy = player.y - item.y + FP16_HALF;
                     if dx.get_int().abs() == 0 && dy.get_int().abs() == 0 {
-                        match collectible {
+                        match item.collectible {
                             Collectible::Ammo if player.weapon.ammo < 100 => {
                                 player.weapon.ammo = (player.weapon.ammo + 8).min(100);
                                 *collected = true;
                             }
                             Collectible::Food | Collectible::Medkit | Collectible::DogFood if player.health < 100 => {
-                                let add = match collectible {
+                                let add = match item.collectible {
                                     Collectible::Food => 8,
                                     Collectible::DogFood => 4,
                                     Collectible::Medkit => 25,
@@ -200,12 +233,12 @@ impl Things {
                             _ => (),
                         }
                         // if *collected {
-                        println!("collected: {thing_def:?} {collectible:?}");
+                        println!("collected: {:?}", item.collectible);
                         // println!("collected: {:?} ", thing_def);
                         // }
                     }
                 }
-                (_, Actor::Enemy { enemy }) if !enemy.dead => {
+                Actor::Enemy { enemy } if !enemy.dead => {
                     let old_x = enemy.x;
                     let old_y = enemy.y;
 
@@ -236,7 +269,7 @@ impl Things {
                         }
                     }
                 }
-                (_, Actor::Enemy { enemy }) if enemy.dead => {
+                Actor::Enemy { enemy } if enemy.dead => {
                     enemy.update(map_dynamic, self, thing.static_index, player);
                 }
                 _ => (),
@@ -250,10 +283,10 @@ impl Things {
             .iter()
             .enumerate()
             .filter_map(|(i, thing)| {
-                let thing_def = &self.thing_defs.thing_defs[thing.static_index];
+                // let thing_def = &self.thing_defs.thing_defs[thing.static_index];
                 // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
-                match (thing_def.thing_type, &thing.actor) {
-                    (ThingType::Enemy(_direction, _difficulty, _enemy_type, _state), Actor::Enemy { enemy }) => {
+                match &thing.actor {
+                    Actor::Enemy { enemy } => {
                         let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
 
                         // if  enemy.dbg_see_player {
@@ -261,19 +294,30 @@ impl Things {
                         // }
                         Some(SpriteDef { id, x, y, owner: i })
                     }
-                    (
-                        ThingType::Prop(id),
-                        Actor::Item {
-                            collected: false,
-                            collectible: _,
-                        },
-                    )
-                    | (ThingType::Prop(id), Actor::None) => Some(SpriteDef {
-                        id: sprite::SpriteIndex::Undirectional(id - 22 + 2),
-                        x: thing_def.x,
-                        y: thing_def.y,
+                    Actor::Item { collected: false, item } => Some(SpriteDef {
+                        id: sprite::SpriteIndex::Undirectional(item.id - 22 + 2),
+                        x: item.x,
+                        y: item.y,
                         owner: i,
                     }),
+                    Actor::None => {
+                        let thing_def = self.thing_defs.thing_defs.get(thing.static_index);
+                        if let Some(ThingDef {
+                            thing_type: ThingType::Prop(id),
+                            x,
+                            y,
+                        }) = thing_def
+                        {
+                            Some(SpriteDef {
+                                id: sprite::SpriteIndex::Undirectional(id - 22 + 2),
+                                x: *x,
+                                y: *y,
+                                owner: i,
+                            })
+                        } else {
+                            None
+                        }
+                    }
                     _ => None,
                 }
             })
