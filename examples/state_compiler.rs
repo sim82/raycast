@@ -242,20 +242,11 @@ fn parse_states_block(input: &str) -> IResult<&str, ToplevelElement> {
     ))
 }
 
-fn bonus_item(name: &str) -> Option<Item> {
+fn spawn_on_death(name: &str) -> Option<i32> {
     match name {
-        "ammo" => Some(Item {
-            collectible: Collectible::Ammo,
-            id: 49,
-            x: FP16_ZERO,
-            y: FP16_ZERO,
-        }),
-        "silver_key" => Some(Item {
-            collectible: Collectible::Key(0),
-            id: 43,
-            x: FP16_ZERO,
-            y: FP16_ZERO,
-        }),
+        "ammo" => Some(49),
+        "silver_key" => Some(43),
+        "grofaz" => Some(224), // FIXME: abuse blinky
         _ => None,
     }
 }
@@ -278,7 +269,8 @@ fn spawn_block_directional_element(input: &str) -> IResult<&str, Vec<EnemySpawnI
             id: start_id + i as i32,
             direction: *direction,
             state: state.clone(),
-            bonus_item: bonus_item(&bonus_item_name),
+            bonus_item: None, //bonus_item(&bonus_item_name),
+            spawn_on_death: spawn_on_death(&bonus_item_name),
         })
     }
     Ok((input, infos))
@@ -295,7 +287,8 @@ fn spawn_block_undirectional_element(input: &str) -> IResult<&str, Vec<EnemySpaw
         id,
         direction: Direction::South, // FIXME: not really undirectional
         state,
-        bonus_item: bonus_item(&bonus_item_name),
+        bonus_item: None, //bonus_item(&bonus_item_name),
+        spawn_on_death: spawn_on_death(&bonus_item_name),
     }];
     Ok((input, infos))
 }

@@ -178,6 +178,26 @@ pub struct ThingDef {
     pub y: Fp16,
 }
 
+impl ThingDef {
+    pub fn from_map_id(c: i32, x: Fp16, y: Fp16) -> Option<ThingDef> {
+        let thing_type = if let Some(spawn_info) = IMG_WL6.spawn_infos.find_spawn_info(c) {
+            println!("spawn info: {spawn_info:?}");
+            ThingType::Enemy(spawn_info.clone())
+        } else {
+            match c {
+                19 => ThingType::PlayerStart(FA_PI_FRAC_PI_2), // NORTH means facing -y
+                20 => ThingType::PlayerStart(0),
+                21 => ThingType::PlayerStart(FA_FRAC_PI_2),
+                22 => ThingType::PlayerStart(FA_PI),
+                23..=71 => ThingType::Prop(c),
+                _ => return None,
+            }
+        };
+        let thing_def = ThingDef { thing_type, x, y };
+        Some(thing_def)
+    }
+}
+
 pub struct ThingDefs {
     pub thing_defs: Vec<ThingDef>,
 }
@@ -189,27 +209,15 @@ impl ThingDefs {
 
         for y in 0..64 {
             for x in 0..64 {
-                let c = plane_iter.next().unwrap();
+                let c = *plane_iter.next().unwrap() as i32;
+                let x = FP16_HALF + x.into();
+                let y = FP16_HALF + y.into();
 
-                let thing_type = if let Some(spawn_info) = IMG_WL6.spawn_infos.find_spawn_info(*c) {
-                    // println!("spawn info: {spawn_info:?}");
-                    ThingType::Enemy(spawn_info.clone())
-                } else {
-                    match *c {
-                        19 => ThingType::PlayerStart(FA_PI_FRAC_PI_2), // NORTH means facing -y
-                        20 => ThingType::PlayerStart(0),
-                        21 => ThingType::PlayerStart(FA_FRAC_PI_2),
-                        22 => ThingType::PlayerStart(FA_PI),
-                        23..=71 => ThingType::Prop((*c) as i32),
-                        _ => continue,
-                    }
+                let thing_def = match ThingDef::from_map_id(c, x, y) {
+                    Some(value) => value,
+                    None => continue,
                 };
-
-                thing_defs.push(ThingDef {
-                    thing_type,
-                    x: FP16_HALF + x.into(),
-                    y: FP16_HALF + y.into(),
-                });
+                thing_defs.push(thing_def);
             }
         }
         ThingDefs { thing_defs }

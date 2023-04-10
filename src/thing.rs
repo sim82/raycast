@@ -140,6 +140,36 @@ impl ms::Writable for Things {
 }
 
 impl Things {
+    fn spawn_from_thing_def(thing_def: &ThingDef, blockmap: &mut BlockMap, unique_id: usize) -> Option<Thing> {
+        let thing = match &thing_def.thing_type {
+            ThingType::Enemy(enemy_spawn_info) => {
+                let enemy = Enemy::spawn(enemy_spawn_info, thing_def);
+
+                blockmap.insert(unique_id, enemy.x, enemy.y);
+                Thing {
+                    unique_id,
+                    actor: Actor::Enemy { enemy },
+                }
+            }
+            ThingType::Prop(sprite_index) => {
+                let actor = try_to_collectible(*sprite_index)
+                    .map(|collectible| Actor::Item {
+                        collected: false,
+                        item: Item {
+                            collectible,
+                            id: *sprite_index,
+                            x: thing_def.x,
+                            y: thing_def.y,
+                        },
+                    })
+                    .unwrap_or_default();
+                Thing { unique_id, actor }
+            }
+            ThingType::PlayerStart(_) => return None,
+        };
+        Some(thing)
+    }
+
     pub fn read_from(r: &mut dyn std::io::Read, thing_defs: ThingDefs) -> Result<Self> {
         let num_things = r.read_u32::<LittleEndian>()?;
         let mut things = Vec::new();
@@ -162,31 +192,9 @@ impl Things {
         let mut things = Vec::new();
         let mut blockmap = BlockMap::default();
         for (i, thing_def) in thing_defs.thing_defs.iter().enumerate() {
-            let thing = match &thing_def.thing_type {
-                ThingType::Enemy(enemy_spawn_info) => {
-                    let enemy = Enemy::spawn(enemy_spawn_info, thing_def);
-
-                    blockmap.insert(i, enemy.x, enemy.y);
-                    Thing {
-                        unique_id: i,
-                        actor: Actor::Enemy { enemy },
-                    }
-                }
-                ThingType::Prop(sprite_index) => {
-                    let actor = try_to_collectible(*sprite_index)
-                        .map(|collectible| Actor::Item {
-                            collected: false,
-                            item: Item {
-                                collectible,
-                                id: *sprite_index,
-                                x: thing_def.x,
-                                y: thing_def.y,
-                            },
-                        })
-                        .unwrap_or_default();
-                    Thing { unique_id: i, actor }
-                }
-                ThingType::PlayerStart(_) => continue,
+            let thing = match Self::spawn_from_thing_def(thing_def, &mut blockmap, i) {
+                Some(value) => value,
+                None => continue,
             };
 
             things.push(thing);
@@ -206,7 +214,7 @@ impl Things {
         // temporarily take out things during mutation
         let mut things = std::mem::take(&mut self.things);
         let mut new_notifications = HashSet::new();
-        let mut spawn_actors = Vec::new();
+        let mut spawn_thing_defs = Vec::new();
 
         for thing in &mut things {
             // let thing_def = &self.thing_defs.thing_defs[thing.static_index];
@@ -268,14 +276,14 @@ impl Things {
                             Some(ThingDef {
                                 thing_type:
                                     ThingType::Enemy(EnemySpawnInfo {
-                                        bonus_item: Some(item), ..
+                                        spawn_on_death: Some(id),
+                                        ..
                                     }),
                                 ..
                             }) => {
-                                let mut item = item.clone();
-                                item.x = enemy.x;
-                                item.y = enemy.y;
-                                spawn_actors.push(Actor::Item { collected: false, item });
+                                if let Some(thing_def) = ThingDef::from_map_id(*id, enemy.x, enemy.y) {
+                                    spawn_thing_defs.push(thing_def);
+                                }
                             }
                             _ => (),
                         }
@@ -296,12 +304,19 @@ impl Things {
         }
         map_dynamic.notifications = new_notifications;
 
-        for actor in spawn_actors {
-            things.push(Thing {
-                actor,
-                unique_id: things.len(), // TODO: rethink: as long as nothing is ever deleted from things this is probably good enough
-            })
+        // for actor in spawn_actors {
+        //     things.push(Thing {
+        //         actor,
+        //         unique_id: things.len(), // TODO: rethink: as long as nothing is ever deleted from things this is probably good enough
+        //     })
+        // }
+        for thing_def in spawn_thing_defs {
+            // TODO: rethink: as long as nothing is ever deleted from things this is probably good enough
+            if let Some(thing) = Self::spawn_from_thing_def(&thing_def, &mut self.blockmap, things.len()) {
+                things.push(thing);
+            }
         }
+
         self.things = things;
     }
     pub fn get_sprites(&self) -> Vec<SpriteDef> {

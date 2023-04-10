@@ -117,6 +117,7 @@ pub struct EnemySpawnInfo {
     pub direction: Direction,
     pub state: String,
     pub bonus_item: Option<Item>,
+    pub spawn_on_death: Option<i32>,
 }
 
 impl ms::Loadable for EnemySpawnInfo {
@@ -125,11 +126,17 @@ impl ms::Loadable for EnemySpawnInfo {
         let direction = Direction::read_from(r)?;
         let state = String::read_from(r)?;
         let bonus_item = Option::<Item>::read_from(r)?;
+        let spawn_on_death = match r.read_i32::<LittleEndian>()? {
+            x if x >= 0 => Some(x),
+            _ => None,
+        };
+
         Ok(Self {
             id,
             direction,
             state,
             bonus_item,
+            spawn_on_death,
         })
     }
 }
@@ -140,6 +147,7 @@ impl ms::Writable for EnemySpawnInfo {
         self.direction.write(w)?;
         self.state.write(w)?;
         self.bonus_item.write(w)?;
+        w.write_i32::<LittleEndian>(self.spawn_on_death.unwrap_or(-1))?;
         Ok(())
     }
 }
@@ -306,8 +314,8 @@ impl SpawnInfos {
         let mut f = Cursor::new(buf);
         SpawnInfos::read_from(&mut f)
     }
-    pub fn find_spawn_info(&self, id: u16) -> Option<&EnemySpawnInfo> {
-        self.spawn_infos.iter().find(|&info| info.id == id as i32)
+    pub fn find_spawn_info(&self, id: i32) -> Option<&EnemySpawnInfo> {
+        self.spawn_infos.iter().find(|&info| info.id == id)
     }
 }
 
