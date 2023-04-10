@@ -209,11 +209,11 @@ impl StateBc {
 }
 
 const WL6_IMAGE: &[u8] = include_bytes!("out.img");
-const WL6_SPAWN_INFO: &[u8] = include_bytes!("out.spawn");
+// const WL6_SPAWN_INFO: &[u8] = include_bytes!("out.spawn");
 
 lazy_static! {
-    static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
-    pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
+    pub static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
+    // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
 }
 
 #[derive(Debug)]

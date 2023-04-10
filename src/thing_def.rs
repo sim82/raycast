@@ -191,14 +191,10 @@ impl ThingDefs {
             for x in 0..64 {
                 let c = plane_iter.next().unwrap();
 
-                let thing_type = if let Some(spawn_info) = SPAWN_INFO_WL6.find_spawn_info(*c) {
+                let thing_type = if let Some(spawn_info) = IMG_WL6.spawn_infos.find_spawn_info(*c) {
                     println!("spawn info: {spawn_info:?}");
                     ThingType::Enemy(spawn_info.clone())
-                }
-                // let thing_type = if let Some(enemy) = ThingDefs::map_enemy(*c) {
-                //     enemy
-                // }
-                else {
+                } else {
                     match *c {
                         19 => ThingType::PlayerStart(FA_PI_FRAC_PI_2), // NORTH means facing -y
                         20 => ThingType::PlayerStart(0),
