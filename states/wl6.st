@@ -265,7 +265,7 @@ shoot:
 }
 
 spawn grofaz {
-    undirectional 224, stand, None
+    undirectional 224, chase, None
 }
 
 states grofaz {
@@ -334,7 +334,8 @@ chase:
 die:
     state MECHA_DIE1, false, 15, None, None, next
     state MECHA_DIE2, false, 15, None, None, next
-    state MECHA_DIE3, false, 15, None, Die, next
+    state MECHA_DIE3, false, 15, None, None, next
+    state MECHA_DIE3, false, 0, None, Die, next
 dead:
     state MECHA_DEAD, false, 0, None, None, dead
 shoot:
