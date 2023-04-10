@@ -302,6 +302,44 @@ shoot:
 }
 
 
+spawn mecha {
+    undirectional 178, stand, grofaz
+}
+
+states mecha {
+stand:
+    state MECHA_W1, false, 0, Stand, None, stand
+path:
+    state MECHA_W1, false, 20, Path, None, next
+    state MECHA_W1, false, 5, None, None, next
+    state MECHA_W2, false, 15, Path, None, next
+    state MECHA_W3, false, 20, Path, None, next
+    state MECHA_W3, false, 5, None, None, next
+    state MECHA_W4, false, 15, Path, None, path
+pain1:
+    state MECHA_DIE1, false, 10, None, None, chase
+pain2:
+    state MECHA_DIE1, false, 10, None, None, chase
+chase:
+    state MECHA_W1, false, 10, Chase, None, next
+    state MECHA_W1, false, 3, None, None, next
+    state MECHA_W2, false, 8, Chase, None, next
+    state MECHA_W3, false, 10, Chase, None, next
+    state MECHA_W3, false, 3, None, None, next
+    state MECHA_W4, false, 8, Chase, None, chase
+die:
+    state MECHA_DIE1, false, 15, None, None, next
+    state MECHA_DIE2, false, 15, None, None, next
+    state MECHA_DIE3, false, 15, None, Die, next
+dead:
+    state MECHA_DEAD, false, 0, None, None, dead
+shoot:
+    state MECHA_SHOOT1, false, 20, None, None, next
+    state MECHA_SHOOT2, false, 20, None, None, next
+    state MECHA_SHOOT3, false, 20, None, Shoot, chase
+}
+
+
 
 states weapon_knife {
 lower:

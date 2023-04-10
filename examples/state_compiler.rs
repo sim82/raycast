@@ -291,14 +291,12 @@ fn spawn_block_undirectional_element(input: &str) -> IResult<&str, Vec<EnemySpaw
     let (input, _) = char(',')(input)?;
     let (input, bonus_item_name) = ws(identifier)(input)?;
 
-    let mut infos = Vec::new();
-
-    infos.push(EnemySpawnInfo {
+    let infos = vec![EnemySpawnInfo {
         id,
         direction: Direction::South, // FIXME: not really undirectional
-        state: state.clone(),
+        state,
         bonus_item: bonus_item(&bonus_item_name),
-    });
+    }];
     Ok((input, infos))
 }
 
@@ -371,7 +369,10 @@ fn main() {
         }
         let _ = write!(enum_file, "\n];");
     }
-    codegen(&outname, &state_blocks, &enums, &SpawnInfos { spawn_infos });
+    // std::fs::rename(from, to)
+    let tmp_outname = format!("{}.tmp", outname);
+    codegen(&tmp_outname, &state_blocks, &enums, &SpawnInfos { spawn_infos });
+    std::fs::rename(tmp_outname, outname).unwrap();
 }
 
 #[test]

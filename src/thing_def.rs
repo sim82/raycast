@@ -192,7 +192,7 @@ impl ThingDefs {
                 let c = plane_iter.next().unwrap();
 
                 let thing_type = if let Some(spawn_info) = IMG_WL6.spawn_infos.find_spawn_info(*c) {
-                    println!("spawn info: {spawn_info:?}");
+                    // println!("spawn info: {spawn_info:?}");
                     ThingType::Enemy(spawn_info.clone())
                 } else {
                     match *c {
