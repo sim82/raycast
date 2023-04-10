@@ -334,15 +334,53 @@ chase:
 die:
     state MECHA_DIE1, false, 15, None, None, next
     state MECHA_DIE2, false, 15, None, None, next
-    state MECHA_DIE3, false, 15, None, None, next
+    state MECHA_DIE3, false, 15, None, Die, next
 dead:
-    state MECHA_DEAD, false, 0, None, Die, dead
+    state MECHA_DEAD, false, 0, None, None, dead
 shoot:
     state MECHA_SHOOT1, false, 20, None, None, next
     state MECHA_SHOOT2, false, 20, None, None, next
     state MECHA_SHOOT3, false, 20, None, Shoot, chase
 }
 
+
+spawn alp {
+    undirectional 160, stand, None
+}
+
+states alp {
+stand:
+    state ALP_W1, false, 0, Stand, None, stand
+path:
+    state ALP_W1, false, 20, Path, None, next
+    state ALP_W1, false, 5, None, None, next
+    state ALP_W2, false, 15, Path, None, next
+    state ALP_W3, false, 20, Path, None, next
+    state ALP_W3, false, 5, None, None, next
+    state ALP_W4, false, 15, Path, None, path
+pain1:
+    state ALP_DIE1, false, 10, None, None, chase
+pain2:
+    state ALP_DIE1, false, 10, None, None, chase
+chase:
+    state ALP_W1, false, 10, Chase, None, next
+    state ALP_W1, false, 3, None, None, next
+    state ALP_W2, false, 8, Chase, None, next
+    state ALP_W3, false, 10, Chase, None, next
+    state ALP_W3, false, 3, None, None, next
+    state ALP_W4, false, 8, Chase, None, chase
+die:
+    state ALP_DIE1, false, 15, None, None, next
+    state ALP_DIE2, false, 15, None, None, next
+    state ALP_DIE3, false, 15, None, None, next
+    state ALP_DIE4, false, 15, None, None, next
+    state ALP_DIE5, false, 15, None, Die, next
+dead:
+    state ALP_DEAD, false, 0, None, None, dead
+shoot:
+    state ALP_W1, false, 20, None, None, next
+    state ALP_W1, false, 20, None, Shoot, chase
+}
 
 
 states weapon_knife {
@@ -537,7 +575,7 @@ enum
     PARTY_O1,PARTY_O2,PARTY_O3,PARTY_O4,
     
     ALP_W1,ALP_W2,ALP_W3,ALP_W4,
-    ALP_SHOOT,FIRE1,FIRE2,
+    ALP_SHOOT,ALP_FIRE1,ALP_FIRE2,
     ALP_DIE1,ALP_DIE2,ALP_DIE3,ALP_DIE4,
     ALP_DIE5,ALP_DEAD,
     
