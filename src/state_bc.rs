@@ -220,6 +220,7 @@ lazy_static! {
 pub struct ExecImage {
     pub code: &'static [u8],
     pub labels: HashMap<String, i32>,
+    pub spawn_infos: SpawnInfos,
 }
 
 #[derive(Debug)]
@@ -277,8 +278,14 @@ impl ExecImage {
 
             labels.insert(String::from_utf8(name)?, ptr);
         }
+        let spawn_infos = SpawnInfos::read_from(&mut f)?;
         // println!("labels: {labels:?}");
-        Ok(ExecImage { code, labels })
+        let code_offs = f.position() as usize;
+        Ok(ExecImage {
+            code: &code[code_offs..],
+            labels,
+            spawn_infos,
+        })
     }
     pub fn read_state(&self, ptr: i32) -> Result<StateBc> {
         StateBc::read_from(&mut std::io::Cursor::new(&self.code[(ptr as usize)..]))
@@ -296,17 +303,33 @@ impl ExecImage {
 
 impl SpawnInfos {
     pub fn from_bytes(buf: &[u8]) -> Result<Self> {
-        let mut spawn_infos = Vec::new();
         let mut f = Cursor::new(buf);
-        let num = f.read_i32::<LittleEndian>()?;
+        SpawnInfos::read_from(&mut f)
+    }
+    pub fn find_spawn_info(&self, id: u16) -> Option<&EnemySpawnInfo> {
+        self.spawn_infos.iter().find(|&info| info.id == id as i32)
+    }
+}
+
+impl ms::Loadable for SpawnInfos {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        let num = r.read_i32::<LittleEndian>()?;
+        let mut spawn_infos = Vec::new();
 
         for _ in 0..num {
-            spawn_infos.push(EnemySpawnInfo::read_from(&mut f)?)
+            spawn_infos.push(EnemySpawnInfo::read_from(r)?)
         }
 
         Ok(Self { spawn_infos })
     }
-    pub fn find_spawn_info(&self, id: u16) -> Option<&EnemySpawnInfo> {
-        self.spawn_infos.iter().find(|&info| info.id == id as i32)
+}
+
+impl ms::Writable for SpawnInfos {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        w.write_i32::<LittleEndian>(self.spawn_infos.len() as i32)?;
+        for spawn_info in &self.spawn_infos {
+            spawn_info.write(w)?;
+        }
+        Ok(())
     }
 }

@@ -11,105 +11,14 @@ pub enum Difficulty {
     Hard,
 }
 
-// #[derive(Clone, Copy, Debug)]
-// pub enum EnemyType {
-//     Brown,
-//     Blue,
-//     White,
-//     Rotten,
-//     Woof,
-//     Hans,
-// }
-
-// impl ms::Loadable for EnemyType {
-//     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-//         Ok(match r.read_u8()? {
-//             0 => EnemyType::Brown,
-//             1 => EnemyType::Blue,
-//             2 => EnemyType::White,
-//             3 => EnemyType::Rotten,
-//             4 => EnemyType::Woof,
-//             5 => EnemyType::Hans,
-//             x => return Err(anyhow!("unhandled EnemyType discriminator {x}")),
-//         })
-//     }
-// }
-
-// impl ms::Writable for EnemyType {
-//     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-//         w.write_u8(match self {
-//             EnemyType::Brown => 0,
-//             EnemyType::Blue => 1,
-//             EnemyType::White => 2,
-//             EnemyType::Rotten => 3,
-//             EnemyType::Woof => 4,
-//             EnemyType::Hans => 5,
-//         })?;
-//         Ok(())
-//     }
-// }
-
 pub struct EnemyCapabilities {
     pub can_open_doors: bool,
 }
-
-// impl EnemyType {
-//     pub fn get_capabilities(&self) -> EnemyCapabilities {
-//         match self {
-//             EnemyType::Woof => EnemyCapabilities { can_open_doors: false },
-//             _ => EnemyCapabilities { can_open_doors: false },
-//         }
-//     }
-// }
 
 pub fn get_capabilities_by_name(name: &str) -> EnemyCapabilities {
     EnemyCapabilities {
         can_open_doors: name != "furry",
     }
-}
-
-pub enum AnimationPhase {
-    Stand,
-    Walk,
-    Pain,
-    Die,
-    Dead,
-    Shoot,
-}
-
-pub enum AnimationState {
-    Stand,
-    Walk1,
-    Walk2,
-    Walk3,
-    Walk4,
-}
-
-impl AnimationState {
-    pub fn sprite_offset(&self) -> i32 {
-        match self {
-            AnimationState::Stand => 0,
-            AnimationState::Walk1 => 8,
-            AnimationState::Walk2 => 16,
-            AnimationState::Walk3 => 24,
-            AnimationState::Walk4 => 32,
-        }
-    }
-    pub fn advance_animation(&self) -> Self {
-        match self {
-            AnimationState::Stand => AnimationState::Stand,
-            AnimationState::Walk1 => AnimationState::Walk2,
-            AnimationState::Walk2 => AnimationState::Walk3,
-            AnimationState::Walk3 => AnimationState::Walk4,
-            AnimationState::Walk4 => AnimationState::Walk1,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum EnemyState {
-    Standing,
-    Patrolling,
 }
 
 #[derive(Clone, Debug)]
@@ -310,27 +219,7 @@ impl ThingDefs {
         ThingDefs { thing_defs }
     }
 
-    fn oa(o: u16) -> Direction {
-        match o % 4 {
-            // 0 => Direction::East,
-            // 1 => Direction::South,
-            // 2 => Direction::West,
-            // 3 => Direction::North,
-            0 => Direction::East,
-            1 => Direction::North,
-            2 => Direction::West,
-            3 => Direction::South,
-            _ => panic!(),
-        }
-    }
-    fn os(o: u16) -> EnemyState {
-        if o <= 3 {
-            EnemyState::Standing
-        } else {
-            EnemyState::Patrolling
-        }
-    }
-
+    // keep for reference:
     // #[rustfmt::skip]
     //     fn map_enemy(t: u16) -> Option<ThingType> {
     //         Some(match t {

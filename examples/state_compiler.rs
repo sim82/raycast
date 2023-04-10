@@ -14,7 +14,11 @@ use nom::{
     sequence::{delimited, pair, terminated},
     IResult,
 };
-use raycast::{ms::Writable, prelude::*, state_bc};
+use raycast::{
+    ms::Writable,
+    prelude::*,
+    state_bc::{self, SpawnInfos},
+};
 
 #[derive(Debug)]
 enum ToplevelElement {
@@ -53,7 +57,7 @@ struct SpawnBlock {
     infos: Vec<EnemySpawnInfo>,
 }
 
-fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String, usize>) {
+fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String, usize>, spawn_infos: &SpawnInfos) {
     let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
 
     let mut states = Vec::new();
@@ -79,12 +83,13 @@ fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String,
         }
     }
 
-    // pass2: generate code
-    // calculate size of labels section
-    let mut ip = label_ptrs.keys().map(|k| k.len() as i32 + 1 + 4).sum::<i32>() + 4;
-    // 're-locate' label pointers to point after the labels section
-    println!("bc offset: {ip}");
-    label_ptrs.values_mut().for_each(|i| *i += ip);
+    // // pass2: generate code
+    // // calculate size of labels section
+    // let mut ip = label_ptrs.keys().map(|k| k.len() as i32 + 1 + 4).sum::<i32>() + 4;
+    // // 're-locate' label pointers to point after the labels section
+    // println!("bc offset: {ip}");
+    // label_ptrs.values_mut().for_each(|i| *i += ip);
+    let mut ip = 0;
 
     for state_block in state_blocks {
         for element in &state_block.elements {
@@ -127,6 +132,8 @@ fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String,
         let _ = f.write(b).unwrap();
         f.write_i32::<LittleEndian>(*ptr).unwrap();
     }
+    spawn_infos.write(&mut f).unwrap();
+
     for state in states {
         state.write(&mut f).unwrap();
     }
@@ -325,7 +332,6 @@ fn parse_toplevel(input: &str) -> IResult<&str, ToplevelElement> {
 fn main() {
     let filename = std::env::args().nth(1).expect("missing input file");
     let outname = std::env::args().nth(2).expect("missing output file");
-    let spawn_name = std::env::args().nth(3).expect("missing spawn info file");
 
     let input = std::fs::read_to_string(filename).expect("failed to read input file");
 
@@ -365,17 +371,7 @@ fn main() {
         }
         let _ = write!(enum_file, "\n];");
     }
-    codegen(&outname, &state_blocks, &enums);
-
-    {
-        let mut spawn_info_file = std::fs::File::create(spawn_name).unwrap();
-        spawn_info_file
-            .write_i32::<LittleEndian>(spawn_infos.len() as i32)
-            .unwrap();
-        for spawn_info in &spawn_infos {
-            spawn_info.write(&mut spawn_info_file).unwrap();
-        }
-    }
+    codegen(&outname, &state_blocks, &enums, &SpawnInfos { spawn_infos });
 }
 
 #[test]

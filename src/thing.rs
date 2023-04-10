@@ -264,7 +264,6 @@ impl Things {
                         self.blockmap.remove(thing.unique_id, old_x, old_y);
 
                         let thing_def = self.thing_defs.thing_defs.get(thing.unique_id);
-                        println!("spawn: {thing_def:?}");
                         match thing_def {
                             Some(ThingDef {
                                 thing_type:
@@ -310,15 +309,9 @@ impl Things {
             .iter()
             .enumerate()
             .filter_map(|(i, thing)| {
-                // let thing_def = &self.thing_defs.thing_defs[thing.static_index];
-                // println!("{:?} {:?}", thing_def.thing_type, thing.actor);
                 match &thing.actor {
                     Actor::Enemy { enemy } => {
                         let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
-
-                        // if  enemy.dbg_see_player {
-                        //     id = SpriteIndex::Undirectional(1)
-                        // }
                         Some(SpriteDef { id, x, y, owner: i })
                     }
                     Actor::Item { collected: false, item } => Some(SpriteDef {
