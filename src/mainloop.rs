@@ -68,8 +68,9 @@ pub struct Mainloop {
     // resources: Resources,
     map_dynamic: MapDynamic,
     things: Things,
-    player: Player,
+    pub player: Player,
     level_id: i32,
+    pub map_name: String,
     player_vel: PlayerVel,
     automap: bool,
     stop_the_world_mode: bool,
@@ -162,6 +163,7 @@ impl Mainloop {
             things,
             player,
             level_id,
+            map_name: maps.get_map_name(level_id).to_string(),
             player_vel,
             automap: false,
             stop_the_world_mode: false,
@@ -351,7 +353,7 @@ impl Mainloop {
         buffer.point(320 / 2, 80, 4);
 
         // draw_string8x8("Get Psyched!", &mut buffer[..], 100, 160);
-        hud::draw_status_bar(&mut buffer[..], &self.player);
+        hud::draw_status_bar(&mut buffer[..], &self);
 
         if self.player.shoot {
             if let Some(hit_thing) = hit_thing {

@@ -264,6 +264,43 @@ shoot:
     state BOSS_SHOOT3, false, 20, None, Shoot, chase
 }
 
+spawn good_dr {
+    undirectional 196, stand, None
+}
+
+states good_dr {
+stand:
+    state GOOD_DR_W1, false, 0, Stand, None, stand
+path:
+    state GOOD_DR_W1, false, 20, Path, None, next
+    state GOOD_DR_W1, false, 5, None, None, next
+    state GOOD_DR_W2, false, 15, Path, None, next
+    state GOOD_DR_W3, false, 20, Path, None, next
+    state GOOD_DR_W3, false, 5, None, None, next
+    state GOOD_DR_W4, false, 15, Path, None, path
+pain1:
+    state GOOD_DR_W1, false, 10, None, None, chase
+pain2:
+    state GOOD_DR_W1, false, 10, None, None, chase
+chase:
+    state GOOD_DR_W1, false, 10, Chase, None, next
+    state GOOD_DR_W1, false, 3, None, None, next
+    state GOOD_DR_W2, false, 8, Chase, None, next
+    state GOOD_DR_W3, false, 10, Chase, None, next
+    state GOOD_DR_W3, false, 3, None, None, next
+    state GOOD_DR_W4, false, 8, Chase, None, chase
+die:
+    state GOOD_DR_DIE1, false, 15, None, None, next
+    state GOOD_DR_DIE2, false, 15, None, None, next
+    state GOOD_DR_DIE3, false, 15, None, Die, dead
+dead:
+    state GOOD_DR_DEAD, false, 0, None, None, dead
+shoot:
+    state GOOD_DR_SHOOT1, false, 20, None, None, next
+    state GOOD_DR_SHOOT2, false, 20, None, Shoot, chase
+}
+
+
 spawn grofaz {
     undirectional 224, chase, None
 }
@@ -382,6 +419,118 @@ shoot:
     state ALP_W1, false, 20, None, None, next
     state ALP_W1, false, 20, None, Shoot, chase
 }
+
+
+spawn hermann {
+    undirectional 215, stand, None
+}
+
+states hermann {
+stand:
+    state HERMANN_W1, false, 0, Stand, None, stand
+path:
+    state HERMANN_W1, false, 20, Path, None, next
+    state HERMANN_W1, false, 5, None, None, next
+    state HERMANN_W2, false, 15, Path, None, next
+    state HERMANN_W3, false, 20, Path, None, next
+    state HERMANN_W3, false, 5, None, None, next
+    state HERMANN_W4, false, 15, Path, None, path
+pain1:
+    state HERMANN_W1, false, 10, None, None, chase
+pain2:
+    state HERMANN_W1, false, 10, None, None, chase
+chase:
+    state HERMANN_W1, false, 10, Chase, None, next
+    state HERMANN_W1, false, 3, None, None, next
+    state HERMANN_W2, false, 8, Chase, None, next
+    state HERMANN_W3, false, 10, Chase, None, next
+    state HERMANN_W3, false, 3, None, None, next
+    state HERMANN_W4, false, 8, Chase, None, chase
+die:
+    state HERMANN_DIE1, false, 15, None, None, next
+    state HERMANN_DIE2, false, 15, None, None, next
+    state HERMANN_DIE3, false, 15, None, Die, dead
+dead:
+    state HERMANN_DEAD, false, 0, None, None, dead
+shoot:
+    state HERMANN_SHOOT1, false, 20, None, None, next
+    state HERMANN_SHOOT2, false, 20, None, Shoot, chase
+}
+
+spawn gretel {
+    undirectional 197, stand, None
+}
+
+states gretel {
+stand:
+    state GRETEL_W1, false, 0, Stand, None, stand
+path:
+    state GRETEL_W1, false, 20, Path, None, next
+    state GRETEL_W1, false, 5, None, None, next
+    state GRETEL_W2, false, 15, Path, None, next
+    state GRETEL_W3, false, 20, Path, None, next
+    state GRETEL_W3, false, 5, None, None, next
+    state GRETEL_W4, false, 15, Path, None, path
+pain1:
+    state GRETEL_W1, false, 10, None, None, chase
+pain2:
+    state GRETEL_W1, false, 10, None, None, chase
+chase:
+    state GRETEL_W1, false, 10, Chase, None, next
+    state GRETEL_W1, false, 3, None, None, next
+    state GRETEL_W2, false, 8, Chase, None, next
+    state GRETEL_W3, false, 10, Chase, None, next
+    state GRETEL_W3, false, 3, None, None, next
+    state GRETEL_W4, false, 8, Chase, None, chase
+die:
+    state GRETEL_DIE1, false, 15, None, None, next
+    state GRETEL_DIE2, false, 15, None, None, next
+    state GRETEL_DIE3, false, 15, None, Die, dead
+dead:
+    state GRETEL_DEAD, false, 0, None, None, dead
+shoot:
+    state GRETEL_SHOOT1, false, 20, None, None, next
+    state GRETEL_SHOOT2, false, 20, None, Shoot, chase
+}
+
+spawn fettgeischt {
+    undirectional 179, stand, None
+}
+
+states fettgeischt {
+stand:
+    state FETTGEISCHT_W1, false, 0, Stand, None, stand
+path:
+    state FETTGEISCHT_W1, false, 20, Path, None, next
+    state FETTGEISCHT_W1, false, 5, None, None, next
+    state FETTGEISCHT_W2, false, 15, Path, None, next
+    state FETTGEISCHT_W3, false, 20, Path, None, next
+    state FETTGEISCHT_W3, false, 5, None, None, next
+    state FETTGEISCHT_W4, false, 15, Path, None, path
+pain1:
+    state FETTGEISCHT_W1, false, 10, None, None, chase
+pain2:
+    state FETTGEISCHT_W1, false, 10, None, None, chase
+chase:
+    state FETTGEISCHT_W1, false, 10, Chase, None, next
+    state FETTGEISCHT_W1, false, 3, None, None, next
+    state FETTGEISCHT_W2, false, 8, Chase, None, next
+    state FETTGEISCHT_W3, false, 10, Chase, None, next
+    state FETTGEISCHT_W3, false, 3, None, None, next
+    state FETTGEISCHT_W4, false, 8, Chase, None, chase
+die:
+    state FETTGEISCHT_DIE1, false, 15, None, None, next
+    state FETTGEISCHT_DIE2, false, 15, None, None, next
+    state FETTGEISCHT_DIE3, false, 15, None, Die, dead
+dead:
+    state FETTGEISCHT_DEAD, false, 0, None, None, dead
+shoot:
+    state FETTGEISCHT_SHOOT1, false, 20, None, None, next
+    state FETTGEISCHT_SHOOT2, false, 20, None, None, next
+    state FETTGEISCHT_SHOOT3, false, 20, None, None, next
+    state FETTGEISCHT_SHOOT4, false, 20, None, Shoot, chase
+}
+
 
 
 states weapon_knife {

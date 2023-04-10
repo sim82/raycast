@@ -181,7 +181,7 @@ pub struct ThingDef {
 impl ThingDef {
     pub fn from_map_id(c: i32, x: Fp16, y: Fp16) -> Option<ThingDef> {
         let thing_type = if let Some(spawn_info) = IMG_WL6.spawn_infos.find_spawn_info(c) {
-            println!("spawn info: {spawn_info:?}");
+            // println!("spawn info: {spawn_info:?}");
             ThingType::Enemy(spawn_info.clone())
         } else {
             match c {

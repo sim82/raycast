@@ -59,7 +59,7 @@ fn try_find_pathaction(thing: &Enemy, map_dynamic: &mut MapDynamic, things: &Thi
     let enter_y = thing.y.get_int() + dy;
     match map_dynamic.lookup_tile(enter_x, enter_y) {
         MapTile::Door(_, _, door_id) if !thing.direction.is_diagonal() => {
-            println!("open door");
+            // println!("open door");
             Some(PathAction::WaitForDoor { door_id })
         }
         // MapTile::Door(_, _, door_id) => {
@@ -119,7 +119,7 @@ fn try_chase_pathaction(
     let enter_y = thing.y.get_int() + dy;
     match map_dynamic.lookup_tile(enter_x, enter_y) {
         MapTile::Door(_, _, door_id) if !direction.is_diagonal() => {
-            println!("open door");
+            // println!("open door");
             Some(PathAction::WaitForDoor { door_id })
         }
         MapTile::Walkable(_, _) => {
