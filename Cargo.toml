@@ -16,6 +16,7 @@ rand = { version = "0.8" }
 
 [dev-dependencies]
 nom = "7"
+nom_locate = "*"
 
 [profile.release]
 opt-level = 3     # Optimize for size

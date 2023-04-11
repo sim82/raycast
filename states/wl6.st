@@ -145,6 +145,7 @@ spawn rotten {
     directional 256, path, ammo
 }
 
+
 states rotten {
 stand:
     state ROTTEN_S_1, true, 0, Stand, None, stand
@@ -379,8 +380,7 @@ shoot:
     state MECHA_SHOOT1, false, 20, None, None, next
     state MECHA_SHOOT2, false, 20, None, None, next
     state MECHA_SHOOT3, false, 20, None, Shoot, chase
-}
-
+} 
 
 spawn alp {
     undirectional 160, stand, None
