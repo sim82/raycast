@@ -28,149 +28,19 @@ pub enum ThingType {
     Prop(i32),
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub enum Direction {
-    East,
-    SouthEast,
-    South,
-    SouthWest,
-    West,
-    NorthWest,
-    North,
-    NorthEast,
-}
-
-impl ms::Loadable for Direction {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
-            0 => Direction::North, // TEMP: keep backward compatible with serialized Direction enum
-            1 => Direction::East,
-            2 => Direction::South,
-            3 => Direction::West,
-            4 => Direction::NorthEast,
-            5 => Direction::NorthWest,
-            6 => Direction::SouthWest,
-            7 => Direction::SouthEast,
-            x => return Err(anyhow!("unrecognized Direction discriminator {x}")),
-        })
+pub fn direction_angle(d: &Direction) -> i32 {
+    match d {
+        Direction::North => FA_PI_FRAC_PI_2,
+        Direction::NorthEast => FA_PI_FRAC_PI_2 + FA_FRAC_PI_4,
+        Direction::East => 0,
+        Direction::SouthEast => FA_FRAC_PI_4,
+        Direction::South => FA_FRAC_PI_2,
+        Direction::SouthWest => FA_FRAC_PI_2 + FA_FRAC_PI_4,
+        Direction::West => FA_PI,
+        Direction::NorthWest => FA_PI + FA_FRAC_PI_4,
     }
 }
 
-impl ms::Writable for Direction {
-    fn write(&self, w: &mut dyn Write) -> Result<()> {
-        match self {
-            Direction::North => w.write_u8(0)?,
-            Direction::East => w.write_u8(1)?,
-            Direction::South => w.write_u8(2)?,
-            Direction::West => w.write_u8(3)?,
-            Direction::NorthEast => w.write_u8(4)?,
-            Direction::NorthWest => w.write_u8(5)?,
-            Direction::SouthWest => w.write_u8(6)?,
-            Direction::SouthEast => w.write_u8(7)?,
-        }
-
-        Ok(())
-    }
-}
-
-impl Direction {
-    pub fn try_from_prop_id(p: i32) -> Option<Direction> {
-        Some(match p {
-            0x5a => Direction::East,
-            0x5b => Direction::NorthEast,
-            0x5c => Direction::North,
-            0x5d => Direction::NorthWest,
-            0x5e => Direction::West,
-            0x5f => Direction::SouthWest,
-            0x60 => Direction::South,
-            0x61 => Direction::SouthEast,
-            _ => return None,
-        })
-    }
-
-    pub fn is_diagonal(&self) -> bool {
-        matches!(
-            self,
-            Direction::SouthEast | Direction::SouthWest | Direction::NorthWest | Direction::NorthEast
-        )
-    }
-}
-
-impl Direction {
-    pub fn angle(&self) -> i32 {
-        match &self {
-            Direction::North => FA_PI_FRAC_PI_2,
-            Direction::NorthEast => FA_PI_FRAC_PI_2 + FA_FRAC_PI_4,
-            Direction::East => 0,
-            Direction::SouthEast => FA_FRAC_PI_4,
-            Direction::South => FA_FRAC_PI_2,
-            Direction::SouthWest => FA_FRAC_PI_2 + FA_FRAC_PI_4,
-            Direction::West => FA_PI,
-            Direction::NorthWest => FA_PI + FA_FRAC_PI_4,
-        }
-    }
-    pub fn sprite_offset(&self) -> i32 {
-        match &self {
-            Direction::North => 0,
-            Direction::NorthEast => 1,
-            Direction::East => 2,
-            Direction::SouthEast => 3,
-            Direction::South => 4,
-            Direction::SouthWest => 5,
-            Direction::West => 6,
-            Direction::NorthWest => 7,
-        }
-    }
-
-    pub fn tile_offset(&self) -> (i32, i32) {
-        match self {
-            Direction::NorthWest => (-1, -1),
-            Direction::North => (0, -1),
-            Direction::NorthEast => (1, -1),
-            Direction::East => (1, 0),
-            Direction::SouthEast => (1, 1),
-            Direction::South => (0, 1),
-            Direction::SouthWest => (-1, 1),
-            Direction::West => (-1, 0),
-        }
-    }
-    pub fn x_offs(&self) -> i32 {
-        match self {
-            Direction::NorthWest => -1,
-            Direction::North => 0,
-            Direction::NorthEast => 1,
-            Direction::East => 1,
-            Direction::SouthEast => 1,
-            Direction::South => 0,
-            Direction::SouthWest => -1,
-            Direction::West => -1,
-        }
-    }
-    pub fn y_offs(&self) -> i32 {
-        match self {
-            Direction::NorthWest => -1,
-            Direction::North => -1,
-            Direction::NorthEast => -1,
-            Direction::East => 0,
-            Direction::SouthEast => 1,
-            Direction::South => 1,
-            Direction::SouthWest => 1,
-            Direction::West => 0,
-        }
-    }
-    pub fn opposite(&self) -> Direction {
-        match self {
-            Direction::East => Direction::West,
-            Direction::SouthEast => Direction::NorthWest,
-            Direction::South => Direction::North,
-            Direction::SouthWest => Direction::NorthEast,
-            Direction::West => Direction::East,
-            Direction::NorthWest => Direction::SouthEast,
-            Direction::North => Direction::South,
-            Direction::NorthEast => Direction::SouthWest,
-        }
-    }
-}
 #[derive(Debug)]
 pub struct ThingDef {
     pub thing_type: ThingType,

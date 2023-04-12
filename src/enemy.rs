@@ -499,7 +499,7 @@ pub struct Enemy {
 
 impl ms::Loadable for Enemy {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        let exec_ctx = ExecCtx::read_from(r)?;
+        let exec_ctx = ExecCtx::read_from(r, &IMG_WL6)?;
         // let enemy_type = EnemyType::read_from(r)?;
         let enemy_type_name = String::read_from(r)?;
         let direction = Direction::read_from(r)?;
@@ -598,7 +598,7 @@ impl Enemy {
     }
 
     pub fn spawn(enemy_spawn_info: &EnemySpawnInfo, thing_def: &ThingDef) -> Enemy {
-        let exec_ctx = ExecCtx::new(&enemy_spawn_info.state).unwrap();
+        let exec_ctx = ExecCtx::new(&enemy_spawn_info.state, &IMG_WL6).unwrap();
 
         // FIXME: hack. find better solution for 'enemy type name'
         let enemy_type_name = enemy_spawn_info.state.split("::").next().unwrap().to_string();

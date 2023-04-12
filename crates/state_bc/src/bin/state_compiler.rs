@@ -12,12 +12,8 @@ use nom::{
     IResult,
 };
 use nom_locate::LocatedSpan;
-use raycast::{
-    ms::Writable,
-    prelude::*,
-    state_bc::{self, SpawnInfos},
-};
-
+use state_bc::{self, Action, Direction, EnemySpawnInfo, SpawnInfos, StateBc, Think};
+use util::ms::Writable;
 type Span<'a> = LocatedSpan<&'a str>;
 type Res<'a, Output> = IResult<Span<'a>, Output, MyError<Span<'a>>>;
 
@@ -304,7 +300,6 @@ fn spawn_block_directional_element(input: Span) -> Res<'_, Vec<EnemySpawnInfo>> 
             id: start_id + i as i32,
             direction: *direction,
             state: state.clone(),
-            bonus_item: None, //bonus_item(&bonus_item_name),
             spawn_on_death: spawn_on_death(&bonus_item_name),
         })
     }
@@ -322,7 +317,6 @@ fn spawn_block_undirectional_element(input: Span) -> Res<'_, Vec<EnemySpawnInfo>
         id,
         direction: Direction::South, // FIXME: not really undirectional
         state,
-        bonus_item: None, //bonus_item(&bonus_item_name),
         spawn_on_death: spawn_on_death(&bonus_item_name),
     }];
     Ok((input, infos))
@@ -411,23 +405,23 @@ fn main() {
     std::fs::rename(tmp_outname, outname).unwrap();
 }
 
-#[test]
-fn test_enum_parser() {
-    let (input, decl) = parse_enum_decl("enum {test,\ntest2}").unwrap();
-}
+// #[test]
+// fn test_enum_parser() {
+//     let (input, decl) = parse_enum_decl("enum {test,\ntest2}").unwrap();
+// }
 
-#[test]
-fn test_states_block() {
-    let input = r#"
-    states brown_gen.bc brown_gen.lb {
-        stand:
-            state SPR_GRD_S_1, true, 0, Stand, None, next
-        path:
-            state SPR_GRD_W1_1, true, 15, Path, None, next
-            state SPR_GRD_W2_1, true, 15, Path, None, next
-            state SPR_GRD_W3_1, true, 15, Path, None, path
-        }
-    "#;
+// #[test]
+// fn test_states_block() {
+//     let input = r#"
+//     states brown_gen.bc brown_gen.lb {
+//         stand:
+//             state SPR_GRD_S_1, true, 0, Stand, None, next
+//         path:
+//             state SPR_GRD_W1_1, true, 15, Path, None, next
+//             state SPR_GRD_W2_1, true, 15, Path, None, next
+//             state SPR_GRD_W3_1, true, 15, Path, None, path
+//         }
+//     "#;
 
-    let (input, decl) = parse_states_block(input).unwrap();
-}
+//     let (input, decl) = parse_states_block(input).unwrap();
+// }

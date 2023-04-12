@@ -1,4 +1,4 @@
-use crate::prelude::{Fp16, WIDTH};
+use crate::prelude::Fp16;
 use lazy_static::lazy_static;
 use std;
 
@@ -17,15 +17,6 @@ pub const TAN_CLAMP: f32 = 128.0;
 pub const FA_STEPS: usize = 3600;
 
 lazy_static! {
-    pub static ref COL_ANGLE: [i32; WIDTH] = {
-        let mut col_angle = [0; WIDTH];
-        for i in 0..WIDTH / 2 {
-            let f = (i as f32) / (WIDTH as f32 * 0.50);
-            col_angle[WIDTH / 2 + i] = (f.atan().to_degrees() * FA_SCALEF) as i32;
-            col_angle[WIDTH / 2 - i - 1] = ((-f.atan()).to_degrees() * FA_SCALEF) as i32;
-        }
-        col_angle
-    };
     static ref SIN_TABLE: [Fp16; FA_STEPS] = {
         let mut t = [Fp16::default(); FA_STEPS];
         #[allow(clippy::needless_range_loop)]

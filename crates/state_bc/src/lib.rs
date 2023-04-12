@@ -1,10 +1,13 @@
-use crate::{ms::Loadable, prelude::*};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     io::{Cursor, Read, Write},
+};
+use util::{
+    ms::{self, Loadable},
+    prelude::*,
 };
 
 #[derive(Debug, Default)]
@@ -111,12 +114,143 @@ impl ms::Writable for Action {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum Direction {
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest,
+    North,
+    NorthEast,
+}
+
+impl ms::Loadable for Direction {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        Ok(match r.read_u8()? {
+            0 => Direction::North, // TEMP: keep backward compatible with serialized Direction enum
+            1 => Direction::East,
+            2 => Direction::South,
+            3 => Direction::West,
+            4 => Direction::NorthEast,
+            5 => Direction::NorthWest,
+            6 => Direction::SouthWest,
+            7 => Direction::SouthEast,
+            x => return Err(anyhow!("unrecognized Direction discriminator {x}")),
+        })
+    }
+}
+
+impl ms::Writable for Direction {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        match self {
+            Direction::North => w.write_u8(0)?,
+            Direction::East => w.write_u8(1)?,
+            Direction::South => w.write_u8(2)?,
+            Direction::West => w.write_u8(3)?,
+            Direction::NorthEast => w.write_u8(4)?,
+            Direction::NorthWest => w.write_u8(5)?,
+            Direction::SouthWest => w.write_u8(6)?,
+            Direction::SouthEast => w.write_u8(7)?,
+        }
+
+        Ok(())
+    }
+}
+
+impl Direction {
+    pub fn try_from_prop_id(p: i32) -> Option<Direction> {
+        Some(match p {
+            0x5a => Direction::East,
+            0x5b => Direction::NorthEast,
+            0x5c => Direction::North,
+            0x5d => Direction::NorthWest,
+            0x5e => Direction::West,
+            0x5f => Direction::SouthWest,
+            0x60 => Direction::South,
+            0x61 => Direction::SouthEast,
+            _ => return None,
+        })
+    }
+
+    pub fn is_diagonal(&self) -> bool {
+        matches!(
+            self,
+            Direction::SouthEast | Direction::SouthWest | Direction::NorthWest | Direction::NorthEast
+        )
+    }
+}
+
+impl Direction {
+    pub fn sprite_offset(&self) -> i32 {
+        match &self {
+            Direction::North => 0,
+            Direction::NorthEast => 1,
+            Direction::East => 2,
+            Direction::SouthEast => 3,
+            Direction::South => 4,
+            Direction::SouthWest => 5,
+            Direction::West => 6,
+            Direction::NorthWest => 7,
+        }
+    }
+
+    pub fn tile_offset(&self) -> (i32, i32) {
+        match self {
+            Direction::NorthWest => (-1, -1),
+            Direction::North => (0, -1),
+            Direction::NorthEast => (1, -1),
+            Direction::East => (1, 0),
+            Direction::SouthEast => (1, 1),
+            Direction::South => (0, 1),
+            Direction::SouthWest => (-1, 1),
+            Direction::West => (-1, 0),
+        }
+    }
+    pub fn x_offs(&self) -> i32 {
+        match self {
+            Direction::NorthWest => -1,
+            Direction::North => 0,
+            Direction::NorthEast => 1,
+            Direction::East => 1,
+            Direction::SouthEast => 1,
+            Direction::South => 0,
+            Direction::SouthWest => -1,
+            Direction::West => -1,
+        }
+    }
+    pub fn y_offs(&self) -> i32 {
+        match self {
+            Direction::NorthWest => -1,
+            Direction::North => -1,
+            Direction::NorthEast => -1,
+            Direction::East => 0,
+            Direction::SouthEast => 1,
+            Direction::South => 1,
+            Direction::SouthWest => 1,
+            Direction::West => 0,
+        }
+    }
+    pub fn opposite(&self) -> Direction {
+        match self {
+            Direction::East => Direction::West,
+            Direction::SouthEast => Direction::NorthWest,
+            Direction::South => Direction::North,
+            Direction::SouthWest => Direction::NorthEast,
+            Direction::West => Direction::East,
+            Direction::NorthWest => Direction::SouthEast,
+            Direction::North => Direction::South,
+            Direction::NorthEast => Direction::SouthWest,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct EnemySpawnInfo {
     pub id: i32,
     pub direction: Direction,
     pub state: String,
-    pub bonus_item: Option<Item>,
     pub spawn_on_death: Option<i32>,
 }
 
@@ -125,7 +259,7 @@ impl ms::Loadable for EnemySpawnInfo {
         let id = r.read_i32::<LittleEndian>()?;
         let direction = Direction::read_from(r)?;
         let state = String::read_from(r)?;
-        let bonus_item = Option::<Item>::read_from(r)?;
+
         let spawn_on_death = match r.read_i32::<LittleEndian>()? {
             x if x >= 0 => Some(x),
             _ => None,
@@ -135,7 +269,7 @@ impl ms::Loadable for EnemySpawnInfo {
             id,
             direction,
             state,
-            bonus_item,
+
             spawn_on_death,
         })
     }
@@ -146,7 +280,7 @@ impl ms::Writable for EnemySpawnInfo {
         w.write_i32::<LittleEndian>(self.id)?;
         self.direction.write(w)?;
         self.state.write(w)?;
-        self.bonus_item.write(w)?;
+
         w.write_i32::<LittleEndian>(self.spawn_on_death.unwrap_or(-1))?;
         Ok(())
     }
@@ -216,14 +350,6 @@ impl StateBc {
     }
 }
 
-const WL6_IMAGE: &[u8] = include_bytes!("out.img");
-// const WL6_SPAWN_INFO: &[u8] = include_bytes!("out.spawn");
-
-lazy_static! {
-    pub static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
-    // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
-}
-
 #[derive(Debug)]
 pub struct ExecImage {
     pub code: &'static [u8],
@@ -242,9 +368,13 @@ pub struct SpawnInfos {
     pub spawn_infos: Vec<EnemySpawnInfo>,
 }
 
+lazy_static! {
+    pub static ref IMG: std::sync::Mutex<Option<ExecImage>>  = {std::sync::Mutex::new(None)}; //ExecImage::from_bytes(WL6_IMAGE).unwrap();
+    // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
+}
+
 impl ExecCtx {
-    pub fn new(initial_label: &str) -> Result<Self> {
-        let image = &IMG_WL6; //get_exec_image(enemy_type);
+    pub fn new(initial_label: &str, image: &'static ExecImage) -> Result<Self> {
         let state = image.read_state_by_label(initial_label)?;
         Ok(ExecCtx { image, state })
     }
@@ -258,10 +388,10 @@ impl ExecCtx {
     }
 }
 
-impl ms::Loadable for ExecCtx {
-    fn read_from(r: &mut dyn Read) -> Result<Self> {
+impl ExecCtx {
+    pub fn read_from(r: &mut dyn Read, image: &'static ExecImage) -> Result<Self> {
         let state = StateBc::read_from(r)?;
-        Ok(ExecCtx { image: &IMG_WL6, state })
+        Ok(ExecCtx { image, state })
     }
 }
 

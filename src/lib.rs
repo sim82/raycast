@@ -1,26 +1,29 @@
-pub use anyhow::Result;
+use lazy_static::lazy_static;
+use state_bc::ExecImage;
 use std::path::Path;
 
 pub mod block_map;
 pub mod door;
 pub mod draw;
 pub mod enemy;
-pub mod fa;
 pub mod font;
-pub mod fp16;
 pub mod hud;
 pub mod mainloop;
 pub mod map;
 pub mod map_dynamic;
-pub mod ms;
 pub mod player;
 pub mod render;
 pub mod sprite;
-pub mod state_bc;
 pub mod thing;
 pub mod thing_def;
 pub mod weapon;
 pub mod wl6;
+
+pub use state_bc;
+pub use util::fa;
+pub use util::fp16;
+pub use util::ms;
+pub use util::Result;
 
 pub mod prelude {
 
@@ -30,8 +33,8 @@ pub mod prelude {
         draw::Draw,
         enemy::Enemy,
         fa::{
-            fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, COL_ANGLE, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF,
-            FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
+            fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF, FA_STEPS,
+            FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
         },
         font::{draw_char8x8, draw_string8x8},
         fp16::{Fp16, FP16_F, FP16_FOUR, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
@@ -41,13 +44,13 @@ pub mod prelude {
         map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},
         ms,
         player::{Player, PlayerVel},
-        render,
+        render::{self, COL_ANGLE},
         sprite::{self, Directionality, SpriteDef, SpriteIndex},
-        state_bc::{Action, EnemySpawnInfo, ExecCtx, StateBc, Think, IMG_WL6},
+        state_bc::{Action, Direction, EnemySpawnInfo, ExecCtx, StateBc, Think},
         thing::{Actor, Collectible, Item, Thing, Things},
-        thing_def::{Direction, ThingDef, ThingDefs, ThingType},
+        thing_def::{ThingDef, ThingDefs, ThingType},
         weapon::{Weapon, WeaponType},
-        Resources, Result, HALF_HEIGHT, HEIGHT, MID, VIEW_HEIGHT, WIDTH,
+        Resources, Result, HALF_HEIGHT, HEIGHT, IMG_WL6, MID, VIEW_HEIGHT, WIDTH,
     };
 }
 
@@ -165,3 +168,11 @@ impl Resources {
 }
 
 pub mod palette;
+
+const WL6_IMAGE: &[u8] = include_bytes!("out.img");
+// const WL6_SPAWN_INFO: &[u8] = include_bytes!("out.spawn");
+
+lazy_static! {
+    pub static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
+    // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
+}

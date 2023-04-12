@@ -4,34 +4,6 @@ use crate::{enemy::Enemy, ms::Loadable, prelude::*, thing_def::Difficulty};
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-#[derive(Debug, Clone)]
-pub struct Item {
-    pub collectible: Collectible,
-    pub id: i32,
-    pub x: Fp16,
-    pub y: Fp16,
-}
-
-impl ms::Loadable for Item {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let collectible = Collectible::read_from(r)?;
-        let id = r.read_i32::<LittleEndian>()?;
-        let x = Fp16::read_from(r)?;
-        let y = Fp16::read_from(r)?;
-        Ok(Self { collectible, id, x, y })
-    }
-}
-
-impl ms::Writable for Item {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        self.collectible.write(w)?;
-        w.write_i32::<LittleEndian>(self.id)?;
-        self.x.write(w)?;
-        self.y.write(w)?;
-        Ok(())
-    }
-}
-
 #[derive(Debug, Default)]
 pub enum Actor {
     Item {
@@ -372,19 +344,6 @@ impl Things {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum Collectible {
-    DogFood,
-    Key(i32),
-    Food,
-    Medkit,
-    Ammo,
-    Machinegun,
-    Chaingun,
-    Treasure(i32),
-    LifeUp,
-}
-
 fn try_to_collectible(sprite_index: i32) -> Option<Collectible> {
     Some(match sprite_index {
         29 => Collectible::DogFood,
@@ -400,7 +359,18 @@ fn try_to_collectible(sprite_index: i32) -> Option<Collectible> {
         _ => return None,
     })
 }
-
+#[derive(Debug, Clone)]
+pub enum Collectible {
+    DogFood,
+    Key(i32),
+    Food,
+    Medkit,
+    Ammo,
+    Machinegun,
+    Chaingun,
+    Treasure(i32),
+    LifeUp,
+}
 impl ms::Loadable for Collectible {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let id = r.read_u8()?;
@@ -421,6 +391,34 @@ impl ms::Writable for Collectible {
             Collectible::Treasure(t) => 52 + *t as u8,
             Collectible::LifeUp => 56,
         })?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Item {
+    pub collectible: Collectible,
+    pub id: i32,
+    pub x: Fp16,
+    pub y: Fp16,
+}
+
+impl ms::Loadable for Item {
+    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
+        let collectible = Collectible::read_from(r)?;
+        let id = r.read_i32::<LittleEndian>()?;
+        let x = Fp16::read_from(r)?;
+        let y = Fp16::read_from(r)?;
+        Ok(Self { collectible, id, x, y })
+    }
+}
+
+impl ms::Writable for Item {
+    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
+        self.collectible.write(w)?;
+        w.write_i32::<LittleEndian>(self.id)?;
+        self.x.write(w)?;
+        self.y.write(w)?;
         Ok(())
     }
 }

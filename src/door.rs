@@ -13,7 +13,7 @@ pub struct Door {
 impl Default for Door {
     fn default() -> Self {
         Self {
-            exec_ctx: ExecCtx::new("door::closed").unwrap(),
+            exec_ctx: ExecCtx::new("door::closed", &IMG_WL6).unwrap(),
             open_f: FP16_ZERO,
             blockers: Default::default(),
         }
@@ -53,7 +53,7 @@ impl Door {
 impl ms::Loadable for Door {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let open_f = Fp16::read_from(r)?;
-        let exec_ctx = ExecCtx::read_from(r)?;
+        let exec_ctx = ExecCtx::read_from(r, &IMG_WL6)?;
 
         let num_blockers = r.read_u32::<LittleEndian>()?;
         let mut blockers = HashSet::new();

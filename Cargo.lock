@@ -131,10 +131,10 @@ dependencies = [
  "anyhow",
  "byteorder",
  "lazy_static",
- "nom",
- "nom_locate",
  "rand",
  "sdl2",
+ "state_bc",
+ "util",
 ]
 
 [[package]]
@@ -158,6 +158,27 @@ dependencies = [
  "cfg-if",
  "libc",
  "version-compare",
+]
+
+[[package]]
+name = "state_bc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "lazy_static",
+ "nom",
+ "nom_locate",
+ "util",
+]
+
+[[package]]
+name = "util"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "lazy_static",
 ]
 
 [[package]]

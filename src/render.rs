@@ -1,6 +1,19 @@
 use std::ops::Range;
 
 use crate::prelude::*;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref COL_ANGLE: [i32; WIDTH] = {
+        let mut col_angle = [0; WIDTH];
+        for i in 0..WIDTH / 2 {
+            let f = (i as f32) / (WIDTH as f32 * 0.50);
+            col_angle[WIDTH / 2 + i] = (f.atan().to_degrees() * FA_SCALEF) as i32;
+            col_angle[WIDTH / 2 - i - 1] = ((-f.atan()).to_degrees() * FA_SCALEF) as i32;
+        }
+        col_angle
+    };
+}
 
 pub fn sweep_raycast<D: Draw + ?Sized>(
     map_dynamic: &MapDynamic,

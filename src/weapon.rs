@@ -75,7 +75,7 @@ impl Default for Weapon {
             // selected_weapon: WeaponType::Gun,
             selected_weapon: WeaponType::Machinegun,
             ammo: 99,
-            exec_ctx: ExecCtx::new("weapon_gun::ready").unwrap(),
+            exec_ctx: ExecCtx::new("weapon_gun::ready", &IMG_WL6).unwrap(),
         }
     }
 }
@@ -171,7 +171,7 @@ impl ms::Loadable for Weapon {
         Ok(Self {
             ammo: r.read_i32::<LittleEndian>()?,
             selected_weapon: WeaponType::read_from(r)?,
-            exec_ctx: ExecCtx::read_from(r)?,
+            exec_ctx: ExecCtx::read_from(r, &IMG_WL6)?,
         })
     }
 }
