@@ -317,9 +317,9 @@ path:
     state GROFAZ_W3, false, 5, None, None, next
     state GROFAZ_W4, false, 15, Path, None, path
 pain1:
-    state GROFAZ_DIE1, false, 10, None, None, chase
+    state GROFAZ_W1, false, 10, None, None, chase
 pain2:
-    state GROFAZ_DIE1, false, 10, None, None, chase
+    state GROFAZ_W1, false, 10, None, None, chase
 chase:
     state GROFAZ_W1, false, 10, Chase, None, next
     state GROFAZ_W1, false, 3, None, None, next
