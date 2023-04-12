@@ -1,6 +1,5 @@
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     io::{Cursor, Read, Write},
@@ -366,11 +365,6 @@ pub struct ExecCtx {
 #[derive(Debug)]
 pub struct SpawnInfos {
     pub spawn_infos: Vec<EnemySpawnInfo>,
-}
-
-lazy_static! {
-    pub static ref IMG: std::sync::Mutex<Option<ExecImage>>  = {std::sync::Mutex::new(None)}; //ExecImage::from_bytes(WL6_IMAGE).unwrap();
-    // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
 }
 
 impl ExecCtx {

@@ -1,8 +1,4 @@
-use std::io::Write;
-
 use crate::{fa::FA_FRAC_PI_4, prelude::*};
-use anyhow::anyhow;
-use byteorder::{ReadBytesExt, WriteBytesExt};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Difficulty {

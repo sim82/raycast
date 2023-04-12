@@ -6,7 +6,9 @@ pub mod block_map;
 pub mod door;
 pub mod draw;
 pub mod enemy;
+pub mod fa;
 pub mod font;
+pub mod fp16;
 pub mod hud;
 pub mod mainloop;
 pub mod map;
@@ -20,8 +22,6 @@ pub mod weapon;
 pub mod wl6;
 
 pub use state_bc;
-pub use util::fa;
-pub use util::fp16;
 pub use util::ms;
 pub use util::Result;
 
