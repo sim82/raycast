@@ -3,13 +3,15 @@ name = "state_bc"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+compiler = ["nom", "nom_locate"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1"
 lazy_static = "1"
 byteorder = "1"
-nom = "7"
-nom_locate = "4"
+nom = {version = "7", optional = true}
+nom_locate = { version = "4", optional = true}
 
 util = {path ="../util"}

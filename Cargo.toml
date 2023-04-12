@@ -16,6 +16,9 @@ util = {path = "crates/util"}
 byteorder = "1"
 anyhow = "1"
 
+[build-dependencies]
+state_bc = {path = "crates/state_bc", features = ["compiler"]}
+
 [profile.release]
 opt-level = 3     # Optimize for size
 lto = true        # Enable link-time optimization

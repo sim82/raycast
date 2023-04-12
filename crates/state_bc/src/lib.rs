@@ -9,6 +9,9 @@ use util::{
     prelude::*,
 };
 
+#[cfg(feature = "compiler")]
+pub mod compiler;
+
 #[derive(Debug, Default)]
 pub enum Think {
     #[default]

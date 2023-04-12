@@ -353,7 +353,7 @@ impl Mainloop {
         buffer.point(320 / 2, 80, 4);
 
         // draw_string8x8("Get Psyched!", &mut buffer[..], 100, 160);
-        hud::draw_status_bar(&mut buffer[..], &self);
+        hud::draw_status_bar(&mut buffer[..], self);
 
         if self.player.shoot {
             if let Some(hit_thing) = hit_thing {
