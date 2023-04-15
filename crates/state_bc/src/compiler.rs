@@ -1,6 +1,4 @@
-use std::{collections::BTreeMap, io::Write};
-
-use crate::{Action, Direction, EnemySpawnInfo, SpawnInfos, StateBc, Think};
+use crate::{ms::Writable, Action, Direction, EnemySpawnInfo, SpawnInfos, StateBc, Think};
 use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
@@ -13,7 +11,8 @@ use nom::{
     IResult,
 };
 use nom_locate::LocatedSpan;
-use util::ms::Writable;
+use std::{collections::BTreeMap, io::Write};
+
 pub type Span<'a> = LocatedSpan<&'a str>;
 pub type Res<'a, Output> = IResult<Span<'a>, Output, MyError<Span<'a>>>;
 

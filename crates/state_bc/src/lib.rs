@@ -1,13 +1,18 @@
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use prelude::ms::Loadable;
 use std::{
     collections::HashMap,
     io::{Cursor, Read, Write},
 };
-use util::{
-    ms::{self, Loadable},
-    prelude::*,
-};
+
+pub mod ms;
+pub use anyhow::Result;
+
+pub mod prelude {
+    pub use crate::ms;
+    pub use crate::Result;
+}
 
 #[cfg(feature = "compiler")]
 pub mod compiler;

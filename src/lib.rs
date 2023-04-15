@@ -21,9 +21,11 @@ pub mod thing_def;
 pub mod weapon;
 pub mod wl6;
 
+// the only reason for the state_bc crate is for the compiler to be usable in build.rs.
+// treat it as part of the main crate (i.e. this project is not intended to become so large it needs further modularization...)
 pub use state_bc;
-pub use util::ms;
-pub use util::Result;
+pub use state_bc::ms;
+pub use state_bc::Result;
 
 pub mod prelude {
 

@@ -134,7 +134,6 @@ dependencies = [
  "rand",
  "sdl2",
  "state_bc",
- "util",
 ]
 
 [[package]]
@@ -169,16 +168,6 @@ dependencies = [
  "lazy_static",
  "nom",
  "nom_locate",
- "util",
-]
-
-[[package]]
-name = "util"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "byteorder",
- "lazy_static",
 ]
 
 [[package]]
