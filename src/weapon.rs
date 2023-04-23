@@ -110,7 +110,9 @@ impl Weapon {
                         .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
                 }
                 // weapon in attack state + ammo depleted -> restart attack state (keep weapon raised, but don't proceed further)
-                Think::Path if fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0 => {
+                Think::Path
+                    if fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0 =>
+                {
                     self.exec_ctx
                         .jump_label(&self.selected_weapon.map_state_label("attack"))
                         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));

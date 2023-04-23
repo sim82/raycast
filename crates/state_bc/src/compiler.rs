@@ -53,7 +53,12 @@ pub struct SpawnBlock {
     pub infos: Vec<EnemySpawnInfo>,
 }
 
-pub fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<String, usize>, spawn_infos: &SpawnInfos) {
+pub fn codegen(
+    outname: &str,
+    state_blocks: &[StatesBlock],
+    enums: &BTreeMap<String, usize>,
+    spawn_infos: &SpawnInfos,
+) {
     let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
 
     let mut states = Vec::new();
@@ -98,7 +103,10 @@ pub fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<Str
                 next,
             } = element
             {
-                let id = *enums.get(id).unwrap_or_else(|| panic!("unknown identifier {id}")) as i32;
+                let id = *enums
+                    .get(id)
+                    .unwrap_or_else(|| panic!("unknown identifier {id}"))
+                    as i32;
                 let next_ptr = if next == "next" {
                     ip + crate::STATE_BC_SIZE
                 } else {
@@ -121,7 +129,8 @@ pub fn codegen(outname: &str, state_blocks: &[StatesBlock], enums: &BTreeMap<Str
     }
 
     let mut f = std::fs::File::create(outname).expect("failed to open img file");
-    f.write_i32::<LittleEndian>(label_ptrs.len() as i32).unwrap();
+    f.write_i32::<LittleEndian>(label_ptrs.len() as i32)
+        .unwrap();
     for (name, ptr) in &label_ptrs {
         let b = name.as_bytes();
         f.write_u8(b.len() as u8).unwrap();
@@ -155,7 +164,10 @@ impl<I> ParseError<I> for MyError<I> {
     }
 }
 
-fn handle_unexpected<'a, Output, P, F>(parser: P, error_f: F) -> impl Fn(Span<'a>) -> Res<'a, Output>
+fn handle_unexpected<'a, Output, P, F>(
+    parser: P,
+    error_f: F,
+) -> impl Fn(Span<'a>) -> Res<'a, Output>
 where
     P: Fn(Span<'a>) -> Res<'a, Span<'a>>,
     F: Fn(Span<'a>) -> MyError<Span<'a>>,
@@ -261,7 +273,8 @@ fn states_block_element(input: Span) -> Res<'_, StatesBlockElement> {
 fn parse_states_block(input: Span) -> Res<'_, ToplevelElement> {
     let (input, _) = ws(tag("states"))(input)?;
     let (input, name) = ws(take_while(is_identifier))(input)?;
-    let (input, elements) = delimited(ws(char('{')), many0(states_block_element), ws(char('}')))(input)?;
+    let (input, elements) =
+        delimited(ws(char('{')), many0(states_block_element), ws(char('}')))(input)?;
 
     Ok((
         input,
@@ -291,9 +304,14 @@ fn spawn_block_directional_element(input: Span) -> Res<'_, Vec<EnemySpawnInfo>> 
 
     let mut infos = Vec::new();
 
-    for (i, direction) in [Direction::East, Direction::North, Direction::West, Direction::South]
-        .iter()
-        .enumerate()
+    for (i, direction) in [
+        Direction::East,
+        Direction::North,
+        Direction::West,
+        Direction::South,
+    ]
+    .iter()
+    .enumerate()
     {
         infos.push(EnemySpawnInfo {
             id: start_id + i as i32,
@@ -359,7 +377,8 @@ pub fn compile(filename: &str, outname: &str) {
     let input = std::fs::read_to_string(filename).expect("failed to read input file");
     let input = Span::new(&input);
 
-    let (_input, toplevel_elements) = many1(parse_toplevel)(input).expect("failed to parse toplevel elements");
+    let (_input, toplevel_elements) =
+        many1(parse_toplevel)(input).expect("failed to parse toplevel elements");
     // println!("elements: {toplevel_elements:?}");
 
     let mut enums = BTreeMap::new();
@@ -385,7 +404,11 @@ pub fn compile(filename: &str, outname: &str) {
     {
         let mut enum_file = std::fs::File::create(format!("{outname}.enums")).unwrap();
         // write!(enum_file, "{enums:?}").unwrap();
-        let _ = writeln!(enum_file, "const ENUM_NAMES: [(&str, i32); {}] = [", enums.len());
+        let _ = writeln!(
+            enum_file,
+            "const ENUM_NAMES: [(&str, i32); {}] = [",
+            enums.len()
+        );
         // let _ = writeln!(enum_file, "[");
         for (name, id) in enums.iter() {
             let _ = write!(enum_file, "(\"{name}\", {id}), ");
@@ -394,6 +417,11 @@ pub fn compile(filename: &str, outname: &str) {
     }
     // std::fs::rename(from, to)
     let tmp_outname = format!("{}.tmp", outname);
-    codegen(&tmp_outname, &state_blocks, &enums, &SpawnInfos { spawn_infos });
+    codegen(
+        &tmp_outname,
+        &state_blocks,
+        &enums,
+        &SpawnInfos { spawn_infos },
+    );
     std::fs::rename(tmp_outname, outname).unwrap();
 }

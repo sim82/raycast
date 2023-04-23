@@ -35,11 +35,15 @@ pub mod prelude {
         draw::Draw,
         enemy::Enemy,
         fa::{
-            fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF, FA_STEPS,
-            FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
+            fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2,
+            FA_SCALEF, FA_STEPS, FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3,
+            QUADRANT_4, TAN_CLAMP,
         },
         font::{draw_char8x8, draw_string8x8},
-        fp16::{Fp16, FP16_F, FP16_FOUR, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE, FP16_ZERO},
+        fp16::{
+            Fp16, FP16_F, FP16_FOUR, FP16_FRAC_128, FP16_FRAC_64, FP16_HALF, FP16_ONE, FP16_SCALE,
+            FP16_ZERO,
+        },
         hud,
         mainloop::{InputState, Mainloop, SpawnInfo},
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},

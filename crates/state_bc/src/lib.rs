@@ -184,7 +184,10 @@ impl Direction {
     pub fn is_diagonal(&self) -> bool {
         matches!(
             self,
-            Direction::SouthEast | Direction::SouthWest | Direction::NorthWest | Direction::NorthEast
+            Direction::SouthEast
+                | Direction::SouthWest
+                | Direction::NorthWest
+                | Direction::NorthEast
         )
     }
 }
@@ -337,7 +340,14 @@ impl ms::Writable for StateBc {
 }
 
 impl StateBc {
-    pub fn new(id: i32, ticks: i32, think: Think, action: Action, next: i32, directional: bool) -> Self {
+    pub fn new(
+        id: i32,
+        ticks: i32,
+        think: Think,
+        action: Action,
+        next: i32,
+        directional: bool,
+    ) -> Self {
         StateBc {
             id,
             ticks,
@@ -432,7 +442,10 @@ impl ExecImage {
     }
 
     pub fn read_state_by_label(&self, label: &str) -> Result<StateBc> {
-        let ptr = self.labels.get(label).ok_or(anyhow!("unknown label {label}"))?;
+        let ptr = self
+            .labels
+            .get(label)
+            .ok_or(anyhow!("unknown label {label}"))?;
         let res = self.read_state(*ptr);
         if res.is_err() {
             println!("while read from: 0x{ptr:x}");

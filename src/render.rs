@@ -129,7 +129,9 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                     MapTile::OffsetWall(tile, direction, f) => {
                         let hit_y = ny + ty * f;
 
-                        if (hstep_y > 0 && hit_y <= hy.into()) || (hstep_y < 0 && hit_y >= hy.into()) {
+                        if (hstep_y > 0 && hit_y <= hy.into())
+                            || (hstep_y < 0 && hit_y >= hy.into())
+                        {
                             if direction == Direction::West && hstep_x < 0 {
                                 dx = Fp16::from(hx) - player.x - f;
                             } else if direction == Direction::East && hstep_x > 0 {
@@ -152,7 +154,8 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                         let door_hit = ny + tyh;
                         let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
-                            && ((hstep_y > 0 && door_hit <= hy.into()) || (hstep_y < 0 && door_hit >= hy.into()))
+                            && ((hstep_y > 0 && door_hit <= hy.into())
+                                || (hstep_y < 0 && door_hit >= hy.into()))
                         {
                             hit_tile = door_type.get_texture_id() + 1;
                             dx = (Fp16::from(hx) + hstep_x_half) - player.x;
@@ -194,7 +197,9 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                     MapTile::OffsetWall(tile, direction, f) => {
                         let hit_x = nx + tx * f;
 
-                        if (hstep_x > 0 && hit_x <= hx.into()) || (hstep_x < 0 && hit_x >= hx.into()) {
+                        if (hstep_x > 0 && hit_x <= hx.into())
+                            || (hstep_x < 0 && hit_x >= hx.into())
+                        {
                             if direction == Direction::North && hstep_y < 0 {
                                 dy = Fp16::from(hy) - player.y - f;
                             } else if direction == Direction::South && hstep_y > 0 {
@@ -218,7 +223,8 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                         let door_hit = nx + txh;
                         let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
-                            && ((hstep_x > 0 && door_hit <= hx.into()) || (hstep_x < 0 && door_hit >= hx.into()))
+                            && ((hstep_x > 0 && door_hit <= hx.into())
+                                || (hstep_x < 0 && door_hit >= hx.into()))
                         {
                             hit_tile = door_type.get_texture_id();
                             dx = door_hit - player.x;
@@ -240,7 +246,11 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
         const C: i32 = MID;
         let beta = player.rot;
         let p = fa_cos(beta) * dx + fa_sin(beta) * dy;
-        let offs = if p > FP16_ZERO { (C << FP16_SCALE) / p.v } else { C };
+        let offs = if p > FP16_ZERO {
+            (C << FP16_SCALE) / p.v
+        } else {
+            C
+        };
         zbuffer[column] = p;
         let line_range = (MID - offs)..(MID + offs);
 
@@ -293,7 +303,11 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
     z: Fp16,
 ) {
     const C: i32 = MID;
-    let offs = if z > FP16_ZERO { (C << FP16_SCALE) / z.v } else { C };
+    let offs = if z > FP16_ZERO {
+        (C << FP16_SCALE) / z.v
+    } else {
+        C
+    };
     let line_range = (MID - offs)..(MID + offs);
 
     let sprite = resources.get_sprite(id);

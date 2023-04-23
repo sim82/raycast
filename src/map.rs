@@ -100,7 +100,9 @@ impl Map {
                     95 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::SilverLocked, 0),
                     100 => *out = MapTile::Door(PlaneOrientation::X, DoorType::Elevator, 0),
                     101 => *out = MapTile::Door(PlaneOrientation::Y, DoorType::Elevator, 0),
-                    _ if BLOCKING_PROPS.binary_search(&p).is_ok() => *out = MapTile::Blocked(p as i32),
+                    _ if BLOCKING_PROPS.binary_search(&p).is_ok() => {
+                        *out = MapTile::Blocked(p as i32)
+                    }
                     _ => *out = MapTile::Walkable(c as i32, Direction::try_from_prop_id(p as i32)),
                 }
             }
@@ -137,7 +139,11 @@ impl Map {
                 }
 
                 if let Some(color) = wall_color(x, y) {
-                    screen.point_world(FP16_HALF + (x as i32).into(), FP16_HALF + (y as i32).into(), color)
+                    screen.point_world(
+                        FP16_HALF + (x as i32).into(),
+                        FP16_HALF + (y as i32).into(),
+                        color,
+                    )
                 }
             }
         }
@@ -173,9 +179,11 @@ impl Map {
                         self.lookup_tile(x, y),
                         self.lookup_tile(nx2, ny2),
                     ) {
-                        (MapTile::Walkable(id1, _), MapTile::Door(_, _, door_id), MapTile::Walkable(id2, _))
-                            if id1 != id2 && *id1 != ROOM_ID_NONE && *id2 != ROOM_ID_NONE =>
-                        {
+                        (
+                            MapTile::Walkable(id1, _),
+                            MapTile::Door(_, _, door_id),
+                            MapTile::Walkable(id2, _),
+                        ) if id1 != id2 && *id1 != ROOM_ID_NONE && *id2 != ROOM_ID_NONE => {
                             // println!("door {door_id} at {x} {y}, connecting {id1:x} {id2:x}");
                             connections.push((*id1, *id2, *door_id as i32));
                             connections.push((*id2, *id1, *door_id as i32));
@@ -189,7 +197,13 @@ impl Map {
     }
 }
 
-pub fn bresenham_trace<F: Fn(i32, i32) -> bool>(mut x0: i32, mut y0: i32, x1: i32, y1: i32, f: F) -> bool {
+pub fn bresenham_trace<F: Fn(i32, i32) -> bool>(
+    mut x0: i32,
+    mut y0: i32,
+    x1: i32,
+    y1: i32,
+    f: F,
+) -> bool {
     let dx = (x1 - x0).abs();
     let sx = if x0 < x1 { 1 } else { -1 };
     let dy = -(y1 - y0).abs();

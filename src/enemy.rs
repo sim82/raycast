@@ -4,7 +4,12 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
 use std::io::{Read, Write};
 impl Enemy {
-    fn check_player_sight(&mut self, things: &Things, map_dynamic: &mut MapDynamic, _static_index: usize) -> bool {
+    fn check_player_sight(
+        &mut self,
+        things: &Things,
+        map_dynamic: &mut MapDynamic,
+        _static_index: usize,
+    ) -> bool {
         let dx = things.player_x - self.x.get_int();
         let dy = things.player_y - self.y.get_int();
 
@@ -45,7 +50,8 @@ impl Enemy {
             println!("PathAction::Move ended not on tile center. Aborting.");
             return None;
         }
-        if let MapTile::Walkable(_, Some(path_direction)) = map_dynamic.lookup_tile(self.x.get_int(), self.y.get_int())
+        if let MapTile::Walkable(_, Some(path_direction)) =
+            map_dynamic.lookup_tile(self.x.get_int(), self.y.get_int())
         {
             Some(path_direction)
         } else {
@@ -53,7 +59,11 @@ impl Enemy {
         }
     }
 
-    fn try_find_pathaction(&self, map_dynamic: &mut MapDynamic, things: &Things) -> Option<PathAction> {
+    fn try_find_pathaction(
+        &self,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+    ) -> Option<PathAction> {
         let (dx, dy) = self.direction.tile_offset();
         // check the block we are about to enter
         let enter_x = self.x.get_int() + dx;
@@ -72,7 +82,11 @@ impl Enemy {
                     println!("path occupied in blockmap. waiting");
                     None
                 } else {
-                    Some(PathAction::Move { dist: FP16_ONE, dx, dy })
+                    Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx,
+                        dy,
+                    })
                 }
             }
             MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => {
@@ -80,7 +94,9 @@ impl Enemy {
                 // diagonal direction but 'slide' along walls (e.g. the dogs in E1M6)
                 if dx != 0 && dy != 0 {
                     match map_dynamic.lookup_tile(enter_x, self.y.get_int()) {
-                        MapTile::Walkable(_, _) if !things.blockmap.is_occupied(enter_x, self.y.get_int()) => {
+                        MapTile::Walkable(_, _)
+                            if !things.blockmap.is_occupied(enter_x, self.y.get_int()) =>
+                        {
                             return Some(PathAction::Move {
                                 dist: FP16_ONE,
                                 dx,
@@ -90,7 +106,9 @@ impl Enemy {
                         _ => (), // fall through
                     }
                     match map_dynamic.lookup_tile(self.x.get_int(), enter_y) {
-                        MapTile::Walkable(_, _) if !things.blockmap.is_occupied(self.x.get_int(), enter_y) => {
+                        MapTile::Walkable(_, _)
+                            if !things.blockmap.is_occupied(self.x.get_int(), enter_y) =>
+                        {
                             return Some(PathAction::Move {
                                 dist: FP16_ONE,
                                 dx: 0,
@@ -137,7 +155,11 @@ impl Enemy {
                 if diagonal_blocked || things.blockmap.is_occupied(enter_x, enter_y) {
                     None
                 } else {
-                    Some(PathAction::Move { dist: FP16_ONE, dx, dy })
+                    Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx,
+                        dy,
+                    })
                 }
             }
             MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => None,
@@ -155,7 +177,9 @@ impl Enemy {
                 .abs_diff(self.x.get_int())
                 .max(things.player_y.abs_diff(self.y.get_int()));
 
-            let chance = if d == 0 || (d == 1 && self.path_action.as_ref().map_or(true, boost_shoot_chance)) {
+            let chance = if d == 0
+                || (d == 1 && self.path_action.as_ref().map_or(true, boost_shoot_chance))
+            {
                 256
             } else {
                 16 / d
@@ -189,7 +213,9 @@ impl Enemy {
         }
 
         if self.path_action.is_none() {
-            self.direction = self.try_update_pathdir(map_dynamic).unwrap_or(self.direction);
+            self.direction = self
+                .try_update_pathdir(map_dynamic)
+                .unwrap_or(self.direction);
             self.path_action = self.try_find_pathaction(map_dynamic, things);
         }
         self.move_default(map_dynamic, unique_id, FP16_FRAC_128);
@@ -226,7 +252,13 @@ impl Enemy {
         self.dead = true;
     }
     fn action_bite(&mut self, _map_dynamic: &mut MapDynamic, _things: &Things, _unique_id: usize) {}
-    fn action_shoot(&mut self, map_dynamic: &mut MapDynamic, _things: &Things, _unique_id: usize, player: &mut Player) {
+    fn action_shoot(
+        &mut self,
+        map_dynamic: &mut MapDynamic,
+        _things: &Things,
+        _unique_id: usize,
+        player: &mut Player,
+    ) {
         println!("shoot");
         if !bresenham_trace(
             (self.x * 4).get_int(),
@@ -255,7 +287,11 @@ impl Enemy {
     }
 }
 impl Enemy {
-    fn select_chase_action(&self, things: &Things, map_dynamic: &mut MapDynamic) -> Option<(PathAction, Direction)> {
+    fn select_chase_action(
+        &self,
+        things: &Things,
+        map_dynamic: &mut MapDynamic,
+    ) -> Option<(PathAction, Direction)> {
         let dx = things.player_x - self.x.get_int();
         let dy = things.player_y - self.y.get_int();
         let mut dirtry = [None; 3];
@@ -276,18 +312,17 @@ impl Enemy {
             dirtry.swap(1, 2);
         }
         if random::<u8>() < 192 {
-            dirtry[0] =
-                match (dirtry[1], dirtry[2]) {
-                    (Some(Direction::North), Some(Direction::East))
-                    | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
-                    (Some(Direction::North), Some(Direction::West))
-                    | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
-                    (Some(Direction::South), Some(Direction::East))
-                    | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
-                    (Some(Direction::South), Some(Direction::West))
-                    | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
-                    _ => None,
-                };
+            dirtry[0] = match (dirtry[1], dirtry[2]) {
+                (Some(Direction::North), Some(Direction::East))
+                | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
+                (Some(Direction::North), Some(Direction::West))
+                | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
+                (Some(Direction::South), Some(Direction::East))
+                | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
+                (Some(Direction::South), Some(Direction::West))
+                | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
+                _ => None,
+            };
         }
 
         for dir in dirtry.iter().filter_map(|x| *x) {
@@ -299,7 +334,11 @@ impl Enemy {
         }
         None
     }
-    fn select_dodge_action(&self, things: &Things, map_dynamic: &mut MapDynamic) -> Option<(PathAction, Direction)> {
+    fn select_dodge_action(
+        &self,
+        things: &Things,
+        map_dynamic: &mut MapDynamic,
+    ) -> Option<(PathAction, Direction)> {
         let dx = things.player_x - self.x.get_int();
         let dy = things.player_y - self.y.get_int();
         //
@@ -325,18 +364,14 @@ impl Enemy {
         }
 
         dirtry[0] = match (dirtry[1], dirtry[2]) {
-            (Some(Direction::North), Some(Direction::East)) | (Some(Direction::East), Some(Direction::North)) => {
-                Some(Direction::NorthEast)
-            }
-            (Some(Direction::North), Some(Direction::West)) | (Some(Direction::West), Some(Direction::North)) => {
-                Some(Direction::NorthWest)
-            }
-            (Some(Direction::South), Some(Direction::East)) | (Some(Direction::East), Some(Direction::South)) => {
-                Some(Direction::SouthEast)
-            }
-            (Some(Direction::South), Some(Direction::West)) | (Some(Direction::West), Some(Direction::South)) => {
-                Some(Direction::SouthWest)
-            }
+            (Some(Direction::North), Some(Direction::East))
+            | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
+            (Some(Direction::North), Some(Direction::West))
+            | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
+            (Some(Direction::South), Some(Direction::East))
+            | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
+            (Some(Direction::South), Some(Direction::West))
+            | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
             _ => None,
         };
 
@@ -381,7 +416,11 @@ impl Enemy {
                     self.path_action = None;
                 }
             }
-            Some(PathAction::Move { dist: _, dx: _, dy: _ }) => {
+            Some(PathAction::Move {
+                dist: _,
+                dx: _,
+                dy: _,
+            }) => {
 
                 // panic!("PathAction::Move with zero dist.");
             }
@@ -533,7 +572,13 @@ impl Enemy {
         println!("state: {self:?}");
         self.dead = name == "dead";
     }
-    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize, player: &mut Player) {
+    pub fn update(
+        &mut self,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+        unique_id: usize,
+        player: &mut Player,
+    ) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
         // this is different from wolf3d where actions execute on state exit (don't understand why...)
         match self.exec_ctx.state.take_action() {
@@ -585,7 +630,12 @@ impl Enemy {
         let exec_ctx = ExecCtx::new(&enemy_spawn_info.state, &IMG_WL6).unwrap();
 
         // FIXME: hack. find better solution for 'enemy type name'
-        let enemy_type_name = enemy_spawn_info.state.split("::").next().unwrap().to_string();
+        let enemy_type_name = enemy_spawn_info
+            .state
+            .split("::")
+            .next()
+            .unwrap()
+            .to_string();
 
         Enemy {
             direction: enemy_spawn_info.direction,

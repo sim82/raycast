@@ -112,7 +112,11 @@ impl ms::Writable for Things {
 }
 
 impl Things {
-    fn spawn_from_thing_def(thing_def: &ThingDef, blockmap: &mut BlockMap, unique_id: usize) -> Option<Thing> {
+    fn spawn_from_thing_def(
+        thing_def: &ThingDef,
+        blockmap: &mut BlockMap,
+        unique_id: usize,
+    ) -> Option<Thing> {
         let thing = match &thing_def.thing_type {
             ThingType::Enemy(enemy_spawn_info) => {
                 let enemy = Enemy::spawn(enemy_spawn_info, thing_def);
@@ -202,7 +206,9 @@ impl Things {
                                 player.weapon.ammo = (player.weapon.ammo + 8).min(100);
                                 *collected = true;
                             }
-                            Collectible::Food | Collectible::Medkit | Collectible::DogFood if player.health < 100 => {
+                            Collectible::Food | Collectible::Medkit | Collectible::DogFood
+                                if player.health < 100 =>
+                            {
                                 let add = match item.collectible {
                                     Collectible::Food => 8,
                                     Collectible::DogFood => 4,
@@ -228,7 +234,10 @@ impl Things {
                     // check if enemy gets notified by the room for this frame
                     if !enemy.notify {
                         match map_dynamic.get_room_id(old_x.get_int(), old_y.get_int()) {
-                            Some(room_id) if map_dynamic.notifications.contains(&room_id) && !enemy.notify => {
+                            Some(room_id)
+                                if map_dynamic.notifications.contains(&room_id)
+                                    && !enemy.notify =>
+                            {
                                 println!("enemy {} notified by room {room_id}", thing.unique_id);
                                 enemy.notify = true;
                             }
@@ -239,7 +248,8 @@ impl Things {
 
                     // update blockmal link
                     if !enemy.dead {
-                        self.blockmap.update(thing.unique_id, old_x, old_y, enemy.x, enemy.y);
+                        self.blockmap
+                            .update(thing.unique_id, old_x, old_y, enemy.x, enemy.y);
                     } else {
                         self.blockmap.remove(thing.unique_id, old_x, old_y);
 
@@ -253,7 +263,9 @@ impl Things {
                                     }),
                                 ..
                             }) => {
-                                if let Some(thing_def) = ThingDef::from_map_id(*id, enemy.x, enemy.y) {
+                                if let Some(thing_def) =
+                                    ThingDef::from_map_id(*id, enemy.x, enemy.y)
+                                {
                                     spawn_thing_defs.push(thing_def);
                                 }
                             }
@@ -263,7 +275,9 @@ impl Things {
 
                     // if enemy raised the notify flag this frame, forward it to the room
                     if enemy.notify && !was_notify {
-                        if let Some(room_id) = map_dynamic.get_room_id(enemy.x.get_int(), enemy.y.get_int()) {
+                        if let Some(room_id) =
+                            map_dynamic.get_room_id(enemy.x.get_int(), enemy.y.get_int())
+                        {
                             new_notifications.insert(room_id);
                         }
                     }
@@ -284,7 +298,9 @@ impl Things {
         // }
         for thing_def in spawn_thing_defs {
             // TODO: rethink: as long as nothing is ever deleted from things this is probably good enough
-            if let Some(thing) = Self::spawn_from_thing_def(&thing_def, &mut self.blockmap, things.len()) {
+            if let Some(thing) =
+                Self::spawn_from_thing_def(&thing_def, &mut self.blockmap, things.len())
+            {
                 things.push(thing);
             }
         }
@@ -301,7 +317,10 @@ impl Things {
                         let (id, x, y) = enemy.get_sprite(); // + enemy_type.sprite_offset();
                         Some(SpriteDef { id, x, y, owner: i })
                     }
-                    Actor::Item { collected: false, item } => Some(SpriteDef {
+                    Actor::Item {
+                        collected: false,
+                        item,
+                    } => Some(SpriteDef {
                         id: sprite::SpriteIndex::Undirectional(item.id - 22 + 2),
                         x: item.x,
                         y: item.y,
@@ -374,7 +393,8 @@ pub enum Collectible {
 impl ms::Loadable for Collectible {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let id = r.read_u8()?;
-        try_to_collectible(id as i32).ok_or_else(|| anyhow!("unsupported discriminator for Collectible: {id}"))
+        try_to_collectible(id as i32)
+            .ok_or_else(|| anyhow!("unsupported discriminator for Collectible: {id}"))
     }
 }
 
@@ -409,7 +429,12 @@ impl ms::Loadable for Item {
         let id = r.read_i32::<LittleEndian>()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
-        Ok(Self { collectible, id, x, y })
+        Ok(Self {
+            collectible,
+            id,
+            x,
+            y,
+        })
     }
 }
 

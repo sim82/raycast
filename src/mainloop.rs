@@ -98,7 +98,10 @@ impl Mainloop {
                         level_id = y;
                     }
                     _ => {
-                        println!("starting level. load static map data {}", maps.get_map_name(id));
+                        println!(
+                            "starting level. load static map data {}",
+                            maps.get_map_name(id)
+                        );
                         let (plane0, plane1) = maps.get_map_planes(id);
 
                         map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
@@ -135,16 +138,23 @@ impl Mainloop {
                         level_id: y,
                     }) if level_id == y => {
                         println!("load savegame. re-using static map data");
-                        map_dynamic =
-                            MapDynamic::read_and_wrap(&mut f, map).expect("failed to load MapDynamic from savegame");
-                        things = Things::read_from(&mut f, thing_defs).expect("failed to load Things from savegame");
+                        map_dynamic = MapDynamic::read_and_wrap(&mut f, map)
+                            .expect("failed to load MapDynamic from savegame");
+                        things = Things::read_from(&mut f, thing_defs)
+                            .expect("failed to load Things from savegame");
                     }
                     _ => {
-                        println!("load savegame. load static map data {}", maps.get_map_name(level_id));
+                        println!(
+                            "load savegame. load static map data {}",
+                            maps.get_map_name(level_id)
+                        );
                         let (plane0, plane1) = maps.get_map_planes(level_id);
 
-                        map_dynamic = MapDynamic::read_and_wrap(&mut f, Map::from_map_planes(&plane0, &plane1))
-                            .expect("failed to load MapDynamic from savegame");
+                        map_dynamic = MapDynamic::read_and_wrap(
+                            &mut f,
+                            Map::from_map_planes(&plane0, &plane1),
+                        )
+                        .expect("failed to load MapDynamic from savegame");
                         things = Things::read_from(&mut f, ThingDefs::from_map_plane(&plane1))
                             .expect("failed to load Things from savegame");
                     }
@@ -183,7 +193,11 @@ impl Mainloop {
         self.player_vel.rot = 0;
         self.player.trigger = false;
         self.player.shoot = false;
-        let (fwd_speed, rot_speed) = if input_events.slow { (2, 360) } else { (7, 3 * 360) };
+        let (fwd_speed, rot_speed) = if input_events.slow {
+            (2, 360)
+        } else {
+            (7, 3 * 360)
+        };
 
         if input_events.forward {
             self.player_vel.forward += fwd_speed;
@@ -235,17 +249,22 @@ impl Mainloop {
             self.things.update(&mut self.player, &mut self.map_dynamic);
             self.map_dynamic.update(&self.player);
         }
-        self.player
-            .apply_vel(&self.player_vel, dt, &self.map_dynamic, !self.stop_the_world_mode);
+        self.player.apply_vel(
+            &self.player_vel,
+            dt,
+            &self.map_dynamic,
+            !self.stop_the_world_mode,
+        );
 
         // println!("player: {:?} {:?} {:?}", self.player_vel, player.x, player.y);
         // println!("player: {:?}", player);
 
         let ceiling_color = [
-            0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0xbf, 0x4e, 0x4e, 0x4e, 0x1d, 0x8d, 0x4e, 0x1d, 0x2d,
-            0x1d, 0x8d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x2d, 0xdd, 0x1d, 0x1d, 0x98, 0x1d, 0x9d, 0x2d, 0xdd, 0xdd, 0x9d,
-            0x2d, 0x4d, 0x1d, 0xdd, 0x7d, 0x1d, 0x2d, 0x2d, 0xdd, 0xd7, 0x1d, 0x1d, 0x1d, 0x2d, 0x1d, 0x1d, 0x1d, 0x1d,
-            0xdd, 0xdd, 0x7d, 0xdd, 0xdd, 0xdd,
+            0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0xbf, 0x4e, 0x4e, 0x4e, 0x1d,
+            0x8d, 0x4e, 0x1d, 0x2d, 0x1d, 0x8d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x2d, 0xdd, 0x1d,
+            0x1d, 0x98, 0x1d, 0x9d, 0x2d, 0xdd, 0xdd, 0x9d, 0x2d, 0x4d, 0x1d, 0xdd, 0x7d, 0x1d,
+            0x2d, 0x2d, 0xdd, 0xd7, 0x1d, 0x1d, 0x1d, 0x2d, 0x1d, 0x1d, 0x1d, 0x1d, 0xdd, 0xdd,
+            0x7d, 0xdd, 0xdd, 0xdd,
         ];
         for (i, chunk) in buffer.chunks_mut(320 * HALF_HEIGHT as usize).enumerate() {
             if i == 0 {
@@ -276,10 +295,15 @@ impl Mainloop {
 
         // draw_sprite(&mut buffer, &zbuffer, &resources, 8, 100, sprite_z.into());
         // if frame % 4 == 0 {
-        let mut sprite_screen_setup = sprite::setup_screen_pos_for_player(self.things.get_sprites(), &self.player);
+        let mut sprite_screen_setup =
+            sprite::setup_screen_pos_for_player(self.things.get_sprites(), &self.player);
 
         let mut hit_thing = None;
-        if self.player.weapon.run(input_events.shoot, input_events.select_weapon) {
+        if self
+            .player
+            .weapon
+            .run(input_events.shoot, input_events.select_weapon)
+        {
             if let Some(room_id) = self
                 .map_dynamic
                 .get_room_id(self.player.x.get_int(), self.player.y.get_int())
@@ -381,11 +405,15 @@ impl Mainloop {
         if input_events.save {
             let mut f = std::fs::File::create("save.bin").unwrap();
             f.write_i32::<LittleEndian>(self.level_id).unwrap();
-            self.player.write(&mut f).expect("failed to write Player to savegame");
+            self.player
+                .write(&mut f)
+                .expect("failed to write Player to savegame");
             self.map_dynamic
                 .write(&mut f)
                 .expect("failed to write MapDynamic to savegame");
-            self.things.write(&mut f).expect("failed to write Things to savegame");
+            self.things
+                .write(&mut f)
+                .expect("failed to write Things to savegame");
         }
     }
 

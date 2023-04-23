@@ -15,7 +15,11 @@ impl RoomGraph {
         RoomGraph { adj }
     }
 
-    pub fn propagate_notifications(&self, door_states: &[Door], notifications: &HashSet<i32>) -> HashSet<i32> {
+    pub fn propagate_notifications(
+        &self,
+        door_states: &[Door],
+        notifications: &HashSet<i32>,
+    ) -> HashSet<i32> {
         let mut stack = notifications.iter().collect::<Vec<_>>();
         let mut out = notifications.iter().cloned().collect::<HashSet<_>>();
         while let Some(room_id) = stack.pop() {
@@ -158,9 +162,10 @@ impl MapDynamic {
                 // matches!(self.door_states[*state_index].action, DoorAction::Open(_))
                 self.door_states[*state_index].open_f == FP16_ONE
             }
-            MapTile::PushWall(_, state_index) => {
-                !matches!(self.pushwall_states[*state_index].action, PushwallAction::Closed)
-            }
+            MapTile::PushWall(_, state_index) => !matches!(
+                self.pushwall_states[*state_index].action,
+                PushwallAction::Closed
+            ),
             _ => false,
         }
     }
@@ -199,7 +204,10 @@ impl MapDynamic {
         let mut trigger_pushwalls = HashMap::new();
         if player.trigger {
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                match self.map.lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy) {
+                match self
+                    .map
+                    .lookup_tile(player.x.get_int() + dx, player.y.get_int() + dy)
+                {
                     MapTile::Door(_, _, state_index) => {
                         trigger_doors.insert(*state_index);
                     }
@@ -225,7 +233,9 @@ impl MapDynamic {
         let (tx, ty) = player.get_corners();
 
         for i in 0..4 {
-            if let MapTile::Door(_, _, state_index) = self.map.lookup_tile(tx[i].get_int(), ty[i].get_int()) {
+            if let MapTile::Door(_, _, state_index) =
+                self.map.lookup_tile(tx[i].get_int(), ty[i].get_int())
+            {
                 blocked_doors.insert(state_index);
             }
         }
@@ -249,7 +259,8 @@ impl MapDynamic {
                 PushwallAction::Sliding(direction, f) => {
                     let (dx, dy) = direction.tile_offset();
                     let fi = f.get_int();
-                    if let MapTile::PushWall(id, _) = self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                    if let MapTile::PushWall(id, _) =
+                        self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
                     {
                         self.pushwall_patch.insert(
                             ((fi * dx) + pushwall_state.x, (fi * dy) + pushwall_state.y),
@@ -258,10 +269,13 @@ impl MapDynamic {
                     }
                 }
                 PushwallAction::Open(xoffs, yoffs) => {
-                    if let MapTile::PushWall(id, _) = self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
+                    if let MapTile::PushWall(id, _) =
+                        self.map.map[pushwall_state.y as usize][pushwall_state.x as usize]
                     {
-                        self.pushwall_patch
-                            .insert((pushwall_state.x + xoffs, pushwall_state.y + yoffs), MapTile::Wall(id));
+                        self.pushwall_patch.insert(
+                            (pushwall_state.x + xoffs, pushwall_state.y + yoffs),
+                            MapTile::Wall(id),
+                        );
                     }
                 }
 
@@ -447,7 +461,9 @@ pub struct PushwallState {
 impl PushwallState {
     pub fn update(&mut self, trigger_direction: Option<Direction>) {
         match (&mut self.action, trigger_direction) {
-            (PushwallAction::Closed, Some(direction)) => self.action = PushwallAction::Sliding(direction, FP16_ZERO),
+            (PushwallAction::Closed, Some(direction)) => {
+                self.action = PushwallAction::Sliding(direction, FP16_ZERO)
+            }
             (PushwallAction::Sliding(_, f), _) if *f < (FP16_ONE * 2) => {
                 *f += FP16_FRAC_64;
             }
