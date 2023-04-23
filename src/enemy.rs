@@ -3,6 +3,7 @@ use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
 use std::io::{Read, Write};
+
 impl Enemy {
     fn check_player_sight(
         &mut self,
@@ -167,7 +168,9 @@ impl Enemy {
             _ => None,
         }
     }
-} // think implementations
+}
+
+// think implementations
 impl Enemy {
     fn think_chase(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
         let mut dodge = false;
@@ -246,6 +249,7 @@ impl Enemy {
         self.move_default(map_dynamic, unique_id, FP16_FRAC_64);
     }
 }
+
 // action implementations
 impl Enemy {
     fn action_die(&mut self) {
@@ -391,6 +395,8 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
         PathAction::MoveThroughDoor { dist, door_id: _ } => *dist < FP16_FRAC_64 * 2,
     }
 }
+
+// move implementations
 impl Enemy {
     fn move_default(&mut self, map_dynamic: &mut MapDynamic, static_index: usize, speed: Fp16) {
         match &mut self.path_action {
