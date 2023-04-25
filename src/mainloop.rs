@@ -320,9 +320,9 @@ impl Mainloop {
                 }
             }
         }
-
+        self.entities.update();
         sprite_screen_setup.push(self.player.weapon.get_sprite());
-
+        sprite_screen_setup.append(&mut self.entities.get_sprites());
         if input_events.misc_selection > 0 {
             sprite_screen_setup.push(SpriteSceenSetup {
                 z: FP16_ZERO,

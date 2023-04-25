@@ -1,5 +1,5 @@
 use crate::{prelude::*, sprite::SpriteSceenSetup};
-use rhai::Engine;
+use rhai::{Engine, Scope};
 
 #[derive(Debug, Clone)]
 struct Entity {
@@ -24,13 +24,25 @@ pub struct Entities {
 }
 impl Entities {
     pub fn new() -> Self {
+        let mut entities = Vec::new();
+        entities.push(Entity { sprite_id: 1, state: 0 });
         Self {
-            entities: Vec::new(),
+            entities,
             script_engine: ScriptEngine::new(),
         }
     }
     pub fn update(&mut self) {
-        todo!()
+        let ast = self.script_engine.engine.compile("x+1").unwrap();
+        for entity in &mut self.entities {
+            let mut scope = Scope::new();
+            scope.push("x", entity.sprite_id);
+
+            entity.sprite_id = self
+                .script_engine
+                .engine
+                .eval_ast_with_scope::<i32>(&mut scope, &ast)
+                .unwrap() as i32;
+        }
     }
     pub fn get_sprites(&self) -> Vec<SpriteSceenSetup> {
         let mut ret = Vec::new();

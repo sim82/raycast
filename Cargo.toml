@@ -14,7 +14,7 @@ rand = { version = "0.8" }
 state_bc = {path = "crates/state_bc"}
 byteorder = "1"
 anyhow = "1"
-rhai = "1"
+rhai = {version= "1", features = ["only_i32"]}
 [build-dependencies]
 state_bc = {path = "crates/state_bc", features = ["compiler"]}
 
