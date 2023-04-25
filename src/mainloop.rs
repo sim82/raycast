@@ -75,6 +75,7 @@ pub struct Mainloop {
     automap: bool,
     stop_the_world_mode: bool,
     pub use_mouse_move: bool, // needs to be managed from outside
+    entities: Entities,
 }
 
 impl Mainloop {
@@ -158,6 +159,7 @@ impl Mainloop {
             rot: 0,
         };
 
+        let entities = Entities::new();
         Mainloop {
             map_dynamic,
             things,
@@ -168,6 +170,7 @@ impl Mainloop {
             automap: false,
             stop_the_world_mode: false,
             use_mouse_move: false,
+            entities,
         }
     }
 

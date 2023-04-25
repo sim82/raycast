@@ -6,6 +6,7 @@ pub mod block_map;
 pub mod door;
 pub mod draw;
 pub mod enemy;
+pub mod entity_rh;
 pub mod fa;
 pub mod font;
 pub mod fp16;
@@ -34,6 +35,7 @@ pub mod prelude {
         door::Door,
         draw::Draw,
         enemy::Enemy,
+        entity_rh::Entities,
         fa::{
             fa_cos, fa_cot, fa_fix_angle, fa_sin, fa_tan, FA_FRAC_PI_2, FA_PI, FA_PI_FRAC_PI_2, FA_SCALEF, FA_STEPS,
             FA_TAU, PIS_IN_180, QUADRANT_1, QUADRANT_2, QUADRANT_3, QUADRANT_4, TAN_CLAMP,
