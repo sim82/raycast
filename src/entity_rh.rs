@@ -30,6 +30,9 @@ impl Entities {
 
         let script_engine = ScriptEngine::new();
         let ast = script_engine.engine.compile(include_str!("test.rhai")).unwrap();
+
+        let m = script_engine.engine.eval_ast::<rhai::Map>(&ast);
+        println!("m: {m:?}");
         Self {
             entities,
             script_engine,
@@ -39,13 +42,13 @@ impl Entities {
     pub fn update(&mut self) {
         for entity in &mut self.entities {
             let mut scope = Scope::new();
-            scope.push("x", entity.sprite_id);
+            // scope.push("x", entity.sprite_id);
 
-            entity.sprite_id = self
-                .script_engine
-                .engine
-                .eval_ast_with_scope::<i32>(&mut scope, &self.ast)
-                .unwrap() as i32;
+            // entity.sprite_id = self
+            //     .script_engine
+            //     .engine
+            //     .eval_ast_with_scope::<i32>(&mut scope, &self.ast)
+            //     .unwrap() as i32;
         }
     }
     pub fn get_sprites(&self) -> Vec<SpriteSceenSetup> {
