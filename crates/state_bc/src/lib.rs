@@ -17,6 +17,71 @@ pub mod prelude {
 #[cfg(feature = "compiler")]
 pub mod compiler;
 
+pub mod opcode;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub enum Function {
+    #[default]
+    None,
+    ThinkStand,
+    ThinkPath,
+    ThinkChase,
+    ThinkDogChase,
+    ActionDie,
+    ActionShoot,
+    ActionBite,
+}
+impl Function {
+    pub fn from_identifier(name: &str) -> Self {
+        match name {
+            "None" => Self::None,
+            "ThinkStand" => Self::ThinkStand,
+            "ThinkPath" => Self::ThinkPath,
+            "ThinkChase" => Self::ThinkChase,
+            "ThinkDogChase" => Self::ThinkDogChase,
+            "ActionDie" => Self::ActionDie,
+            "ActionShoot" => Self::ActionShoot,
+            "ActionBite" => Self::ActionBite,
+            _ => panic!("unhandled Function identifier {name}"),
+        }
+    }
+}
+
+impl TryFrom<u8> for Function {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self> {
+        Ok(match value {
+            0 => Self::None,
+            1 => Self::ThinkStand,
+            2 => Self::ThinkPath,
+            3 => Self::ThinkChase,
+            6 => Self::ThinkDogChase,
+            7 => Self::ActionDie,
+            8 => Self::ActionShoot,
+            9 => Self::ActionBite,
+            x => return Err(anyhow!("unhandled Think discriminator {x}")),
+        })
+    }
+}
+
+impl TryInto<u8> for Function {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<u8> {
+        Ok(match self {
+            Self::None => 0,
+            Self::ThinkStand => 1,
+            Self::ThinkPath => 2,
+            Self::ThinkChase => 3,
+            Self::ThinkDogChase => 6,
+            Self::ActionDie => 7,
+            Self::ActionShoot => 8,
+            Self::ActionBite => 9,
+        })
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Think {
     #[default]
