@@ -17,7 +17,7 @@ pub mod prelude {
 #[cfg(feature = "compiler")]
 pub mod compiler;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum Think {
     #[default]
     None,
@@ -44,9 +44,11 @@ impl Think {
     }
 }
 
-impl ms::Loadable for Think {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+impl TryFrom<u8> for Think {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self> {
+        Ok(match value {
             0 => Think::None,
             1 => Think::Stand,
             2 => Think::Path,
@@ -58,10 +60,11 @@ impl ms::Loadable for Think {
         })
     }
 }
+impl TryInto<u8> for Think {
+    type Error = anyhow::Error;
 
-impl ms::Writable for Think {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        let v = match self {
+    fn try_into(self) -> Result<u8> {
+        Ok(match self {
             Think::None => 0,
             Think::Stand => 1,
             Think::Path => 2,
@@ -69,13 +72,11 @@ impl ms::Writable for Think {
             Think::Shoot => 4,
             Think::Bite => 5,
             Think::DogChase => 6,
-        };
-        w.write_u8(v)?;
-        Ok(())
+        })
     }
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
 pub enum Action {
     #[default]
     None,
@@ -96,9 +97,11 @@ impl Action {
     }
 }
 
-impl ms::Loadable for Action {
-    fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+impl TryFrom<u8> for Action {
+    type Error = anyhow::Error;
+
+    fn try_from(value: u8) -> Result<Self> {
+        Ok(match value {
             0 => Action::None,
             1 => Action::Die,
             2 => Action::Shoot,
@@ -108,16 +111,16 @@ impl ms::Loadable for Action {
     }
 }
 
-impl ms::Writable for Action {
-    fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        let v = match self {
+impl TryInto<u8> for Action {
+    type Error = anyhow::Error;
+
+    fn try_into(self) -> Result<u8> {
+        Ok(match self {
             Action::None => 0,
             Action::Die => 1,
             Action::Shoot => 2,
             Action::Bite => 3,
-        };
-        w.write_u8(v)?;
-        Ok(())
+        })
     }
 }
 
@@ -310,8 +313,8 @@ impl ms::Loadable for StateBc {
         let id = r.read_i32::<LittleEndian>()?;
         let ticks = r.read_i32::<LittleEndian>()?;
         let directional = r.read_u8()? != 0;
-        let think = Think::read_from(r)?;
-        let action = Action::read_from(r)?;
+        let think = r.read_u8()?.try_into()?;
+        let action = r.read_u8()?.try_into()?;
         let next = r.read_i32::<LittleEndian>()?;
         Ok(StateBc {
             id,
@@ -329,8 +332,8 @@ impl ms::Writable for StateBc {
         w.write_i32::<LittleEndian>(self.id)?;
         w.write_i32::<LittleEndian>(self.ticks)?;
         w.write_u8(if self.directional { 1 } else { 0 })?;
-        self.think.write(w)?;
-        self.action.write(w)?;
+        w.write_u8(self.think.try_into()?)?;
+        w.write_u8(self.action.try_into()?)?;
         w.write_i32::<LittleEndian>(self.next)?;
         Ok(())
     }
