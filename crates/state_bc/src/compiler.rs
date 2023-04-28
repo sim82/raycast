@@ -1,4 +1,6 @@
-use crate::{ms::Writable, Action, Direction, EnemySpawnInfo, SpawnInfos, StateBc, Think};
+use crate::{
+    ms::Writable, Action, Direction, EnemySpawnInfo, Function, SpawnInfos, StateBc, Think,
+};
 use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
@@ -119,8 +121,8 @@ pub fn codegen(
                     id,
                     ticks: *ticks,
                     directional: *directional,
-                    think: Think::from_identifier(think),
-                    action: Action::from_identifier(action),
+                    think: Function::from_identifier(think),
+                    action: Function::from_identifier(action),
                     next: next_ptr,
                 });
                 ip += crate::STATE_BC_SIZE;

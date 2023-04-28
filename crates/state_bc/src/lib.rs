@@ -19,7 +19,7 @@ pub mod compiler;
 
 pub mod opcode;
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum Function {
     #[default]
     None,
@@ -369,8 +369,8 @@ pub struct StateBc {
     pub id: i32,
     pub ticks: i32,
     pub directional: bool,
-    pub think: Think,
-    pub action: Action,
+    pub think: Function,
+    pub action: Function,
     pub next: i32,
 }
 
@@ -411,8 +411,8 @@ impl StateBc {
     pub fn new(
         id: i32,
         ticks: i32,
-        think: Think,
-        action: Action,
+        think: Function,
+        action: Function,
         next: i32,
         directional: bool,
     ) -> Self {
@@ -426,11 +426,11 @@ impl StateBc {
         }
     }
 
-    pub fn take_action(&mut self) -> Action {
-        if self.action != Action::None {
+    pub fn take_action(&mut self) -> Function {
+        if self.action != Function::None {
             std::mem::take(&mut self.action)
         } else {
-            Action::None
+            Function::None
         }
     }
 }
