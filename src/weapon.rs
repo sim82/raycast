@@ -88,7 +88,7 @@ impl Weapon {
             }
         }
 
-        let shoot = matches!(self.exec_ctx.state.take_action(), Action::Shoot);
+        let shoot = matches!(self.exec_ctx.state.take_action(), Function::ActionShoot);
 
         if shoot && self.selected_weapon != WeaponType::Knife {
             self.ammo -= 1;
@@ -98,19 +98,19 @@ impl Weapon {
         if self.exec_ctx.state.ticks <= 0 {
             match self.exec_ctx.state.think {
                 // weapon idle + fire -> attack state
-                Think::Stand if fire => {
+                Function::ThinkStand if fire => {
                     self.exec_ctx
                         .jump_label(&self.selected_weapon.map_state_label("attack"))
                         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
                 }
                 // weapon idle + no fire -> restart ready state of selected weapon (i.e. change weapon if requested)
-                Think::Stand if !fire => {
+                Function::ThinkStand if !fire => {
                     self.exec_ctx
                         .jump_label(&self.selected_weapon.map_state_label("ready"))
                         .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
                 }
                 // weapon in attack state + ammo depleted -> restart attack state (keep weapon raised, but don't proceed further)
-                Think::Path
+                Function::ThinkPath
                     if fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0 =>
                 {
                     self.exec_ctx
@@ -118,7 +118,7 @@ impl Weapon {
                         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
                 }
                 // weapon in attack state + no fire -> lower weapon, proceed to idle
-                Think::Path if !fire => {
+                Function::ThinkPath if !fire => {
                     self.exec_ctx
                         .jump_label(&self.selected_weapon.map_state_label("lower"))
                         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));

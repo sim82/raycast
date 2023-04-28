@@ -606,26 +606,20 @@ impl Enemy {
     ) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
         // this is different from wolf3d where actions execute on state exit (don't understand why...)
-        match self.exec_ctx.state.take_action() {
-            Action::None => (),
-            Action::Die => self.action_die(),
-            Action::Shoot => self.action_shoot(map_dynamic, things, unique_id, player),
-            Action::Bite => self.action_bite(map_dynamic, things, unique_id),
-        }
+        let function = self.exec_ctx.state.take_action();
+        self.dispatch_call(function, map_dynamic, things, unique_id, player);
 
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
 
-        match self.exec_ctx.state.think {
-            Think::None => (),
-            Think::Stand => self.think_stand(map_dynamic, things, unique_id),
-            Think::Path => self.think_path(map_dynamic, things, unique_id),
-            Think::Chase => self.think_chase(map_dynamic, things, unique_id),
-            Think::Shoot => (), // FIXME: remove
-            Think::Bite => (),  // FIXME: remove
-            Think::DogChase => self.think_dogchase(map_dynamic, things, unique_id),
-        }
+        self.dispatch_call(
+            self.exec_ctx.state.think,
+            map_dynamic,
+            things,
+            unique_id,
+            player,
+        );
 
         // self.states[self.cur].2();
 

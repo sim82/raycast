@@ -28,19 +28,19 @@ impl Door {
         self.exec_ctx.state.ticks -= 1;
 
         match self.exec_ctx.state.think {
-            Think::Stand if trigger => {
+            Function::ThinkStand if trigger => {
                 self.exec_ctx
                     .jump_label("door::open")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::open: {err:?}"));
             }
-            Think::Path if trigger => {
+            Function::ThinkPath if trigger => {
                 self.exec_ctx
                     .jump_label("door::blocked")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
             }
-            Think::Chase => self.open_f -= FP16_FRAC_64,
-            Think::DogChase => self.open_f += FP16_FRAC_64,
-            Think::Shoot if !blocked => {
+            Function::ThinkChase => self.open_f -= FP16_FRAC_64,
+            Function::ThinkDogChase => self.open_f += FP16_FRAC_64,
+            Function::ActionShoot if !blocked => {
                 self.exec_ctx
                     .jump_label("door::close")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
