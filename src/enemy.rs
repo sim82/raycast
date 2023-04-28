@@ -4,307 +4,390 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
 use std::io::{Read, Write};
 
-fn check_player_sight(thing: &mut Enemy, things: &Things, map_dynamic: &mut MapDynamic, _static_index: usize) -> bool {
-    let dx = things.player_x - thing.x.get_int();
-    let dy = things.player_y - thing.y.get_int();
+impl Enemy {
+    fn check_player_sight(
+        &mut self,
+        things: &Things,
+        map_dynamic: &mut MapDynamic,
+        _static_index: usize,
+    ) -> bool {
+        let dx = things.player_x - self.x.get_int();
+        let dy = things.player_y - self.y.get_int();
 
-    let in_front = match thing.direction {
-        Direction::East => dx > 0,
-        Direction::SouthEast => dx + dy > 0,
-        Direction::South => dy > 0,
-        Direction::SouthWest => dx - dy < 0,
-        Direction::West => dx < 0,
-        Direction::NorthWest => dx + dy < 0,
-        Direction::North => dy < 0,
-        Direction::NorthEast => dx - dy > 0,
-    };
+        let in_front = match self.direction {
+            Direction::East => dx > 0,
+            Direction::SouthEast => dx + dy > 0,
+            Direction::South => dy > 0,
+            Direction::SouthWest => dx - dy < 0,
+            Direction::West => dx < 0,
+            Direction::NorthWest => dx + dy < 0,
+            Direction::North => dy < 0,
+            Direction::NorthEast => dx - dy > 0,
+        };
 
-    if !in_front {
-        return false;
+        if !in_front {
+            return false;
+        }
+
+        bresenham_trace(
+            self.x.get_int(),
+            self.y.get_int(),
+            things.player_x,
+            things.player_y,
+            |x, y| match map_dynamic.lookup_tile(x, y) {
+                MapTile::Walkable(_, _) => true,
+                MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
+                _ => false,
+            },
+        )
     }
 
-    bresenham_trace(
-        thing.x.get_int(),
-        thing.y.get_int(),
-        things.player_x,
-        things.player_y,
-        |x, y| match map_dynamic.lookup_tile(x, y) {
-            MapTile::Walkable(_, _) => true,
-            MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
-            _ => false,
-        },
-    )
+    fn try_update_pathdir(&self, map_dynamic: &mut MapDynamic) -> Option<Direction> {
+        // check how to continue
+        let xaligned = self.x.fract() == FP16_HALF;
+        let yaligned = self.y.fract() == FP16_HALF;
+        if !(xaligned && yaligned) {
+            // TODO: recover, e.g. teleport to next tile center. This should not happen in a fixedpoint world, but who knows...
+            println!("PathAction::Move ended not on tile center. Aborting.");
+            return None;
+        }
+        if let MapTile::Walkable(_, Some(path_direction)) =
+            map_dynamic.lookup_tile(self.x.get_int(), self.y.get_int())
+        {
+            Some(path_direction)
+        } else {
+            None
+        }
+    }
+
+    fn try_find_pathaction(
+        &self,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+    ) -> Option<PathAction> {
+        let (dx, dy) = self.direction.tile_offset();
+        // check the block we are about to enter
+        let enter_x = self.x.get_int() + dx;
+        let enter_y = self.y.get_int() + dy;
+        match map_dynamic.lookup_tile(enter_x, enter_y) {
+            MapTile::Door(_, _, door_id) if !self.direction.is_diagonal() => {
+                // println!("open door");
+                Some(PathAction::WaitForDoor { door_id })
+            }
+            // MapTile::Door(_, _, door_id) => {
+            //     println!("door diagonal");
+            //     None
+            // }
+            MapTile::Walkable(_, _) => {
+                if things.blockmap.is_occupied(enter_x, enter_y) {
+                    println!("path occupied in blockmap. waiting");
+                    None
+                } else {
+                    Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx,
+                        dy,
+                    })
+                }
+            }
+            MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => {
+                // fixup path direction pointing diagonally into wall. The expectation seems to be that the actor continues going in the
+                // diagonal direction but 'slide' along walls (e.g. the dogs in E1M6)
+                if dx != 0 && dy != 0 {
+                    match map_dynamic.lookup_tile(enter_x, self.y.get_int()) {
+                        MapTile::Walkable(_, _)
+                            if !things.blockmap.is_occupied(enter_x, self.y.get_int()) =>
+                        {
+                            return Some(PathAction::Move {
+                                dist: FP16_ONE,
+                                dx,
+                                dy: 0,
+                            })
+                        }
+                        _ => (), // fall through
+                    }
+                    match map_dynamic.lookup_tile(self.x.get_int(), enter_y) {
+                        MapTile::Walkable(_, _)
+                            if !things.blockmap.is_occupied(self.x.get_int(), enter_y) =>
+                        {
+                            return Some(PathAction::Move {
+                                dist: FP16_ONE,
+                                dx: 0,
+                                dy,
+                            })
+                        }
+                        _ => (), // fall through
+                    }
+                }
+                println!("path hits wall head on. stopping.");
+                None
+            }
+
+            _ => None,
+        }
+    }
+
+    fn try_chase_pathaction(
+        &self,
+        direction: Direction,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+    ) -> Option<PathAction> {
+        let (dx, dy) = direction.tile_offset();
+        // check the block we are about to enter
+        let enter_x = self.x.get_int() + dx;
+        let enter_y = self.y.get_int() + dy;
+        match map_dynamic.lookup_tile(enter_x, enter_y) {
+            MapTile::Door(_, _, door_id) if !direction.is_diagonal() => {
+                // println!("open door");
+                Some(PathAction::WaitForDoor { door_id })
+            }
+            MapTile::Walkable(_, _) => {
+                // on diagonal moves check if both adjecent tiles are at least walkable (it is ok if they are occupied so an enemy can move diagonally
+                // between two others, but it can nerver move through a wall corner)
+                let old_x = self.x.get_int();
+                let old_y = self.y.get_int();
+                let diagonal_blocked = direction.is_diagonal()
+                    && (!map_dynamic.can_walk(old_x, enter_y)
+                        || !map_dynamic.can_walk(enter_x, old_y)
+                        || things.blockmap.is_occupied(old_x, enter_y)
+                        || things.blockmap.is_occupied(enter_x, old_y));
+
+                if diagonal_blocked || things.blockmap.is_occupied(enter_x, enter_y) {
+                    None
+                } else {
+                    Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx,
+                        dy,
+                    })
+                }
+            }
+            MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => None,
+
+            _ => None,
+        }
+    }
 }
 
-fn try_update_pathdir(thing: &Enemy, map_dynamic: &mut MapDynamic) -> Option<Direction> {
-    // check how to continue
-    let xaligned = thing.x.fract() == FP16_HALF;
-    let yaligned = thing.y.fract() == FP16_HALF;
-    if !(xaligned && yaligned) {
-        // TODO: recover, e.g. teleport to next tile center. This should not happen in a fixedpoint world, but who knows...
-        println!("PathAction::Move ended not on tile center. Aborting.");
-        return None;
+// think implementations
+impl Enemy {
+    fn think_chase(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+        let mut dodge = false;
+        if self.check_player_sight(things, map_dynamic, unique_id) {
+            let d = things
+                .player_x
+                .abs_diff(self.x.get_int())
+                .max(things.player_y.abs_diff(self.y.get_int()));
+
+            let chance = if d == 0
+                || (d == 1 && self.path_action.as_ref().map_or(true, boost_shoot_chance))
+            {
+                256
+            } else {
+                16 / d
+            };
+            // println!("chance: {chance}");
+            if (rand::random::<u8>() as u32) < chance {
+                self.set_state("shoot");
+            }
+            dodge = true;
+        }
+
+        if self.path_action.is_none() {
+            let cont = if dodge {
+                self.select_dodge_action(things, map_dynamic)
+            } else {
+                self.select_chase_action(things, map_dynamic)
+            };
+
+            if let Some((path_action, dir)) = cont {
+                self.path_action = Some(path_action);
+                self.direction = dir;
+            }
+        }
+        self.move_default(map_dynamic, unique_id, FP16_FRAC_64);
     }
-    if let MapTile::Walkable(_, Some(path_direction)) = map_dynamic.lookup_tile(thing.x.get_int(), thing.y.get_int()) {
-        Some(path_direction)
-    } else {
+    fn think_path(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+        if self.notify || self.check_player_sight(things, map_dynamic, unique_id) {
+            self.set_state("chase");
+            self.notify = true;
+            return;
+        }
+
+        if self.path_action.is_none() {
+            self.direction = self
+                .try_update_pathdir(map_dynamic)
+                .unwrap_or(self.direction);
+            self.path_action = self.try_find_pathaction(map_dynamic, things);
+        }
+        self.move_default(map_dynamic, unique_id, FP16_FRAC_128);
+    }
+
+    fn think_stand(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+        if self.notify || self.check_player_sight(things, map_dynamic, unique_id) {
+            self.set_state("chase");
+            self.notify = true;
+        }
+    }
+    fn think_dogchase(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+        if self.path_action.is_none() {
+            // absurd fact: dogs never dogdge
+            if let Some((path_action, dir)) = self.select_chase_action(things, map_dynamic) {
+                self.path_action = Some(path_action);
+                self.direction = dir;
+            }
+        }
+
+        let dx = self.x.get_int().abs_diff(things.player_x);
+        let dy = self.y.get_int().abs_diff(things.player_y);
+
+        if dx <= 1 && dy <= 1 {
+            self.set_state("jump");
+        }
+
+        self.move_default(map_dynamic, unique_id, FP16_FRAC_64);
+    }
+}
+
+// action implementations
+impl Enemy {
+    fn action_die(&mut self) {
+        self.dead = true;
+    }
+    fn action_bite(&mut self, _map_dynamic: &mut MapDynamic, _things: &Things, _unique_id: usize) {}
+    fn action_shoot(
+        &mut self,
+        map_dynamic: &mut MapDynamic,
+        _things: &Things,
+        _unique_id: usize,
+        player: &mut Player,
+    ) {
+        println!("shoot");
+        if !bresenham_trace(
+            (self.x * 4).get_int(),
+            (self.y * 4).get_int(),
+            (player.x * 4).get_int(),
+            (player.y * 4).get_int(),
+            |x, y| match map_dynamic.lookup_tile(x / 4, y / 4) {
+                MapTile::Walkable(_, _) => true,
+                MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
+                _ => false,
+            },
+        ) {
+            return;
+        }
+
+        let dx = self.x.get_int() - player.x.get_int();
+        let dy = self.y.get_int() - player.y.get_int();
+        let dist = dx.max(dy);
+
+        if random::<u8>() as i32 > dist * 20 {
+            let boost = 2 - dx.max(dy).min(2);
+            let base_hitpoints = 7;
+            let hitpoints = base_hitpoints + ((boost * 5) * (random::<u8>() as i32)) / 255;
+            player.health -= hitpoints;
+        }
+    }
+}
+impl Enemy {
+    fn select_chase_action(
+        &self,
+        things: &Things,
+        map_dynamic: &mut MapDynamic,
+    ) -> Option<(PathAction, Direction)> {
+        let dx = things.player_x - self.x.get_int();
+        let dy = things.player_y - self.y.get_int();
+        let mut dirtry = [None; 3];
+
+        if (dx > 0) ^ (random::<u8>() < 16) {
+            dirtry[1] = Some(Direction::East);
+        } else {
+            dirtry[1] = Some(Direction::West);
+        }
+
+        if (dy > 0) ^ (random::<u8>() < 16) {
+            dirtry[2] = Some(Direction::South);
+        } else {
+            dirtry[2] = Some(Direction::North);
+        }
+
+        if (dy.abs() > dx.abs()) ^ (random::<u8>() < 32) {
+            dirtry.swap(1, 2);
+        }
+        if random::<u8>() < 192 {
+            dirtry[0] = match (dirtry[1], dirtry[2]) {
+                (Some(Direction::North), Some(Direction::East))
+                | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
+                (Some(Direction::North), Some(Direction::West))
+                | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
+                (Some(Direction::South), Some(Direction::East))
+                | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
+                (Some(Direction::South), Some(Direction::West))
+                | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
+                _ => None,
+            };
+        }
+
+        for dir in dirtry.iter().filter_map(|x| *x) {
+            // println!("chase try: {dir:?}");
+            let path_action = self.try_chase_pathaction(dir, map_dynamic, things);
+            if let Some(path_action) = path_action {
+                return Some((path_action, dir));
+            }
+        }
+        None
+    }
+    fn select_dodge_action(
+        &self,
+        things: &Things,
+        map_dynamic: &mut MapDynamic,
+    ) -> Option<(PathAction, Direction)> {
+        let dx = things.player_x - self.x.get_int();
+        let dy = things.player_y - self.y.get_int();
+        //
+        // arange 5 direction choices in order of preference
+        // the four cardinal directions plus the diagonal straight towards
+        // the player
+        //
+        let mut dirtry = [None; 5];
+        if dx > 0 {
+            dirtry[1] = Some(Direction::East);
+            dirtry[3] = Some(Direction::West);
+        } else {
+            dirtry[1] = Some(Direction::West);
+            dirtry[3] = Some(Direction::East);
+        }
+
+        if dy > 0 {
+            dirtry[2] = Some(Direction::South);
+            dirtry[4] = Some(Direction::North);
+        } else {
+            dirtry[2] = Some(Direction::North);
+            dirtry[4] = Some(Direction::South);
+        }
+
+        dirtry[0] = match (dirtry[1], dirtry[2]) {
+            (Some(Direction::North), Some(Direction::East))
+            | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
+            (Some(Direction::North), Some(Direction::West))
+            | (Some(Direction::West), Some(Direction::North)) => Some(Direction::NorthWest),
+            (Some(Direction::South), Some(Direction::East))
+            | (Some(Direction::East), Some(Direction::South)) => Some(Direction::SouthEast),
+            (Some(Direction::South), Some(Direction::West))
+            | (Some(Direction::West), Some(Direction::South)) => Some(Direction::SouthWest),
+            _ => None,
+        };
+
+        for dir in dirtry.iter().filter_map(|x| *x) {
+            let path_action = self.try_chase_pathaction(dir, map_dynamic, things);
+            if let Some(path_action) = path_action {
+                return Some((path_action, dir));
+            }
+        }
         None
     }
 }
-
-fn try_find_pathaction(thing: &Enemy, map_dynamic: &mut MapDynamic, things: &Things) -> Option<PathAction> {
-    let (dx, dy) = thing.direction.tile_offset();
-    // check the block we are about to enter
-    let enter_x = thing.x.get_int() + dx;
-    let enter_y = thing.y.get_int() + dy;
-    match map_dynamic.lookup_tile(enter_x, enter_y) {
-        MapTile::Door(_, _, door_id) if !thing.direction.is_diagonal() => {
-            // println!("open door");
-            Some(PathAction::WaitForDoor { door_id })
-        }
-        // MapTile::Door(_, _, door_id) => {
-        //     println!("door diagonal");
-        //     None
-        // }
-        MapTile::Walkable(_, _) => {
-            if things.blockmap.is_occupied(enter_x, enter_y) {
-                println!("path occupied in blockmap. waiting");
-                None
-            } else {
-                Some(PathAction::Move { dist: FP16_ONE, dx, dy })
-            }
-        }
-        MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => {
-            // fixup path direction pointing diagonally into wall. The expectation seems to be that the actor continues going in the
-            // diagonal direction but 'slide' along walls (e.g. the dogs in E1M6)
-            if dx != 0 && dy != 0 {
-                match map_dynamic.lookup_tile(enter_x, thing.y.get_int()) {
-                    MapTile::Walkable(_, _) if !things.blockmap.is_occupied(enter_x, thing.y.get_int()) => {
-                        return Some(PathAction::Move {
-                            dist: FP16_ONE,
-                            dx,
-                            dy: 0,
-                        })
-                    }
-                    _ => (), // fall through
-                }
-                match map_dynamic.lookup_tile(thing.x.get_int(), enter_y) {
-                    MapTile::Walkable(_, _) if !things.blockmap.is_occupied(thing.x.get_int(), enter_y) => {
-                        return Some(PathAction::Move {
-                            dist: FP16_ONE,
-                            dx: 0,
-                            dy,
-                        })
-                    }
-                    _ => (), // fall through
-                }
-            }
-            println!("path hits wall head on. stopping.");
-            None
-        }
-
-        _ => None,
-    }
-}
-
-fn try_chase_pathaction(
-    direction: Direction,
-    thing: &Enemy,
-    map_dynamic: &mut MapDynamic,
-    things: &Things,
-) -> Option<PathAction> {
-    let (dx, dy) = direction.tile_offset();
-    // check the block we are about to enter
-    let enter_x = thing.x.get_int() + dx;
-    let enter_y = thing.y.get_int() + dy;
-    match map_dynamic.lookup_tile(enter_x, enter_y) {
-        MapTile::Door(_, _, door_id) if !direction.is_diagonal() => {
-            // println!("open door");
-            Some(PathAction::WaitForDoor { door_id })
-        }
-        MapTile::Walkable(_, _) => {
-            // on diagonal moves check if both adjecent tiles are at least walkable (it is ok if they are occupied so an enemy can move diagonally
-            // between two others, but it can nerver move through a wall corner)
-            let old_x = thing.x.get_int();
-            let old_y = thing.y.get_int();
-            let diagonal_blocked = direction.is_diagonal()
-                && (!map_dynamic.can_walk(old_x, enter_y)
-                    || !map_dynamic.can_walk(enter_x, old_y)
-                    || things.blockmap.is_occupied(old_x, enter_y)
-                    || things.blockmap.is_occupied(enter_x, old_y));
-
-            if diagonal_blocked || things.blockmap.is_occupied(enter_x, enter_y) {
-                None
-            } else {
-                Some(PathAction::Move { dist: FP16_ONE, dx, dy })
-            }
-        }
-        MapTile::Blocked(_) | MapTile::Wall(_) | MapTile::PushWall(_, _) => None,
-
-        _ => None,
-    }
-}
-
-fn think_chase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
-    let mut dodge = false;
-    if check_player_sight(thing, things, map_dynamic, unique_id) {
-        let d = things
-            .player_x
-            .abs_diff(thing.x.get_int())
-            .max(things.player_y.abs_diff(thing.y.get_int()));
-
-        let chance = if d == 0 || (d == 1 && thing.path_action.as_ref().map_or(true, boost_shoot_chance)) {
-            256
-        } else {
-            16 / d
-        };
-        // println!("chance: {chance}");
-        if (rand::random::<u8>() as u32) < chance {
-            thing.set_state("shoot");
-        }
-        dodge = true;
-    }
-
-    if thing.path_action.is_none() {
-        let cont = if dodge {
-            select_dodge_action(things, thing, map_dynamic)
-        } else {
-            select_chase_action(things, thing, map_dynamic)
-        };
-
-        if let Some((path_action, dir)) = cont {
-            thing.path_action = Some(path_action);
-            thing.direction = dir;
-        }
-    }
-    move_default(thing, map_dynamic, unique_id, FP16_FRAC_64);
-}
-
-fn select_chase_action(
-    things: &Things,
-    thing: &mut Enemy,
-    map_dynamic: &mut MapDynamic,
-) -> Option<(PathAction, Direction)> {
-    let dx = things.player_x - thing.x.get_int();
-    let dy = things.player_y - thing.y.get_int();
-    let mut dirtry = [None; 3];
-
-    if (dx > 0) ^ (random::<u8>() < 16) {
-        dirtry[1] = Some(Direction::East);
-    } else {
-        dirtry[1] = Some(Direction::West);
-    }
-
-    if (dy > 0) ^ (random::<u8>() < 16) {
-        dirtry[2] = Some(Direction::South);
-    } else {
-        dirtry[2] = Some(Direction::North);
-    }
-
-    if (dy.abs() > dx.abs()) ^ (random::<u8>() < 32) {
-        dirtry.swap(1, 2);
-    }
-    if random::<u8>() < 192 {
-        dirtry[0] = match (dirtry[1], dirtry[2]) {
-            (Some(Direction::North), Some(Direction::East)) | (Some(Direction::East), Some(Direction::North)) => {
-                Some(Direction::NorthEast)
-            }
-            (Some(Direction::North), Some(Direction::West)) | (Some(Direction::West), Some(Direction::North)) => {
-                Some(Direction::NorthWest)
-            }
-            (Some(Direction::South), Some(Direction::East)) | (Some(Direction::East), Some(Direction::South)) => {
-                Some(Direction::SouthEast)
-            }
-            (Some(Direction::South), Some(Direction::West)) | (Some(Direction::West), Some(Direction::South)) => {
-                Some(Direction::SouthWest)
-            }
-            _ => None,
-        };
-    }
-
-    for dir in dirtry.iter().filter_map(|x| *x) {
-        // println!("chase try: {dir:?}");
-        let path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
-        if let Some(path_action) = path_action {
-            return Some((path_action, dir));
-        }
-    }
-    None
-}
-
-fn select_dodge_action(
-    things: &Things,
-    thing: &mut Enemy,
-    map_dynamic: &mut MapDynamic,
-) -> Option<(PathAction, Direction)> {
-    let dx = things.player_x - thing.x.get_int();
-    let dy = things.player_y - thing.y.get_int();
-    //
-    // arange 5 direction choices in order of preference
-    // the four cardinal directions plus the diagonal straight towards
-    // the player
-    //
-    let mut dirtry = [None; 5];
-    if dx > 0 {
-        dirtry[1] = Some(Direction::East);
-        dirtry[3] = Some(Direction::West);
-    } else {
-        dirtry[1] = Some(Direction::West);
-        dirtry[3] = Some(Direction::East);
-    }
-
-    if dy > 0 {
-        dirtry[2] = Some(Direction::South);
-        dirtry[4] = Some(Direction::North);
-    } else {
-        dirtry[2] = Some(Direction::North);
-        dirtry[4] = Some(Direction::South);
-    }
-
-    dirtry[0] = match (dirtry[1], dirtry[2]) {
-        (Some(Direction::North), Some(Direction::East)) | (Some(Direction::East), Some(Direction::North)) => {
-            Some(Direction::NorthEast)
-        }
-        (Some(Direction::North), Some(Direction::West)) | (Some(Direction::West), Some(Direction::North)) => {
-            Some(Direction::NorthWest)
-        }
-        (Some(Direction::South), Some(Direction::East)) | (Some(Direction::East), Some(Direction::South)) => {
-            Some(Direction::SouthEast)
-        }
-        (Some(Direction::South), Some(Direction::West)) | (Some(Direction::West), Some(Direction::South)) => {
-            Some(Direction::SouthWest)
-        }
-        _ => None,
-    };
-
-    for dir in dirtry.iter().filter_map(|x| *x) {
-        let path_action = try_chase_pathaction(dir, thing, map_dynamic, things);
-        if let Some(path_action) = path_action {
-            return Some((path_action, dir));
-        }
-    }
-    None
-}
-
-fn think_dogchase(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
-    if thing.path_action.is_none() {
-        // absurd fact: dogs never dogdge
-        if let Some((path_action, dir)) = select_chase_action(things, thing, map_dynamic) {
-            thing.path_action = Some(path_action);
-            thing.direction = dir;
-        }
-    }
-
-    let dx = thing.x.get_int().abs_diff(things.player_x);
-    let dy = thing.y.get_int().abs_diff(things.player_y);
-
-    if dx <= 1 && dy <= 1 {
-        thing.set_state("jump");
-    }
-
-    move_default(thing, map_dynamic, unique_id, FP16_FRAC_64);
-}
-
 fn boost_shoot_chance(path_action: &PathAction) -> bool {
     match path_action {
         PathAction::Move { dist, dx: _, dy: _ } => *dist < FP16_FRAC_64 * 2,
@@ -313,125 +396,71 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
     }
 }
 
-fn action_shoot(
-    thing: &mut Enemy,
-    map_dynamic: &mut MapDynamic,
-    _things: &Things,
-    _unique_id: usize,
-    player: &mut Player,
-) {
-    println!("shoot");
-    if !bresenham_trace(
-        (thing.x * 4).get_int(),
-        (thing.y * 4).get_int(),
-        (player.x * 4).get_int(),
-        (player.y * 4).get_int(),
-        |x, y| match map_dynamic.lookup_tile(x / 4, y / 4) {
-            MapTile::Walkable(_, _) => true,
-            MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
-            _ => false,
-        },
-    ) {
-        return;
-    }
+// move implementations
+impl Enemy {
+    fn move_default(&mut self, map_dynamic: &mut MapDynamic, static_index: usize, speed: Fp16) {
+        match &mut self.path_action {
+            Some(PathAction::Move { dist, dx, dy }) if *dist > FP16_ZERO => {
+                if *dist == FP16_ONE {
+                    // check if we would bump into door
+                }
 
-    let dx = thing.x.get_int() - player.x.get_int();
-    let dy = thing.y.get_int() - player.y.get_int();
-    let dist = dx.max(dy);
-
-    if random::<u8>() as i32 > dist * 20 {
-        let boost = 2 - dx.max(dy).min(2);
-        let base_hitpoints = 7;
-        let hitpoints = base_hitpoints + ((boost * 5) * (random::<u8>() as i32)) / 255;
-        player.health -= hitpoints;
-    }
-}
-
-fn action_bite(_thing: &mut Enemy, _map_dynamic: &mut MapDynamic, _things: &Things, _unique_id: usize) {}
-
-fn think_path(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
-    if thing.notify || check_player_sight(thing, things, map_dynamic, unique_id) {
-        thing.set_state("chase");
-        thing.notify = true;
-        return;
-    }
-
-    if thing.path_action.is_none() {
-        thing.direction = try_update_pathdir(thing, map_dynamic).unwrap_or(thing.direction);
-        thing.path_action = try_find_pathaction(thing, map_dynamic, things);
-    }
-    move_default(thing, map_dynamic, unique_id, FP16_FRAC_128);
-}
-
-fn think_stand(thing: &mut Enemy, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
-    if thing.notify || check_player_sight(thing, things, map_dynamic, unique_id) {
-        thing.set_state("chase");
-        thing.notify = true;
-    }
-}
-
-fn move_default(thing: &mut Enemy, map_dynamic: &mut MapDynamic, static_index: usize, speed: Fp16) {
-    match &mut thing.path_action {
-        Some(PathAction::Move { dist, dx, dy }) if *dist > FP16_ZERO => {
-            if *dist == FP16_ONE {
-                // check if we would bump into door
-            }
-
-            // still some way to go on old action
-            *dist -= speed;
-            thing.x += speed * *dx;
-            thing.y += speed * *dy;
-
-            if *dist < FP16_ZERO {
-                // mid-move speed changes result in non precise end position. Not sure how to solve this. Hard reset to tile center to keep everything aligned.
-                println!("negative dist. fixing");
-                *dist = FP16_ZERO;
-                thing.x = FP16_HALF + thing.x.get_int().into();
-                thing.y = FP16_HALF + thing.y.get_int().into();
-            }
-
-            if *dist == FP16_ZERO {
-                thing.path_action = None;
-            }
-        }
-        Some(PathAction::Move { dist: _, dx: _, dy: _ }) => {
-
-            // panic!("PathAction::Move with zero dist.");
-        }
-        Some(PathAction::WaitForDoor { door_id }) => {
-            if map_dynamic.try_open_and_block_door(*door_id, static_index as i32) {
-                thing.path_action = Some(PathAction::MoveThroughDoor {
-                    dist: FP16_ONE,
-                    door_id: *door_id,
-                })
-            } else if get_capabilities_by_name(&thing.enemy_type_name).can_open_doors {
-                thing.path_action = None;
-            }
-        }
-        Some(PathAction::MoveThroughDoor { dist, door_id }) => {
-            if *dist > FP16_ZERO {
+                // still some way to go on old action
                 *dist -= speed;
-                let (dx, dy) = thing.direction.tile_offset();
-                thing.x += speed * dx;
-                thing.y += speed * dy;
-            } else {
-                // unblock door and keep moving in same direction
-                map_dynamic.unblock_door(*door_id, static_index as i32);
-                thing.path_action = Some(PathAction::Move {
-                    dist: FP16_ONE,
-                    dx: thing.direction.x_offs(),
-                    dy: thing.direction.y_offs(),
-                });
+                self.x += speed * *dx;
+                self.y += speed * *dy;
+
+                if *dist < FP16_ZERO {
+                    // mid-move speed changes result in non precise end position. Not sure how to solve this. Hard reset to tile center to keep everything aligned.
+                    println!("negative dist. fixing");
+                    *dist = FP16_ZERO;
+                    self.x = FP16_HALF + self.x.get_int().into();
+                    self.y = FP16_HALF + self.y.get_int().into();
+                }
+
+                if *dist == FP16_ZERO {
+                    self.path_action = None;
+                }
+            }
+            Some(PathAction::Move {
+                dist: _,
+                dx: _,
+                dy: _,
+            }) => {
+
+                // panic!("PathAction::Move with zero dist.");
+            }
+            Some(PathAction::WaitForDoor { door_id }) => {
+                if map_dynamic.try_open_and_block_door(*door_id, static_index as i32) {
+                    self.path_action = Some(PathAction::MoveThroughDoor {
+                        dist: FP16_ONE,
+                        door_id: *door_id,
+                    })
+                } else if get_capabilities_by_name(&self.enemy_type_name).can_open_doors {
+                    self.path_action = None;
+                }
+            }
+            Some(PathAction::MoveThroughDoor { dist, door_id }) => {
+                if *dist > FP16_ZERO {
+                    *dist -= speed;
+                    let (dx, dy) = self.direction.tile_offset();
+                    self.x += speed * dx;
+                    self.y += speed * dy;
+                } else {
+                    // unblock door and keep moving in same direction
+                    map_dynamic.unblock_door(*door_id, static_index as i32);
+                    self.path_action = Some(PathAction::Move {
+                        dist: FP16_ONE,
+                        dx: self.direction.x_offs(),
+                        dy: self.direction.y_offs(),
+                    });
+                }
+            }
+            None => {
+                // println!("no PathAction.")
             }
         }
-        None => {
-            // println!("no PathAction.")
-        }
     }
-}
-
-fn action_die(enemy: &mut Enemy) {
-    enemy.dead = true;
 }
 
 #[derive(Debug)]
@@ -555,17 +584,33 @@ impl Enemy {
         map_dynamic: &mut MapDynamic,
         things: &Things,
         unique_id: usize,
+        player: &mut Player,
     ) {
-        match function {}
+        match function {
+            Function::None => (),
+            Function::ThinkStand => self.think_stand(map_dynamic, things, unique_id),
+            Function::ThinkPath => self.think_path(map_dynamic, things, unique_id),
+            Function::ThinkChase => self.think_chase(map_dynamic, things, unique_id),
+            Function::ThinkDogChase => self.think_dogchase(map_dynamic, things, unique_id),
+            Function::ActionDie => self.action_die(),
+            Function::ActionShoot => self.action_shoot(map_dynamic, things, unique_id, player),
+            Function::ActionBite => self.action_bite(map_dynamic, things, unique_id),
+        }
     }
-    pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize, player: &mut Player) {
+    pub fn update(
+        &mut self,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+        unique_id: usize,
+        player: &mut Player,
+    ) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
         // this is different from wolf3d where actions execute on state exit (don't understand why...)
         match self.exec_ctx.state.take_action() {
             Action::None => (),
-            Action::Die => action_die(self),
-            Action::Shoot => action_shoot(self, map_dynamic, things, unique_id, player),
-            Action::Bite => action_bite(self, map_dynamic, things, unique_id),
+            Action::Die => self.action_die(),
+            Action::Shoot => self.action_shoot(map_dynamic, things, unique_id, player),
+            Action::Bite => self.action_bite(map_dynamic, things, unique_id),
         }
 
         if self.exec_ctx.state.ticks <= 0 {
@@ -574,12 +619,12 @@ impl Enemy {
 
         match self.exec_ctx.state.think {
             Think::None => (),
-            Think::Stand => think_stand(self, map_dynamic, things, unique_id),
-            Think::Path => think_path(self, map_dynamic, things, unique_id),
-            Think::Chase => think_chase(self, map_dynamic, things, unique_id),
+            Think::Stand => self.think_stand(map_dynamic, things, unique_id),
+            Think::Path => self.think_path(map_dynamic, things, unique_id),
+            Think::Chase => self.think_chase(map_dynamic, things, unique_id),
             Think::Shoot => (), // FIXME: remove
             Think::Bite => (),  // FIXME: remove
-            Think::DogChase => think_dogchase(self, map_dynamic, things, unique_id),
+            Think::DogChase => self.think_dogchase(map_dynamic, things, unique_id),
         }
 
         // self.states[self.cur].2();
@@ -610,7 +655,12 @@ impl Enemy {
         let exec_ctx = ExecCtx::new(&enemy_spawn_info.state, &IMG_WL6).unwrap();
 
         // FIXME: hack. find better solution for 'enemy type name'
-        let enemy_type_name = enemy_spawn_info.state.split("::").next().unwrap().to_string();
+        let enemy_type_name = enemy_spawn_info
+            .state
+            .split("::")
+            .next()
+            .unwrap()
+            .to_string();
 
         Enemy {
             direction: enemy_spawn_info.direction,

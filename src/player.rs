@@ -91,7 +91,13 @@ impl Player {
         (self.x.fract(), self.y.fract())
     }
 
-    pub fn apply_vel(&mut self, player_vel: &PlayerVel, dt: Fp16, map_dynamic: &MapDynamic, collisions: bool) {
+    pub fn apply_vel(
+        &mut self,
+        player_vel: &PlayerVel,
+        dt: Fp16,
+        map_dynamic: &MapDynamic,
+        collisions: bool,
+    ) {
         self.rot += (dt * player_vel.rot).get_int();
         while self.rot < 0 {
             self.rot += FA_TAU;
@@ -144,8 +150,12 @@ impl Player {
                     && (self.y.fract() > FP16_HALF - doorsnap_threshold
                         || self.y.fract() < FP16_HALF + doorsnap_threshold)
                 {
-                    match map_dynamic.lookup_tile(self.x.get_int() + dx.v.signum(), self.y.get_int()) {
-                        MapTile::Door(_, _, door_id) if map_dynamic.door_states[door_id].open_f > FP16_HALF => {
+                    match map_dynamic
+                        .lookup_tile(self.x.get_int() + dx.v.signum(), self.y.get_int())
+                    {
+                        MapTile::Door(_, _, door_id)
+                            if map_dynamic.door_states[door_id].open_f > FP16_HALF =>
+                        {
                             self.y = FP16_HALF + self.y.get_int().into();
                             continue;
                         }
@@ -157,8 +167,12 @@ impl Player {
                     && (self.x.fract() > FP16_HALF - doorsnap_threshold
                         || self.x.fract() < FP16_HALF + doorsnap_threshold)
                 {
-                    match map_dynamic.lookup_tile(self.x.get_int(), self.y.get_int() + dy.v.signum()) {
-                        MapTile::Door(_, _, door_id) if map_dynamic.door_states[door_id].open_f > FP16_HALF => {
+                    match map_dynamic
+                        .lookup_tile(self.x.get_int(), self.y.get_int() + dy.v.signum())
+                    {
+                        MapTile::Door(_, _, door_id)
+                            if map_dynamic.door_states[door_id].open_f > FP16_HALF =>
+                        {
                             self.x = FP16_HALF + self.x.get_int().into();
                             continue;
                         }

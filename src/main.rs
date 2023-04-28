@@ -1,5 +1,7 @@
 use raycast::{palette::PALETTE, prelude::*, wl6};
-use sdl2::{event::Event, keyboard::Scancode, mouse::MouseButton, pixels::PixelFormatEnum, EventPump};
+use sdl2::{
+    event::Event, keyboard::Scancode, mouse::MouseButton, pixels::PixelFormatEnum, EventPump,
+};
 
 fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
     let mut input_state = InputState::default();
