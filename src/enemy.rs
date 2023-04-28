@@ -549,6 +549,15 @@ impl Enemy {
         println!("state: {self:?}");
         self.dead = name == "dead";
     }
+    pub fn dispatch_call(
+        &mut self,
+        function: Function,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+        unique_id: usize,
+    ) {
+        match function {}
+    }
     pub fn update(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize, player: &mut Player) {
         // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
         // this is different from wolf3d where actions execute on state exit (don't understand why...)
