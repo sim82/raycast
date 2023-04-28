@@ -1,6 +1,4 @@
-use crate::{
-    ms::Writable, Action, Direction, EnemySpawnInfo, Function, SpawnInfos, StateBc, Think,
-};
+use crate::{ms::Writable, Direction, EnemySpawnInfo, Function, SpawnInfos, StateBc};
 use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
