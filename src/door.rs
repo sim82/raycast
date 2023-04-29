@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, io::Cursor};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
@@ -27,7 +27,26 @@ impl Door {
         }
         self.exec_ctx.state.ticks -= 1;
 
-        match self.exec_ctx.state.think {
+        // let function = self.exec_ctx.state.think;
+        // self.dispatch_call(function, trigger, blocked);
+        self.exec_code(self.exec_ctx.state.think_offs, trigger, blocked);
+    }
+
+    fn exec_code(&mut self, code_offs: i32, trigger: bool, blocked: bool) {
+        let mut env = opcode::Env::default();
+        let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
+        loop {
+            let state = opcode::exec(&mut cursor, &mut env).expect("error on bytecode exec");
+            match state {
+                opcode::Event::Stop => break,
+                opcode::Event::Call(function) => self.dispatch_call(function, trigger, blocked),
+                opcode::Event::Load(_) => todo!(),
+                opcode::Event::Store(_) => todo!(),
+            }
+        }
+    }
+    fn dispatch_call(&mut self, function: Function, trigger: bool, blocked: bool) {
+        match function {
             Function::ThinkStand if trigger => {
                 self.exec_ctx
                     .jump_label("door::open")

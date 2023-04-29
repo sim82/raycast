@@ -614,6 +614,8 @@ impl Enemy {
                 opcode::Event::Call(function) => {
                     self.dispatch_call(function, map_dynamic, things, unique_id, player)
                 }
+                opcode::Event::Load(_) => todo!(),
+                opcode::Event::Store(_) => todo!(),
             }
         }
     }

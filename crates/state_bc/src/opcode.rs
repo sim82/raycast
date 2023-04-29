@@ -6,6 +6,8 @@ use byteorder::ReadBytesExt;
 const PUSH_U8: u8 = 1;
 const CALL: u8 = 2;
 const STOP: u8 = 3;
+const LOAD_I32: u8 = 4;
+const STORE_I32: u8 = 5;
 
 pub enum Value {
     None,
@@ -20,6 +22,8 @@ pub struct Env {
 pub enum Event {
     Stop,
     Call(Function),
+    Load(u8),
+    Store(u8),
 }
 
 pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
@@ -33,6 +37,14 @@ pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
                     None => return Err(anyhow!("stack underflow")),
                     _ => return Err(anyhow!("expect U8")),
                 };
+            }
+            LOAD_I32 => {
+                let addr = bc.read_u8()?;
+                return Ok(Event::Load(addr));
+            }
+            STORE_I32 => {
+                let addr = bc.read_u8()?;
+                return Ok(Event::Store(addr));
             }
             x => return Err(anyhow!("unhandled opcode {x:?}")),
         }
