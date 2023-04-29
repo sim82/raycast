@@ -65,22 +65,6 @@ impl TryFrom<u8> for Function {
     }
 }
 
-// impl TryInto<u8> for Function {
-//     type Error = anyhow::Error;
-
-//     fn try_into(self) -> Result<u8> {
-//         Ok(match self {
-//             Self::None => 0,
-//             Self::ThinkStand => 1,
-//             Self::ThinkPath => 2,
-//             Self::ThinkChase => 3,
-//             Self::ThinkDogChase => 6,
-//             Self::ActionDie => 7,
-//             Self::ActionShoot => 8,
-//             Self::ActionBite => 9,
-//         })
-//     }
-// }
 impl From<Function> for u8 {
     fn from(val: Function) -> Self {
         match val {
@@ -95,113 +79,6 @@ impl From<Function> for u8 {
         }
     }
 }
-
-// #[derive(Debug, Default, Clone, Copy)]
-// pub enum Think {
-//     #[default]
-//     None,
-//     Stand,
-//     Path,
-//     Chase,
-//     Shoot,
-//     Bite,
-//     DogChase,
-// }
-
-// impl Think {
-//     pub fn from_identifier(name: &str) -> Self {
-//         match name {
-//             "None" => Think::None,
-//             "Stand" => Think::Stand,
-//             "Path" => Think::Path,
-//             "Chase" => Think::Chase,
-//             "Shoot" => Think::Shoot,
-//             "Bite" => Think::Bite,
-//             "DogChase" => Think::DogChase,
-//             _ => panic!("unhandled Think identifier {name}"),
-//         }
-//     }
-// }
-
-// impl TryFrom<u8> for Think {
-//     type Error = anyhow::Error;
-
-//     fn try_from(value: u8) -> Result<Self> {
-//         Ok(match value {
-//             0 => Think::None,
-//             1 => Think::Stand,
-//             2 => Think::Path,
-//             3 => Think::Chase,
-//             4 => Think::Shoot,
-//             5 => Think::Bite,
-//             6 => Think::DogChase,
-//             x => return Err(anyhow!("unhandled Think discriminator {x}")),
-//         })
-//     }
-// }
-// impl TryInto<u8> for Think {
-//     type Error = anyhow::Error;
-
-//     fn try_into(self) -> Result<u8> {
-//         Ok(match self {
-//             Think::None => 0,
-//             Think::Stand => 1,
-//             Think::Path => 2,
-//             Think::Chase => 3,
-//             Think::Shoot => 4,
-//             Think::Bite => 5,
-//             Think::DogChase => 6,
-//         })
-//     }
-// }
-
-// #[derive(Debug, Default, Eq, PartialEq, Clone, Copy)]
-// pub enum Action {
-//     #[default]
-//     None,
-//     Die,
-//     Shoot,
-//     Bite,
-// }
-
-// impl Action {
-//     pub fn from_identifier(name: &str) -> Self {
-//         match name {
-//             "None" => Action::None,
-//             "Die" => Action::Die,
-//             "Shoot" => Action::Shoot,
-//             "Bite" => Action::Bite,
-//             _ => panic!("unhandled Action identifier {name}"),
-//         }
-//     }
-// }
-
-// impl TryFrom<u8> for Action {
-//     type Error = anyhow::Error;
-
-//     fn try_from(value: u8) -> Result<Self> {
-//         Ok(match value {
-//             0 => Action::None,
-//             1 => Action::Die,
-//             2 => Action::Shoot,
-//             3 => Action::Bite,
-//             x => return Err(anyhow!("unhandled Action dicriminator {x}")),
-//         })
-//     }
-// }
-
-// impl TryInto<u8> for Action {
-//     type Error = anyhow::Error;
-
-//     fn try_into(self) -> Result<u8> {
-//         Ok(match self {
-//             Action::None => 0,
-//             Action::Die => 1,
-//             Action::Shoot => 2,
-//             Action::Bite => 3,
-//         })
-//     }
-// }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Direction {

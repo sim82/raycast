@@ -149,6 +149,7 @@ pub fn codegen(
 
     let mut f = std::fs::File::create(outname).expect("failed to open img file");
 
+    // write labels and spawn info
     f.write_i32::<LittleEndian>(label_ptrs.len() as i32)
         .unwrap();
     for (name, ptr) in &label_ptrs {
@@ -159,8 +160,13 @@ pub fn codegen(
     }
     spawn_infos.write(&mut f).unwrap();
 
+    // write code
+    // the bytecode blocks needs to be written first (to know their offsets), but that's ok
+    // because we know how large the StateBc block will be.
     let code_start_pos = f.stream_position().unwrap();
 
+    // first write think/action bytecode _after_ the StateBc blocks (after ip pointer)
+    // fix up offset pointers in StateBc structs
     f.seek(SeekFrom::Current(ip as i64)).unwrap();
     for (i, state) in states.iter_mut().enumerate() {
         let think_name = format!("think:{i}");
@@ -177,6 +183,7 @@ pub fn codegen(
         let _ = f.write(&gc.into_code()).unwrap();
         // eprintln!("{action_name}: {pos:x}");
     }
+    // then write StateBc blocks _before_ bytecode
     f.seek(SeekFrom::Start(code_start_pos)).unwrap();
     for state in states {
         state.write(&mut f).unwrap();
