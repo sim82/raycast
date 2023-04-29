@@ -24,8 +24,7 @@ pub enum Event {
 
 pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
     loop {
-        let Ok(c) = bc.read_u8() else { return Ok(Event::Stop)};
-        match c {
+        match bc.read_u8()? {
             STOP => return Ok(Event::Stop),
             PUSH_U8 => env.stack.push(Value::U8(bc.read_u8()?)),
             CALL => {
@@ -35,7 +34,7 @@ pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
                     _ => return Err(anyhow!("expect U8")),
                 };
             }
-            x => panic!("unhandled opcode {x:?}"),
+            x => return Err(anyhow!("unhandled opcode {x:?}")),
         }
     }
 }
