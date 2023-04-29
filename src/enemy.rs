@@ -608,7 +608,7 @@ impl Enemy {
         let mut env = opcode::Env::default();
         let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
         loop {
-            let state = opcode::exec(&mut cursor, &mut env);
+            let state = opcode::exec(&mut cursor, &mut env).expect("error on bytecode exec");
             match state {
                 opcode::Event::Stop => break,
                 opcode::Event::Call(function) => {

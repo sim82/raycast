@@ -1,9 +1,8 @@
 use std::io::Read;
 
+use crate::{Function, Result};
+use anyhow::anyhow;
 use byteorder::ReadBytesExt;
-
-use crate::Function;
-
 const PUSH_U8: u8 = 1;
 const CALL: u8 = 2;
 const STOP: u8 = 3;
@@ -23,17 +22,18 @@ pub enum Event {
     Call(Function),
 }
 
-pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Event {
+pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
     loop {
-        let Ok(c) = bc.read_u8() else { return Event::Stop};
+        let Ok(c) = bc.read_u8() else { return Ok(Event::Stop)};
         match c {
-            STOP => return Event::Stop,
-            PUSH_U8 => env.stack.push(Value::U8(
-                bc.read_u8().expect("unexpected end of bytecode: PUSH_U8"),
-            )),
+            STOP => return Ok(Event::Stop),
+            PUSH_U8 => env.stack.push(Value::U8(bc.read_u8()?)),
             CALL => {
-                let Value::U8(function) = env.stack.pop().expect("stack underflow") else { panic!("expect U8")};
-                return Event::Call(function.try_into().expect("u8 -> Function failed."));
+                match env.stack.pop() {
+                    Some(Value::U8(function)) => return Ok(Event::Call(function.try_into()?)),
+                    None => return Err(anyhow!("stack underflow")),
+                    _ => return Err(anyhow!("expect U8")),
+                };
             }
             x => panic!("unhandled opcode {x:?}"),
         }
@@ -76,8 +76,8 @@ fn test_exec() {
 
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
-    assert!(matches!(e, Event::Call(Function::ActionDie)));
+    assert!(matches!(e, Ok(Event::Call(Function::ActionDie))));
 
     let e = exec(&mut c, &mut env);
-    assert!(matches!(e, Event::Stop));
+    assert!(matches!(e, Ok(Event::Stop)));
 }
