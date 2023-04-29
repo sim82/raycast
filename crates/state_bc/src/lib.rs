@@ -65,11 +65,25 @@ impl TryFrom<u8> for Function {
     }
 }
 
-impl TryInto<u8> for Function {
-    type Error = anyhow::Error;
+// impl TryInto<u8> for Function {
+//     type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<u8> {
-        Ok(match self {
+//     fn try_into(self) -> Result<u8> {
+//         Ok(match self {
+//             Self::None => 0,
+//             Self::ThinkStand => 1,
+//             Self::ThinkPath => 2,
+//             Self::ThinkChase => 3,
+//             Self::ThinkDogChase => 6,
+//             Self::ActionDie => 7,
+//             Self::ActionShoot => 8,
+//             Self::ActionBite => 9,
+//         })
+//     }
+// }
+impl Into<u8> for Function {
+    fn into(self) -> u8 {
+        match self {
             Self::None => 0,
             Self::ThinkStand => 1,
             Self::ThinkPath => 2,
@@ -78,7 +92,7 @@ impl TryInto<u8> for Function {
             Self::ActionDie => 7,
             Self::ActionShoot => 8,
             Self::ActionBite => 9,
-        })
+        }
     }
 }
 

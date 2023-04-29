@@ -40,6 +40,29 @@ pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Event {
     }
 }
 
+#[derive(Default)]
+pub struct Codegen {
+    code: Vec<u8>,
+}
+
+impl Codegen {
+    pub fn function_call(&mut self, function: Function) {
+        self.code.push(PUSH_U8);
+        self.code.push(function.into());
+        self.code.push(CALL);
+    }
+    pub fn stop(&mut self) {
+        self.code.push(STOP);
+    }
+}
+
+#[test]
+fn test_codegen() {
+    let mut cg = Codegen::default();
+    cg.function_call(Function::ActionDie);
+    cg.stop();
+    assert_eq!(cg.code[..], [0x1, 0x7, 0x2, 0x3]);
+}
 #[test]
 fn test_exec() {
     let mut env = Env::default();
