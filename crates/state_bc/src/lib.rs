@@ -81,17 +81,17 @@ impl TryFrom<u8> for Function {
 //         })
 //     }
 // }
-impl Into<u8> for Function {
-    fn into(self) -> u8 {
-        match self {
-            Self::None => 0,
-            Self::ThinkStand => 1,
-            Self::ThinkPath => 2,
-            Self::ThinkChase => 3,
-            Self::ThinkDogChase => 6,
-            Self::ActionDie => 7,
-            Self::ActionShoot => 8,
-            Self::ActionBite => 9,
+impl From<Function> for u8 {
+    fn from(val: Function) -> Self {
+        match val {
+            Function::None => 0,
+            Function::ThinkStand => 1,
+            Function::ThinkPath => 2,
+            Function::ThinkChase => 3,
+            Function::ThinkDogChase => 6,
+            Function::ActionDie => 7,
+            Function::ActionShoot => 8,
+            Function::ActionBite => 9,
         }
     }
 }

@@ -159,22 +159,22 @@ pub fn codegen(
     }
     spawn_infos.write(&mut f).unwrap();
 
-    let code_start_pos = f.seek(SeekFrom::Current(0)).unwrap();
+    let code_start_pos = f.stream_position().unwrap();
 
     f.seek(SeekFrom::Current(ip as i64)).unwrap();
     for (i, state) in states.iter_mut().enumerate() {
         let think_name = format!("think:{i}");
         let Some(gc) = codegens.remove(&think_name) else { panic!("missing think gc")};
-        let pos = f.seek(SeekFrom::Current(0)).unwrap();
+        let pos = f.stream_position().unwrap();
         state.think_offs = (pos - code_start_pos) as i32;
-        f.write(&gc.into_code()).unwrap();
+        let _ = f.write(&gc.into_code()).unwrap();
         // eprintln!("{think_name}: {pos:x}");
 
         let action_name = format!("action:{i}");
         let Some(gc) = codegens.remove(&action_name) else { panic!("missing think gc")};
-        let pos = f.seek(SeekFrom::Current(0)).unwrap();
+        let pos = f.stream_position().unwrap();
         state.action_offs = (pos - code_start_pos) as i32;
-        f.write(&gc.into_code()).unwrap();
+        let _ = f.write(&gc.into_code()).unwrap();
         // eprintln!("{action_name}: {pos:x}");
     }
     f.seek(SeekFrom::Start(code_start_pos)).unwrap();
