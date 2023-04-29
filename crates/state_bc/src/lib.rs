@@ -385,10 +385,12 @@ pub struct StateBc {
     pub directional: bool,
     pub think: Function,
     pub action: Function,
+    pub think_offs: i32,
+    pub action_offs: i32,
     pub next: i32,
 }
 
-pub const STATE_BC_SIZE: i32 = 15;
+pub const STATE_BC_SIZE: i32 = 23;
 
 impl ms::Loadable for StateBc {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
@@ -397,6 +399,8 @@ impl ms::Loadable for StateBc {
         let directional = r.read_u8()? != 0;
         let think = r.read_u8()?.try_into()?;
         let action = r.read_u8()?.try_into()?;
+        let think_offs = r.read_i32::<LittleEndian>()?;
+        let action_offs = r.read_i32::<LittleEndian>()?;
         let next = r.read_i32::<LittleEndian>()?;
         Ok(StateBc {
             id,
@@ -404,6 +408,8 @@ impl ms::Loadable for StateBc {
             directional,
             think,
             action,
+            think_offs,
+            action_offs,
             next,
         })
     }
@@ -416,6 +422,8 @@ impl ms::Writable for StateBc {
         w.write_u8(if self.directional { 1 } else { 0 })?;
         w.write_u8(self.think.try_into()?)?;
         w.write_u8(self.action.try_into()?)?;
+        w.write_i32::<LittleEndian>(self.think_offs)?;
+        w.write_i32::<LittleEndian>(self.action_offs)?;
         w.write_i32::<LittleEndian>(self.next)?;
         Ok(())
     }
@@ -436,6 +444,8 @@ impl StateBc {
             directional,
             think,
             action,
+            think_offs: 0,
+            action_offs: 0,
             next: next * STATE_BC_SIZE,
         }
     }

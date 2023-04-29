@@ -1,4 +1,6 @@
-use crate::{ms::Writable, Direction, EnemySpawnInfo, Function, SpawnInfos, StateBc};
+use crate::{
+    ms::Writable, opcode::Codegen, Direction, EnemySpawnInfo, Function, SpawnInfos, StateBc,
+};
 use byteorder::{LittleEndian, WriteBytesExt};
 use nom::{
     branch::alt,
@@ -11,7 +13,10 @@ use nom::{
     IResult,
 };
 use nom_locate::LocatedSpan;
-use std::{collections::BTreeMap, io::Write};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::{Seek, SeekFrom, Write},
+};
 
 pub type Span<'a> = LocatedSpan<&'a str>;
 pub type Res<'a, Output> = IResult<Span<'a>, Output, MyError<Span<'a>>>;
@@ -92,6 +97,8 @@ pub fn codegen(
     // label_ptrs.values_mut().for_each(|i| *i += ip);
     let mut ip = 0;
 
+    let mut codegens = HashMap::new();
+
     for state_block in state_blocks {
         for element in &state_block.elements {
             if let StatesBlockElement::State {
@@ -115,20 +122,36 @@ pub fn codegen(
                         .get(&label)
                         .unwrap_or_else(|| panic!("unknown label name {label}"))
                 };
+                let index = states.len();
                 states.push(StateBc {
                     id,
                     ticks: *ticks,
                     directional: *directional,
                     think: Function::from_identifier(think),
                     action: Function::from_identifier(action),
+                    think_offs: 0,
+                    action_offs: 0,
                     next: next_ptr,
                 });
+                codegens.insert(
+                    format!("think:{index}"),
+                    Codegen::default()
+                        .function_call(Function::from_identifier(think))
+                        .stop(),
+                );
+                codegens.insert(
+                    format!("action:{index}"),
+                    Codegen::default()
+                        .function_call(Function::from_identifier(action))
+                        .stop(),
+                );
                 ip += crate::STATE_BC_SIZE;
             }
         }
     }
 
     let mut f = std::fs::File::create(outname).expect("failed to open img file");
+
     f.write_i32::<LittleEndian>(label_ptrs.len() as i32)
         .unwrap();
     for (name, ptr) in &label_ptrs {
@@ -139,6 +162,25 @@ pub fn codegen(
     }
     spawn_infos.write(&mut f).unwrap();
 
+    let code_start_pos = f.seek(SeekFrom::Current(0)).unwrap();
+
+    f.seek(SeekFrom::Current(ip as i64)).unwrap();
+    for (i, state) in states.iter_mut().enumerate() {
+        let think_name = format!("think:{i}");
+        let Some(gc) = codegens.remove(&think_name) else { panic!("missing think gc")};
+        let pos = f.seek(SeekFrom::Current(0)).unwrap();
+        state.think_offs = pos as i32;
+        f.write(&gc.into_code()).unwrap();
+        // eprintln!("{think_name}: {pos:x}");
+
+        let action_name = format!("action:{i}");
+        let Some(gc) = codegens.remove(&action_name) else { panic!("missing think gc")};
+        let pos = f.seek(SeekFrom::Current(0)).unwrap();
+        state.action_offs = pos as i32;
+        f.write(&gc.into_code()).unwrap();
+        // eprintln!("{action_name}: {pos:x}");
+    }
+    f.seek(SeekFrom::Start(code_start_pos)).unwrap();
     for state in states {
         state.write(&mut f).unwrap();
     }

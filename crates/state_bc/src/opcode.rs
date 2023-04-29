@@ -46,22 +46,28 @@ pub struct Codegen {
 }
 
 impl Codegen {
-    pub fn function_call(&mut self, function: Function) {
+    pub fn function_call(mut self, function: Function) -> Self {
         self.code.push(PUSH_U8);
         self.code.push(function.into());
         self.code.push(CALL);
+        self
     }
-    pub fn stop(&mut self) {
+    pub fn stop(mut self) -> Self {
         self.code.push(STOP);
+        self
+    }
+    pub fn into_code(self) -> Vec<u8> {
+        self.code
     }
 }
 
 #[test]
 fn test_codegen() {
-    let mut cg = Codegen::default();
-    cg.function_call(Function::ActionDie);
-    cg.stop();
-    assert_eq!(cg.code[..], [0x1, 0x7, 0x2, 0x3]);
+    let code = Codegen::default()
+        .function_call(Function::ActionDie)
+        .stop()
+        .into_code();
+    assert_eq!(code[..], [0x1, 0x7, 0x2, 0x3]);
 }
 #[test]
 fn test_exec() {
