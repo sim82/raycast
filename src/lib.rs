@@ -52,6 +52,7 @@ pub mod prelude {
         player::{Player, PlayerVel},
         render::{self, COL_ANGLE},
         sprite::{self, Directionality, SpriteDef, SpriteIndex},
+        state_bc::opcode,
         state_bc::{Direction, EnemySpawnInfo, ExecCtx, Function, StateBc},
         thing::{Actor, Collectible, Item, Thing, Things},
         thing_def::{ThingDef, ThingDefs, ThingType},

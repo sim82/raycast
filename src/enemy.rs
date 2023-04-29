@@ -2,7 +2,7 @@ use crate::{fp16::FP16_FRAC_64, prelude::*, thing_def::get_capabilities_by_name}
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
-use std::io::{Read, Write};
+use std::io::{Cursor, Read, Write};
 
 impl Enemy {
     fn check_player_sight(
@@ -597,6 +597,26 @@ impl Enemy {
             Function::ActionBite => self.action_bite(map_dynamic, things, unique_id),
         }
     }
+    fn exec_code(
+        &mut self,
+        code_offs: i32,
+        map_dynamic: &mut MapDynamic,
+        things: &Things,
+        unique_id: usize,
+        player: &mut Player,
+    ) {
+        let mut env = opcode::Env::default();
+        let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
+        loop {
+            let state = opcode::exec(&mut cursor, &mut env);
+            match state {
+                opcode::Event::Stop => break,
+                opcode::Event::Call(function) => {
+                    self.dispatch_call(function, map_dynamic, things, unique_id, player)
+                }
+            }
+        }
+    }
     pub fn update(
         &mut self,
         map_dynamic: &mut MapDynamic,
@@ -604,17 +624,18 @@ impl Enemy {
         unique_id: usize,
         player: &mut Player,
     ) {
-        // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action' resets state.action to None)
+        // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action_offs' resets state.action_offs to -1)
         // this is different from wolf3d where actions execute on state exit (don't understand why...)
-        let function = self.exec_ctx.state.take_action();
-        self.dispatch_call(function, map_dynamic, things, unique_id, player);
+        if let Some(action_offs) = self.exec_ctx.state.take_action_offs() {
+            self.exec_code(action_offs, map_dynamic, things, unique_id, player);
+        }
 
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
 
-        self.dispatch_call(
-            self.exec_ctx.state.think,
+        self.exec_code(
+            self.exec_ctx.state.think_offs,
             map_dynamic,
             things,
             unique_id,
@@ -625,6 +646,7 @@ impl Enemy {
 
         self.exec_ctx.state.ticks -= 1;
     }
+
     pub fn hit(&mut self, hitpoints: i32) {
         self.health -= hitpoints;
 

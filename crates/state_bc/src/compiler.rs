@@ -133,17 +133,14 @@ pub fn codegen(
                     action_offs: 0,
                     next: next_ptr,
                 });
+
                 codegens.insert(
                     format!("think:{index}"),
-                    Codegen::default()
-                        .function_call(Function::from_identifier(think))
-                        .stop(),
+                    codegen_for_function_call(Function::from_identifier(think)),
                 );
                 codegens.insert(
                     format!("action:{index}"),
-                    Codegen::default()
-                        .function_call(Function::from_identifier(action))
-                        .stop(),
+                    codegen_for_function_call(Function::from_identifier(action)),
                 );
                 ip += crate::STATE_BC_SIZE;
             }
@@ -169,20 +166,28 @@ pub fn codegen(
         let think_name = format!("think:{i}");
         let Some(gc) = codegens.remove(&think_name) else { panic!("missing think gc")};
         let pos = f.seek(SeekFrom::Current(0)).unwrap();
-        state.think_offs = pos as i32;
+        state.think_offs = (pos - code_start_pos) as i32;
         f.write(&gc.into_code()).unwrap();
         // eprintln!("{think_name}: {pos:x}");
 
         let action_name = format!("action:{i}");
         let Some(gc) = codegens.remove(&action_name) else { panic!("missing think gc")};
         let pos = f.seek(SeekFrom::Current(0)).unwrap();
-        state.action_offs = pos as i32;
+        state.action_offs = (pos - code_start_pos) as i32;
         f.write(&gc.into_code()).unwrap();
         // eprintln!("{action_name}: {pos:x}");
     }
     f.seek(SeekFrom::Start(code_start_pos)).unwrap();
     for state in states {
         state.write(&mut f).unwrap();
+    }
+}
+
+fn codegen_for_function_call(function: Function) -> Codegen {
+    if function == Function::None {
+        Codegen::default().stop()
+    } else {
+        Codegen::default().function_call(function).stop()
     }
 }
 
