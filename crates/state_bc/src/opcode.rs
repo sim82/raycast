@@ -9,9 +9,11 @@ const STOP: u8 = 3;
 const LOAD_I32: u8 = 4;
 const STORE_I32: u8 = 5;
 
+#[derive(Debug)]
 pub enum Value {
     None,
     U8(u8),
+    I32(i32),
 }
 
 #[derive(Default)]
@@ -19,6 +21,7 @@ pub struct Env {
     pub stack: Vec<Value>,
 }
 
+#[derive(Debug)]
 pub enum Event {
     Stop,
     Call(Function),

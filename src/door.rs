@@ -1,9 +1,23 @@
+use crate::prelude::*;
+use anyhow::anyhow;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{collections::HashSet, io::Cursor};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+impl From<Fp16> for opcode::Value {
+    fn from(value: Fp16) -> Self {
+        opcode::Value::I32(value.v)
+    }
+}
+impl TryFrom<opcode::Value> for Fp16 {
+    type Error = anyhow::Error;
 
-use crate::prelude::*;
-
+    fn try_from(value: opcode::Value) -> Result<Self> {
+        match value {
+            opcode::Value::I32(v) => Ok(Fp16 { v }),
+            x => Err(anyhow!("cannot convert to Fp16: {x:?}")),
+        }
+    }
+}
 pub struct Door {
     exec_ctx: ExecCtx,
     pub open_f: Fp16,
@@ -32,7 +46,7 @@ impl Door {
         self.exec_code(self.exec_ctx.state.think_offs, trigger, blocked);
     }
 
-    fn exec_code(&mut self, code_offs: i32, trigger: bool, blocked: bool) {
+    fn exec_code(&mut self, code_offs: i32, trigger: bool, blocked: bool) -> Result<()> {
         let mut env = opcode::Env::default();
         let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
         loop {
@@ -40,10 +54,16 @@ impl Door {
             match state {
                 opcode::Event::Stop => break,
                 opcode::Event::Call(function) => self.dispatch_call(function, trigger, blocked),
-                opcode::Event::Load(_) => todo!(),
-                opcode::Event::Store(_) => todo!(),
+                opcode::Event::Load(0) => env.stack.push(self.open_f.into()),
+                opcode::Event::Store(0) => match env.stack.pop() {
+                    Some(opcode::Value::I32(v)) => self.open_f.v = v,
+                    Some(x) => return Err(anyhow!("unhandled opcode::Value {x:?}")),
+                    None => return Err(anyhow!("stack underflow")),
+                },
+                x => todo!("unhandled opcode::Event {x:?}"),
             }
         }
+        Ok(())
     }
     fn dispatch_call(&mut self, function: Function, trigger: bool, blocked: bool) {
         match function {
