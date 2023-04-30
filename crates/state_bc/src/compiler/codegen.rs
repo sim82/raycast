@@ -1,0 +1,183 @@
+use crate::{ms::Writable, opcode::Codegen, Function, SpawnInfos, StateBc};
+use byteorder::{LittleEndian, WriteBytesExt};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::{Cursor, Write},
+};
+
+use super::ast::{StatesBlock, StatesBlockElement};
+#[derive(Default)]
+struct BytecodeOutput {
+    code: Vec<u8>,
+    start_ptr: i32,
+}
+
+impl BytecodeOutput {
+    pub fn new(start_ptr: i32) -> Self {
+        Self {
+            start_ptr,
+            code: vec![0u8; start_ptr as usize],
+        }
+    }
+    pub fn append_codegen(&mut self, codegen: Codegen) -> i32 {
+        if self.code.len() >= codegen.get_code().len() {
+            // compression / size optimization:
+            // search for subsequence match in previously generated code
+            if let Some(pos) = self
+                .code
+                .windows(codegen.get_code().len())
+                .position(|window| window == codegen.get_code())
+            {
+                return pos as i32;
+            }
+        }
+        let pos = self.code.len() as i32;
+        self.code.append(&mut codegen.into_code());
+        pos
+    }
+
+    fn write_states(&mut self, states: &[StateBc]) {
+        let mut f = Cursor::new(&mut self.code[0..(self.start_ptr as usize)]);
+        for state in states {
+            state.write(&mut f).expect(
+                "failed to write StateBc block. Probably pre-calculated output size is wrong.",
+            );
+        }
+    }
+}
+
+pub fn codegen(
+    outname: &str,
+    state_blocks: &[StatesBlock],
+    enums: &BTreeMap<String, usize>,
+    spawn_infos: &SpawnInfos,
+) {
+    let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
+
+    let mut states = Vec::new();
+    let mut label_ptrs = BTreeMap::new(); // keep them sorted in the output file
+
+    // pass 1: resolve label offsets
+    let mut ip = 0;
+    for state_block in state_blocks {
+        for element in &state_block.elements {
+            match element {
+                StatesBlockElement::Label(name) => {
+                    label_ptrs.insert(format!("{}::{}", state_block.name, name), ip);
+                }
+                StatesBlockElement::State {
+                    id: _,
+                    directional: _,
+                    ticks: _,
+                    think: _,
+                    action: _,
+                    next: _,
+                } => ip += crate::STATE_BC_SIZE,
+            }
+        }
+    }
+
+    // // pass2: generate code
+    // // calculate size of labels section
+    // let mut ip = label_ptrs.keys().map(|k| k.len() as i32 + 1 + 4).sum::<i32>() + 4;
+    // // 're-locate' label pointers to point after the labels section
+    // println!("bc offset: {ip}");
+    // label_ptrs.values_mut().for_each(|i| *i += ip);
+    let mut ip = 0;
+
+    let mut codegens = HashMap::new();
+    for state_block in state_blocks {
+        for element in &state_block.elements {
+            if let StatesBlockElement::State {
+                id,
+                directional,
+                ticks,
+                think,
+                action,
+                next,
+            } = element
+            {
+                let id = *enums
+                    .get(id)
+                    .unwrap_or_else(|| panic!("unknown identifier {id}"))
+                    as i32;
+                let next_ptr = if next == "next" {
+                    ip + crate::STATE_BC_SIZE
+                } else {
+                    let label = format!("{}::{}", state_block.name, next);
+                    *label_ptrs
+                        .get(&label)
+                        .unwrap_or_else(|| panic!("unknown label name {label}"))
+                };
+                let index = states.len();
+                states.push(StateBc {
+                    id,
+                    ticks: *ticks,
+                    directional: *directional,
+                    think: Function::try_from_identifier(think).unwrap_or_default(),
+                    action: Function::try_from_identifier(action).unwrap_or_default(),
+                    think_offs: 0,
+                    action_offs: 0,
+                    next: next_ptr,
+                });
+
+                codegens.insert(format!("think:{index}"), codegen_for_function_name(think));
+                codegens.insert(format!("action:{index}"), codegen_for_function_name(action));
+                ip += crate::STATE_BC_SIZE;
+            }
+        }
+    }
+
+    let mut f = std::fs::File::create(outname).expect("failed to open img file");
+
+    // write labels and spawn info
+    f.write_i32::<LittleEndian>(label_ptrs.len() as i32)
+        .unwrap();
+    for (name, ptr) in &label_ptrs {
+        let b = name.as_bytes();
+        f.write_u8(b.len() as u8).unwrap();
+        let _ = f.write(b).unwrap();
+        f.write_i32::<LittleEndian>(*ptr).unwrap();
+    }
+    spawn_infos.write(&mut f).unwrap();
+
+    let mut bytecode_output = BytecodeOutput::new(ip);
+    for (i, state) in states.iter_mut().enumerate() {
+        let think_name = format!("think:{i}");
+        state.think_offs =
+            bytecode_output.append_codegen(codegens.remove(&think_name).expect("missing think gc"));
+        let action_name = format!("action:{i}");
+        state.action_offs = bytecode_output
+            .append_codegen(codegens.remove(&action_name).expect("missing action gc"));
+    }
+    bytecode_output.write_states(&states);
+    let _ = f.write(&bytecode_output.code).unwrap();
+}
+
+fn codegen_for_function_call(function: Function) -> Codegen {
+    if function == Function::None {
+        Codegen::default().stop()
+    } else {
+        Codegen::default().function_call(function).stop()
+    }
+}
+fn codegen_for_function_name(name: &str) -> Codegen {
+    // HACK: hard coded inc/dec functions for door
+    if name == "IncOpen" {
+        Codegen::default()
+            .load_i32(0)
+            .loadi_i32(1 << 10)
+            .add()
+            .store_i32(0)
+            .stop()
+    } else if name == "DecOpen" {
+        Codegen::default()
+            .load_i32(0)
+            .loadi_i32(-(1 << 10))
+            .add()
+            .store_i32(0)
+            .stop()
+    } else {
+        codegen_for_function_call(Function::try_from_identifier(name).unwrap_or_default())
+    }
+}
