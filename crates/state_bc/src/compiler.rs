@@ -15,7 +15,7 @@ use nom::{
 use nom_locate::LocatedSpan;
 use std::{
     collections::{BTreeMap, HashMap},
-    io::{Seek, SeekFrom, Write},
+    io::{Cursor, Write},
 };
 
 pub type Span<'a> = LocatedSpan<&'a str>;
@@ -59,18 +59,42 @@ pub struct SpawnBlock {
 }
 
 #[derive(Default)]
-pub struct CodegenCache {
-    cache: HashMap<Vec<u8>, u64>,
+struct BytecodeOutput {
+    code: Vec<u8>,
+    start_ptr: i32,
 }
 
-impl CodegenCache {
-    pub fn get(&mut self, codegen: &Codegen, pos: u64) -> Option<u64> {
-        let cached = self.cache.get(codegen.get_code());
-        if cached.is_some() {
-            return cached.cloned();
+impl BytecodeOutput {
+    pub fn new(start_ptr: i32) -> Self {
+        Self {
+            start_ptr,
+            code: vec![0u8; start_ptr as usize],
         }
-        self.cache.insert(codegen.get_code().into(), pos);
-        None
+    }
+    pub fn append_codegen(&mut self, codegen: Codegen) -> i32 {
+        if self.code.len() >= codegen.get_code().len() {
+            // compression / size optimization:
+            // search for subsequence match in previously generated code
+            if let Some(pos) = self
+                .code
+                .windows(codegen.get_code().len())
+                .position(|window| window == codegen.get_code())
+            {
+                return pos as i32;
+            }
+        }
+        let pos = self.code.len() as i32;
+        self.code.append(&mut codegen.into_code());
+        pos
+    }
+
+    fn write_states(&mut self, states: &[StateBc]) {
+        let mut f = Cursor::new(&mut self.code[0..(self.start_ptr as usize)]);
+        for state in states {
+            state.write(&mut f).expect(
+                "failed to write StateBc block. Probably pre-calculated output size is wrong.",
+            );
+        }
     }
 }
 
@@ -114,8 +138,6 @@ pub fn codegen(
     let mut ip = 0;
 
     let mut codegens = HashMap::new();
-    let mut codegen_cache = CodegenCache::default();
-
     for state_block in state_blocks {
         for element in &state_block.elements {
             if let StatesBlockElement::State {
@@ -171,44 +193,17 @@ pub fn codegen(
     }
     spawn_infos.write(&mut f).unwrap();
 
-    // write code
-    // the bytecode blocks needs to be written first (to know their offsets), but that's ok
-    // because we know how large the StateBc block will be.
-    let code_start_pos = f.stream_position().unwrap();
-
-    // first write think/action bytecode _after_ the StateBc blocks (after ip pointer)
-    // fix up offset pointers in StateBc structs
-    f.seek(SeekFrom::Current(ip as i64)).unwrap();
+    let mut bytecode_output = BytecodeOutput::new(ip);
     for (i, state) in states.iter_mut().enumerate() {
         let think_name = format!("think:{i}");
-        let Some(gc) = codegens.remove(&think_name) else { panic!("missing think gc")};
-        let pos = f.stream_position().unwrap();
-        let pos = if let Some(pos) = codegen_cache.get(&gc, pos) {
-            pos
-        } else {
-            let _ = f.write(&gc.into_code()).unwrap();
-            pos
-        };
-        state.think_offs = (pos - code_start_pos) as i32;
-        // eprintln!("{think_name}: {pos:x}");
-
+        state.think_offs =
+            bytecode_output.append_codegen(codegens.remove(&think_name).expect("missing think gc"));
         let action_name = format!("action:{i}");
-        let Some(gc) = codegens.remove(&action_name) else { panic!("missing action gc")};
-        let pos = f.stream_position().unwrap();
-        let pos = if let Some(pos) = codegen_cache.get(&gc, pos) {
-            pos
-        } else {
-            let _ = f.write(&gc.into_code()).unwrap();
-            pos
-        };
-        state.action_offs = (pos - code_start_pos) as i32;
-        // eprintln!("{action_name}: {pos:x}");
+        state.action_offs = bytecode_output
+            .append_codegen(codegens.remove(&action_name).expect("missing action gc"));
     }
-    // then write StateBc blocks _before_ bytecode
-    f.seek(SeekFrom::Start(code_start_pos)).unwrap();
-    for state in states {
-        state.write(&mut f).unwrap();
-    }
+    bytecode_output.write_states(&states);
+    let _ = f.write(&bytecode_output.code).unwrap();
 }
 
 fn codegen_for_function_call(function: Function) -> Codegen {

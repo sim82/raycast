@@ -43,7 +43,8 @@ impl Door {
 
         // let function = self.exec_ctx.state.think;
         // self.dispatch_call(function, trigger, blocked);
-        self.exec_code(self.exec_ctx.state.think_offs, trigger, blocked);
+        self.exec_code(self.exec_ctx.state.think_offs, trigger, blocked)
+            .expect("exec_code failed");
     }
 
     fn exec_code(&mut self, code_offs: i32, trigger: bool, blocked: bool) -> Result<()> {
