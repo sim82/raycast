@@ -587,9 +587,9 @@ closed:
 opened: 
     state DEMO, false, 300, ThinkPath, None, blocked
 close:
-    state DEMO, false, 64, ThinkChase, None, closed
+    state DEMO, false, 64, DecOpen, None, closed
 open:
-    state DEMO, false, 64, ThinkDogChase, None, opened
+    state DEMO, false, 64, IncOpen, None, opened
 blocked: 
     state DEMO, false, 0, ActionShoot, None, blocked
 }

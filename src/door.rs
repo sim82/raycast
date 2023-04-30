@@ -77,8 +77,6 @@ impl Door {
                     .jump_label("door::blocked")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
             }
-            Function::ThinkChase => self.open_f -= FP16_FRAC_64,
-            Function::ThinkDogChase => self.open_f += FP16_FRAC_64,
             Function::ActionShoot if !blocked => {
                 self.exec_ctx
                     .jump_label("door::close")

@@ -32,8 +32,8 @@ pub enum Function {
     ActionBite,
 }
 impl Function {
-    pub fn from_identifier(name: &str) -> Self {
-        match name {
+    pub fn try_from_identifier(name: &str) -> Option<Self> {
+        Some(match name {
             "None" => Self::None,
             "ThinkStand" => Self::ThinkStand,
             "ThinkPath" => Self::ThinkPath,
@@ -42,8 +42,8 @@ impl Function {
             "ActionDie" => Self::ActionDie,
             "ActionShoot" => Self::ActionShoot,
             "ActionBite" => Self::ActionBite,
-            _ => panic!("unhandled Function identifier {name}"),
-        }
+            _ => return None,
+        })
     }
 }
 

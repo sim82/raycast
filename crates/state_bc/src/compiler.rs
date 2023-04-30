@@ -127,21 +127,15 @@ pub fn codegen(
                     id,
                     ticks: *ticks,
                     directional: *directional,
-                    think: Function::from_identifier(think),
-                    action: Function::from_identifier(action),
+                    think: Function::try_from_identifier(think).unwrap_or_default(),
+                    action: Function::try_from_identifier(action).unwrap_or_default(),
                     think_offs: 0,
                     action_offs: 0,
                     next: next_ptr,
                 });
 
-                codegens.insert(
-                    format!("think:{index}"),
-                    codegen_for_function_call(Function::from_identifier(think)),
-                );
-                codegens.insert(
-                    format!("action:{index}"),
-                    codegen_for_function_call(Function::from_identifier(action)),
-                );
+                codegens.insert(format!("think:{index}"), codegen_for_function_name(think));
+                codegens.insert(format!("action:{index}"), codegen_for_function_name(action));
                 ip += crate::STATE_BC_SIZE;
             }
         }
@@ -195,6 +189,26 @@ fn codegen_for_function_call(function: Function) -> Codegen {
         Codegen::default().stop()
     } else {
         Codegen::default().function_call(function).stop()
+    }
+}
+fn codegen_for_function_name(name: &str) -> Codegen {
+    // HACK: hard coded inc/dec functions for door
+    if name == "IncOpen" {
+        Codegen::default()
+            .load_i32(0)
+            .loadi_i32(1 << 10)
+            .add()
+            .store_i32(0)
+            .stop()
+    } else if name == "DecOpen" {
+        Codegen::default()
+            .load_i32(0)
+            .loadi_i32(-(1 << 10))
+            .add()
+            .store_i32(0)
+            .stop()
+    } else {
+        codegen_for_function_call(Function::try_from_identifier(name).unwrap_or_default())
     }
 }
 

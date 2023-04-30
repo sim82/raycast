@@ -2,12 +2,14 @@ use std::io::Read;
 
 use crate::{Function, Result};
 use anyhow::anyhow;
-use byteorder::ReadBytesExt;
+use byteorder::{LittleEndian, ReadBytesExt};
+const STOP: u8 = 0xff;
 const PUSH_U8: u8 = 1;
 const CALL: u8 = 2;
-const STOP: u8 = 3;
-const LOAD_I32: u8 = 4;
+const LOAD_I32: u8 = 3;
+const LOADI_I32: u8 = 4;
 const STORE_I32: u8 = 5;
+const ADD: u8 = 6;
 
 #[derive(Debug)]
 pub enum Value {
@@ -45,9 +47,23 @@ pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
                 let addr = bc.read_u8()?;
                 return Ok(Event::Load(addr));
             }
+            LOADI_I32 => {
+                let v = bc.read_i32::<LittleEndian>()?;
+                env.stack.push(Value::I32(v));
+            }
             STORE_I32 => {
                 let addr = bc.read_u8()?;
                 return Ok(Event::Store(addr));
+            }
+            ADD => {
+                let a = env.stack.pop();
+                let b = env.stack.pop();
+                match (a, b) {
+                    (Some(Value::I32(a)), Some(Value::I32(b))) => {
+                        env.stack.push(Value::I32(a + b));
+                    }
+                    (a, b) => return Err(anyhow!("unhandled ADD operands: {a:?} {b:?}")),
+                }
             }
             x => return Err(anyhow!("unhandled opcode {x:?}")),
         }
@@ -64,6 +80,25 @@ impl Codegen {
         self.code.push(PUSH_U8);
         self.code.push(function.into());
         self.code.push(CALL);
+        self
+    }
+    pub fn load_i32(mut self, addr: u8) -> Self {
+        self.code.push(LOAD_I32);
+        self.code.push(addr);
+        self
+    }
+    pub fn loadi_i32(mut self, v: i32) -> Self {
+        self.code.push(LOADI_I32);
+        self.code.extend_from_slice(&v.to_le_bytes());
+        self
+    }
+    pub fn store_i32(mut self, addr: u8) -> Self {
+        self.code.push(STORE_I32);
+        self.code.push(addr);
+        self
+    }
+    pub fn add(mut self) -> Self {
+        self.code.push(ADD);
         self
     }
     pub fn stop(mut self) -> Self {
