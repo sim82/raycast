@@ -21,12 +21,12 @@ pub fn compile(filename: &str, outname: &str) {
     let mut enums = BTreeMap::new();
     let mut state_blocks = Vec::new();
     let mut spawn_infos = Vec::new();
-    let mut functions = BTreeMap::new();
+    let mut function_blocks = Vec::new();
     for tle in toplevel_elements {
         match tle {
             ToplevelElement::EnumDecl(mut enum_decl) => {
                 for (i, name) in enum_decl.names.drain(..).enumerate() {
-                    enums.insert(name, i + 1);
+                    enums.insert(name, i);
                 }
             }
             ToplevelElement::StatesBlock(state_block) => state_blocks.push(state_block),
@@ -36,31 +36,41 @@ pub fn compile(filename: &str, outname: &str) {
                     spawn_infos.push(spawn_info);
                 }
             }
-            ToplevelElement::FunctionBlock(function_block) => {
-                let mut codegen = Codegen::default();
-                for element in function_block.elements {
-                    match element {
-                        ast::FunctionBlockElement::Label(_) => todo!(),
-                        ast::FunctionBlockElement::LoadI32 { addr } => {
-                            codegen = codegen.load_i32(addr);
-                        }
-                        ast::FunctionBlockElement::LoadiI32 { value } => {
-                            codegen = codegen.loadi_i32(value);
-                        }
-                        ast::FunctionBlockElement::StoreI32 { addr } => {
-                            codegen = codegen.store_i32(addr);
-                        }
-                        ast::FunctionBlockElement::Add => {
-                            codegen = codegen.add();
-                        }
-                        ast::FunctionBlockElement::FunctionCall { function: _ } => todo!(),
-                    }
-                }
-                functions.insert(function_block.name.clone(), codegen.stop());
-            }
+            ToplevelElement::FunctionBlock(function_block) => function_blocks.push(function_block),
         }
     }
 
+    let mut functions = BTreeMap::new();
+    for function_block in function_blocks {
+        let mut codegen = Codegen::default();
+        for element in function_block.elements {
+            match element {
+                ast::FunctionBlockElement::Label(_) => todo!(),
+                ast::FunctionBlockElement::LoadI32 { addr } => {
+                    codegen = codegen.load_i32(addr);
+                }
+                ast::FunctionBlockElement::LoadiI32 { value } => {
+                    codegen = codegen.loadi_i32(value);
+                }
+                ast::FunctionBlockElement::LoadiU8Enum { name } => {
+                    let v = enums
+                        .get(&name)
+                        .unwrap_or_else(|| panic!("could not find enum {name}"));
+                    codegen = codegen.loadi_u8(*v as u8);
+                }
+                ast::FunctionBlockElement::StoreI32 { addr } => {
+                    codegen = codegen.store_i32(addr);
+                }
+                ast::FunctionBlockElement::Add => {
+                    codegen = codegen.add();
+                }
+                ast::FunctionBlockElement::FunctionCall => {
+                    codegen = codegen.call();
+                }
+            }
+        }
+        functions.insert(function_block.name.clone(), codegen.stop());
+    }
     {
         let mut enum_file = std::fs::File::create(format!("{outname}.enums")).unwrap();
         // write!(enum_file, "{enums:?}").unwrap();

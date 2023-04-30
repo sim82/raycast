@@ -201,15 +201,31 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, value) = ws(decimal)(input)?;
         Ok((input, FunctionBlockElement::LoadiI32 { value }))
     }
+    pub fn parse_loadi_u8_enum(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("loadiu8"))(input)?;
+        let (input, name) = parse_enum_name(input)?;
+        Ok((
+            input,
+            FunctionBlockElement::LoadiU8Enum {
+                name: name.to_string(),
+            },
+        ))
+    }
     pub fn parse_add(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("add"))(input)?;
         Ok((input, FunctionBlockElement::Add))
+    }
+    pub fn parse_call(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("call"))(input)?;
+        Ok((input, FunctionBlockElement::FunctionCall))
     }
     let (input, e) = ws(alt((
         parse_load_i32,
         parse_store_i32,
         parse_loadi_i32,
+        parse_loadi_u8_enum,
         parse_add,
+        parse_call,
     )))(input)?;
     Ok((input, e))
 }

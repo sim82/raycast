@@ -161,21 +161,9 @@ pub fn codegen(
     let _ = f.write(&bytecode_output.code).unwrap();
 }
 
-fn codegen_for_function_call(function: Function) -> Codegen {
-    if function == Function::None {
-        Codegen::default().stop()
-    } else {
-        Codegen::default().function_call(function).stop()
-    }
-}
-
 fn codegen_for_function_name(name: &str, functions: &BTreeMap<String, Codegen>) -> Codegen {
-    if let Some(codegen) = functions.get(name) {
-        codegen.clone()
-    } else {
-        codegen_for_function_call(
-            Function::try_from_identifier(name)
-                .unwrap_or_else(|| panic!("unknown function {name}")),
-        )
-    }
+    functions
+        .get(name)
+        .unwrap_or_else(|| panic!("unknown function {name}"))
+        .clone()
 }

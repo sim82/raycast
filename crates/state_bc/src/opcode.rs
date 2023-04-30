@@ -92,6 +92,11 @@ impl Codegen {
         self.code.extend_from_slice(&v.to_le_bytes());
         self
     }
+    pub fn loadi_u8(mut self, v: u8) -> Self {
+        self.code.push(PUSH_U8);
+        self.code.push(v);
+        self
+    }
     pub fn store_i32(mut self, addr: u8) -> Self {
         self.code.push(STORE_I32);
         self.code.push(addr);
@@ -99,6 +104,10 @@ impl Codegen {
     }
     pub fn add(mut self) -> Self {
         self.code.push(ADD);
+        self
+    }
+    pub fn call(mut self) -> Self {
+        self.code.push(CALL);
         self
     }
     pub fn stop(mut self) -> Self {

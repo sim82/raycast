@@ -593,6 +593,7 @@ open:
 blocked: 
     state DEMO, false, 0, ActionShoot, None, blocked
 }
+
 function IncOpen {
     loadi32 0
     loadii32 1024
@@ -605,8 +606,51 @@ function DecOpen {
     add
     storei32 0
 }
+function ThinkStand {
+    loadiu8 THINK_STAND
+    call
+}
+function ThinkPath {
+    loadiu8 THINK_PATH
+    call
+}
+function ThinkChase {
+    loadiu8 THINK_CHASE
+    call
+}
+function ThinkDogChase {
+    loadiu8 THINK_DOG_CHASE
+    call
+}
+function ActionDie {
+    loadiu8 ACTION_DIE
+    call
+}
+function ActionShoot {
+    loadiu8 ACTION_SHOOT
+    call
+}
+function ActionBite {
+    loadiu8 ACTION_BITE
+    call
+}
+function None {
+}
+
 enum
 {
+    FUNC_NONE,
+    THINK_STAND,
+    THINK_PATH,
+    THINK_CHASE,
+    THINK_DOG_CHASE,
+    ACTION_DIE,
+    ACTION_SHOOT,
+    ACTION_BITE,
+}
+enum
+{
+    SPR_NONE,
     DEMO,
     DEATHCAM,
     STAT_0,STAT_1,STAT_2,STAT_3,

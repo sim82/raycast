@@ -1,4 +1,4 @@
-use crate::{EnemySpawnInfo, Function};
+use crate::EnemySpawnInfo;
 
 #[derive(Debug)]
 pub enum ToplevelElement {
@@ -43,9 +43,10 @@ pub enum FunctionBlockElement {
     Label(String),
     LoadI32 { addr: u8 },
     LoadiI32 { value: i32 },
+    LoadiU8Enum { name: String },
     StoreI32 { addr: u8 },
     Add,
-    FunctionCall { function: Function },
+    FunctionCall,
 }
 #[derive(Debug)]
 pub struct FunctionBlock {

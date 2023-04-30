@@ -52,14 +52,15 @@ impl TryFrom<u8> for Function {
 
     fn try_from(value: u8) -> Result<Self> {
         Ok(match value {
+            // KEEP IN SYNC WITH .st files!
             0 => Self::None,
             1 => Self::ThinkStand,
             2 => Self::ThinkPath,
             3 => Self::ThinkChase,
-            6 => Self::ThinkDogChase,
-            7 => Self::ActionDie,
-            8 => Self::ActionShoot,
-            9 => Self::ActionBite,
+            4 => Self::ThinkDogChase,
+            5 => Self::ActionDie,
+            6 => Self::ActionShoot,
+            7 => Self::ActionBite,
             x => return Err(anyhow!("unhandled Think discriminator {x}")),
         })
     }
@@ -68,14 +69,15 @@ impl TryFrom<u8> for Function {
 impl From<Function> for u8 {
     fn from(val: Function) -> Self {
         match val {
+            // KEEP IN SYNC WITH .st files!
             Function::None => 0,
             Function::ThinkStand => 1,
             Function::ThinkPath => 2,
             Function::ThinkChase => 3,
-            Function::ThinkDogChase => 6,
-            Function::ActionDie => 7,
-            Function::ActionShoot => 8,
-            Function::ActionBite => 9,
+            Function::ThinkDogChase => 4,
+            Function::ActionDie => 5,
+            Function::ActionShoot => 6,
+            Function::ActionBite => 7,
         }
     }
 }
