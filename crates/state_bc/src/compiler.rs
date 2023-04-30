@@ -2,7 +2,7 @@ use self::{
     ast::ToplevelElement,
     parser::{parse_toplevel, util::Span},
 };
-use crate::SpawnInfos;
+use crate::{opcode::Codegen, SpawnInfos};
 use nom::multi::many1;
 use std::{collections::BTreeMap, io::Write};
 
@@ -21,6 +21,7 @@ pub fn compile(filename: &str, outname: &str) {
     let mut enums = BTreeMap::new();
     let mut state_blocks = Vec::new();
     let mut spawn_infos = Vec::new();
+    let mut functions = BTreeMap::new();
     for tle in toplevel_elements {
         match tle {
             ToplevelElement::EnumDecl(mut enum_decl) => {
@@ -35,7 +36,28 @@ pub fn compile(filename: &str, outname: &str) {
                     spawn_infos.push(spawn_info);
                 }
             }
-            ToplevelElement::FunctionBlock(function_block) => todo!(),
+            ToplevelElement::FunctionBlock(function_block) => {
+                let mut codegen = Codegen::default();
+                for element in function_block.elements {
+                    match element {
+                        ast::FunctionBlockElement::Label(_) => todo!(),
+                        ast::FunctionBlockElement::LoadI32 { addr } => {
+                            codegen = codegen.load_i32(addr);
+                        }
+                        ast::FunctionBlockElement::LoadiI32 { value } => {
+                            codegen = codegen.loadi_i32(value);
+                        }
+                        ast::FunctionBlockElement::StoreI32 { addr } => {
+                            codegen = codegen.store_i32(addr);
+                        }
+                        ast::FunctionBlockElement::Add => {
+                            codegen = codegen.add();
+                        }
+                        ast::FunctionBlockElement::FunctionCall { function: _ } => todo!(),
+                    }
+                }
+                functions.insert(function_block.name.clone(), codegen.stop());
+            }
         }
     }
 
@@ -59,6 +81,7 @@ pub fn compile(filename: &str, outname: &str) {
         &tmp_outname,
         &state_blocks,
         &enums,
+        &functions,
         &SpawnInfos { spawn_infos },
     );
     std::fs::rename(tmp_outname, outname).unwrap();

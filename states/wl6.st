@@ -593,7 +593,18 @@ open:
 blocked: 
     state DEMO, false, 0, ActionShoot, None, blocked
 }
-
+function IncOpen {
+    loadi32 0
+    loadii32 1024
+    add
+    storei32 0
+}
+function DecOpen {
+    loadi32 0
+    loadii32 -1024
+    add
+    storei32 0
+}
 enum
 {
     DEMO,

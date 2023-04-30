@@ -50,6 +50,7 @@ pub fn codegen(
     outname: &str,
     state_blocks: &[StatesBlock],
     enums: &BTreeMap<String, usize>,
+    functions: &BTreeMap<String, Codegen>,
     spawn_infos: &SpawnInfos,
 ) {
     let _ = std::fs::rename(outname, format!("{outname}.bak")); // don't care if it does not work
@@ -121,8 +122,14 @@ pub fn codegen(
                     next: next_ptr,
                 });
 
-                codegens.insert(format!("think:{index}"), codegen_for_function_name(think));
-                codegens.insert(format!("action:{index}"), codegen_for_function_name(action));
+                codegens.insert(
+                    format!("think:{index}"),
+                    codegen_for_function_name(think, functions),
+                );
+                codegens.insert(
+                    format!("action:{index}"),
+                    codegen_for_function_name(action, functions),
+                );
                 ip += crate::STATE_BC_SIZE;
             }
         }
@@ -161,23 +168,14 @@ fn codegen_for_function_call(function: Function) -> Codegen {
         Codegen::default().function_call(function).stop()
     }
 }
-fn codegen_for_function_name(name: &str) -> Codegen {
-    // HACK: hard coded inc/dec functions for door
-    if name == "IncOpen" {
-        Codegen::default()
-            .load_i32(0)
-            .loadi_i32(1 << 10)
-            .add()
-            .store_i32(0)
-            .stop()
-    } else if name == "DecOpen" {
-        Codegen::default()
-            .load_i32(0)
-            .loadi_i32(-(1 << 10))
-            .add()
-            .store_i32(0)
-            .stop()
+
+fn codegen_for_function_name(name: &str, functions: &BTreeMap<String, Codegen>) -> Codegen {
+    if let Some(codegen) = functions.get(name) {
+        codegen.clone()
     } else {
-        codegen_for_function_call(Function::try_from_identifier(name).unwrap_or_default())
+        codegen_for_function_call(
+            Function::try_from_identifier(name)
+                .unwrap_or_else(|| panic!("unknown function {name}")),
+        )
     }
 }

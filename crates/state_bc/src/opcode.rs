@@ -70,7 +70,7 @@ pub fn exec(bc: &mut dyn Read, env: &mut Env) -> Result<Event> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Codegen {
     code: Vec<u8>,
 }

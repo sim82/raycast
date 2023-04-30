@@ -48,7 +48,7 @@ pub fn identifier(input: Span) -> Res<'_, String> {
 }
 
 fn decimal(input: Span) -> Res<'_, i32> {
-    recognize(many1(terminated(one_of("0123456789"), many0(char('_')))))(input)
+    recognize(many1(terminated(one_of("-0123456789"), many0(char('_')))))(input)
         .map(|(i, s)| (i, s.parse::<i32>().expect("failed to parse integer {s}")))
 }
 
@@ -236,6 +236,7 @@ pub fn parse_toplevel(input: Span) -> Res<'_, ToplevelElement> {
         parse_enum_decl,
         parse_states_block,
         parse_spawn_block,
+        parse_function_block,
         handle_unexpected(take_till1(|c: char| c.is_whitespace()), |txt| {
             MyError::Custom(format!("unexpected at toplevel: {txt:?}"))
         }),
