@@ -1,6 +1,6 @@
 use self::{
     ast::ToplevelElement,
-    parser::{parse_toplevel, Span},
+    parser::{parse_toplevel, util::Span},
 };
 use crate::SpawnInfos;
 use nom::multi::many1;
@@ -35,6 +35,7 @@ pub fn compile(filename: &str, outname: &str) {
                     spawn_infos.push(spawn_info);
                 }
             }
+            ToplevelElement::FunctionBlock(function_block) => todo!(),
         }
     }
 

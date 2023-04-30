@@ -1,5 +1,8 @@
 use self::util::{handle_unexpected, is_identifier, ws, MyError, Res, Span};
-use super::ast::{EnumDecl, SpawnBlock, StatesBlock, StatesBlockElement, ToplevelElement};
+use super::ast::{
+    EnumDecl, FunctionBlock, FunctionBlockElement, SpawnBlock, StatesBlock, StatesBlockElement,
+    ToplevelElement,
+};
 use crate::{Direction, EnemySpawnInfo};
 use nom::{
     branch::alt,
@@ -178,6 +181,52 @@ fn parse_spawn_block(input: Span) -> Res<'_, ToplevelElement> {
         ToplevelElement::SpawnBlock(SpawnBlock {
             name: name.to_string(),
             infos,
+        }),
+    ))
+}
+
+pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
+    pub fn parse_load_i32(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("loadi32"))(input)?;
+        let (input, addr) = ws(decimal)(input)?;
+        Ok((input, FunctionBlockElement::LoadI32 { addr: addr as u8 }))
+    }
+    pub fn parse_store_i32(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("storei32"))(input)?;
+        let (input, addr) = ws(decimal)(input)?;
+        Ok((input, FunctionBlockElement::StoreI32 { addr: addr as u8 }))
+    }
+    pub fn parse_loadi_i32(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("loadii32"))(input)?;
+        let (input, value) = ws(decimal)(input)?;
+        Ok((input, FunctionBlockElement::LoadiI32 { value }))
+    }
+    pub fn parse_add(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("add"))(input)?;
+        Ok((input, FunctionBlockElement::Add))
+    }
+    let (input, e) = ws(alt((
+        parse_load_i32,
+        parse_store_i32,
+        parse_loadi_i32,
+        parse_add,
+    )))(input)?;
+    Ok((input, e))
+}
+pub fn parse_function_block(input: Span) -> Res<'_, ToplevelElement> {
+    let (input, _) = ws(tag("function"))(input)?;
+    let (input, name) = ws(take_while(is_identifier))(input)?;
+    let (input, elements) = delimited(
+        ws(char('{')),
+        many0(alt((parse_bytecode_directive,))),
+        ws(char('}')),
+    )(input)?;
+
+    Ok((
+        input,
+        ToplevelElement::FunctionBlock(FunctionBlock {
+            name: name.to_string(),
+            elements,
         }),
     ))
 }

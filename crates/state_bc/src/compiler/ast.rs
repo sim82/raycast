@@ -1,10 +1,11 @@
-use crate::EnemySpawnInfo;
+use crate::{EnemySpawnInfo, Function};
 
 #[derive(Debug)]
 pub enum ToplevelElement {
     EnumDecl(EnumDecl),
     StatesBlock(StatesBlock),
     SpawnBlock(SpawnBlock),
+    FunctionBlock(FunctionBlock),
 }
 
 #[derive(Debug)]
@@ -35,4 +36,19 @@ pub struct StatesBlock {
 pub struct SpawnBlock {
     pub name: String,
     pub infos: Vec<EnemySpawnInfo>,
+}
+
+#[derive(Debug)]
+pub enum FunctionBlockElement {
+    Label(String),
+    LoadI32 { addr: u8 },
+    LoadiI32 { value: i32 },
+    StoreI32 { addr: u8 },
+    Add,
+    FunctionCall { function: Function },
+}
+#[derive(Debug)]
+pub struct FunctionBlock {
+    pub name: String,
+    pub elements: Vec<FunctionBlockElement>,
 }
