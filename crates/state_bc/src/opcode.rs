@@ -108,6 +108,9 @@ impl Codegen {
     pub fn into_code(self) -> Vec<u8> {
         self.code
     }
+    pub fn get_code(&self) -> &[u8] {
+        &self.code
+    }
 }
 
 #[test]

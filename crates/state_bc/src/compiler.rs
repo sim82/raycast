@@ -58,6 +58,22 @@ pub struct SpawnBlock {
     pub infos: Vec<EnemySpawnInfo>,
 }
 
+#[derive(Default)]
+pub struct CodegenCache {
+    cache: HashMap<Vec<u8>, u64>,
+}
+
+impl CodegenCache {
+    pub fn get(&mut self, codegen: &Codegen, pos: u64) -> Option<u64> {
+        let cached = self.cache.get(codegen.get_code());
+        if cached.is_some() {
+            return cached.cloned();
+        }
+        self.cache.insert(codegen.get_code().into(), pos);
+        None
+    }
+}
+
 pub fn codegen(
     outname: &str,
     state_blocks: &[StatesBlock],
@@ -98,6 +114,7 @@ pub fn codegen(
     let mut ip = 0;
 
     let mut codegens = HashMap::new();
+    let mut codegen_cache = CodegenCache::default();
 
     for state_block in state_blocks {
         for element in &state_block.elements {
@@ -166,15 +183,25 @@ pub fn codegen(
         let think_name = format!("think:{i}");
         let Some(gc) = codegens.remove(&think_name) else { panic!("missing think gc")};
         let pos = f.stream_position().unwrap();
+        let pos = if let Some(pos) = codegen_cache.get(&gc, pos) {
+            pos
+        } else {
+            let _ = f.write(&gc.into_code()).unwrap();
+            pos
+        };
         state.think_offs = (pos - code_start_pos) as i32;
-        let _ = f.write(&gc.into_code()).unwrap();
         // eprintln!("{think_name}: {pos:x}");
 
         let action_name = format!("action:{i}");
-        let Some(gc) = codegens.remove(&action_name) else { panic!("missing think gc")};
+        let Some(gc) = codegens.remove(&action_name) else { panic!("missing action gc")};
         let pos = f.stream_position().unwrap();
+        let pos = if let Some(pos) = codegen_cache.get(&gc, pos) {
+            pos
+        } else {
+            let _ = f.write(&gc.into_code()).unwrap();
+            pos
+        };
         state.action_offs = (pos - code_start_pos) as i32;
-        let _ = f.write(&gc.into_code()).unwrap();
         // eprintln!("{action_name}: {pos:x}");
     }
     // then write StateBc blocks _before_ bytecode
