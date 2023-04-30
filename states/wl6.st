@@ -36,9 +36,9 @@ die:
 dead:
     state BROWN_DEAD, false, 0, None, None, dead
 shoot:
-    state BROWN_SHOOT1, false, 20, None, None, next
-    state BROWN_SHOOT2, false, 20, None, ActionShoot, next
-    state BROWN_SHOOT3, false, 20, None, None, chase
+    state BROWN_SHOOT1, false, 60, None, None, next
+    state BROWN_SHOOT2, false, 60, None, ActionShoot, next
+    state BROWN_SHOOT3, false, 60, None, None, chase
 }
 
 

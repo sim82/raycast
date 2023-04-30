@@ -626,13 +626,18 @@ impl Enemy {
         unique_id: usize,
         player: &mut Player,
     ) {
-        // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action_offs' resets state.action_offs to -1)
-        // this is different from wolf3d where actions execute on state exit (don't understand why...)
-        if let Some(action_offs) = self.exec_ctx.state.take_action_offs() {
-            self.exec_code(action_offs, map_dynamic, things, unique_id, player);
-        }
+        // // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action_offs' resets state.action_offs to -1)
+        // // this is different from wolf3d where actions execute on state exit (don't understand why...)
+        // if let Some(action_offs) = self.exec_ctx.state.take_action_offs() {}
 
         if self.exec_ctx.state.ticks <= 0 {
+            self.exec_code(
+                self.exec_ctx.state.action_offs,
+                map_dynamic,
+                things,
+                unique_id,
+                player,
+            );
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
 

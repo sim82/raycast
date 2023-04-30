@@ -328,21 +328,6 @@ impl StateBc {
             next: next * STATE_BC_SIZE,
         }
     }
-
-    pub fn take_action(&mut self) -> Function {
-        if self.action != Function::None {
-            std::mem::take(&mut self.action)
-        } else {
-            Function::None
-        }
-    }
-    pub fn take_action_offs(&mut self) -> Option<i32> {
-        if self.action_offs != -1 {
-            Some(std::mem::replace(&mut self.action_offs, -1))
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug)]
