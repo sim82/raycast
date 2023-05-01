@@ -141,7 +141,8 @@ impl Weapon {
         }
 
         if self.exec_ctx.state.ticks <= 0 {
-            self.exec_code(self.exec_ctx.state.action_offs, fire);
+            self.exec_code(self.exec_ctx.state.action_offs, fire)
+                .expect("exec_code failed.");
             if self.exec_ctx.state.ticks <= 0 {
                 self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
             }

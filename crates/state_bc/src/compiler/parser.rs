@@ -215,6 +215,29 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("add"))(input)?;
         Ok((input, FunctionBlockElement::Add))
     }
+    pub fn parse_ceq(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("ceq"))(input)?;
+        Ok((input, FunctionBlockElement::Ceq))
+    }
+    pub fn parse_not(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("not"))(input)?;
+        Ok((input, FunctionBlockElement::Not))
+    }
+    pub fn parse_jrc(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("jrc"))(input)?;
+        let (input, label) = ws(take_while(is_identifier))(input)?;
+        Ok((
+            input,
+            FunctionBlockElement::Jrc {
+                label: label.to_string(),
+            },
+        ))
+    }
+    pub fn parse_label(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, label) = ws(terminated(take_while(is_identifier), char(':')))(input)?;
+        let (input, _) = ws(tag("not"))(input)?;
+        Ok((input, FunctionBlockElement::Label(label.to_string())))
+    }
     pub fn parse_call(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("call"))(input)?;
         Ok((input, FunctionBlockElement::FunctionCall))
@@ -224,8 +247,12 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         parse_store_i32,
         parse_loadi_i32,
         parse_loadi_u8_enum,
+        parse_jrc,
         parse_add,
+        parse_ceq,
+        parse_not,
         parse_call,
+        parse_label,
     )))(input)?;
     Ok((input, e))
 }

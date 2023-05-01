@@ -46,6 +46,9 @@ pub enum FunctionBlockElement {
     LoadiU8Enum { name: String },
     StoreI32 { addr: u8 },
     Add,
+    Ceq,
+    Not,
+    Jrc { label: String },
     FunctionCall,
 }
 #[derive(Debug)]

@@ -45,7 +45,9 @@ pub fn compile(filename: &str, outname: &str) {
         let mut codegen = Codegen::default();
         for element in function_block.elements {
             match element {
-                ast::FunctionBlockElement::Label(_) => todo!(),
+                ast::FunctionBlockElement::Label(label) => {
+                    codegen = codegen.label(&label);
+                }
                 ast::FunctionBlockElement::LoadI32 { addr } => {
                     codegen = codegen.load_i32(addr);
                 }
@@ -66,6 +68,15 @@ pub fn compile(filename: &str, outname: &str) {
                 }
                 ast::FunctionBlockElement::FunctionCall => {
                     codegen = codegen.call();
+                }
+                ast::FunctionBlockElement::Ceq => {
+                    codegen = codegen.ceq();
+                }
+                ast::FunctionBlockElement::Not => {
+                    codegen = codegen.bin_not();
+                }
+                ast::FunctionBlockElement::Jrc { label } => {
+                    codegen = codegen.jrc_label(&label);
                 }
             }
         }
