@@ -1,4 +1,4 @@
-use crate::{ms::Writable, opcode::Codegen, Function, SpawnInfos, StateBc};
+use crate::{ms::Writable, opcode::Codegen, SpawnInfos, StateBc};
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -116,8 +116,6 @@ pub fn codegen(
                     id,
                     ticks: *ticks,
                     directional: *directional,
-                    think: Function::try_from_identifier(think).unwrap_or_default(),
-                    action: Function::try_from_identifier(action).unwrap_or_default(),
                     think_offs: 0,
                     action_offs: 0,
                     next: next_ptr,

@@ -262,22 +262,18 @@ pub struct StateBc {
     pub id: i32,
     pub ticks: i32,
     pub directional: bool,
-    pub think: Function,
-    pub action: Function,
     pub think_offs: i32,
     pub action_offs: i32,
     pub next: i32,
 }
 
-pub const STATE_BC_SIZE: i32 = 23;
+pub const STATE_BC_SIZE: i32 = 21;
 
 impl ms::Loadable for StateBc {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let id = r.read_i32::<LittleEndian>()?;
         let ticks = r.read_i32::<LittleEndian>()?;
         let directional = r.read_u8()? != 0;
-        let think = r.read_u8()?.try_into()?;
-        let action = r.read_u8()?.try_into()?;
         let think_offs = r.read_i32::<LittleEndian>()?;
         let action_offs = r.read_i32::<LittleEndian>()?;
         let next = r.read_i32::<LittleEndian>()?;
@@ -285,8 +281,6 @@ impl ms::Loadable for StateBc {
             id,
             ticks,
             directional,
-            think,
-            action,
             think_offs,
             action_offs,
             next,
@@ -299,8 +293,6 @@ impl ms::Writable for StateBc {
         w.write_i32::<LittleEndian>(self.id)?;
         w.write_i32::<LittleEndian>(self.ticks)?;
         w.write_u8(if self.directional { 1 } else { 0 })?;
-        w.write_u8(self.think.try_into()?)?;
-        w.write_u8(self.action.try_into()?)?;
         w.write_i32::<LittleEndian>(self.think_offs)?;
         w.write_i32::<LittleEndian>(self.action_offs)?;
         w.write_i32::<LittleEndian>(self.next)?;
@@ -309,20 +301,11 @@ impl ms::Writable for StateBc {
 }
 
 impl StateBc {
-    pub fn new(
-        id: i32,
-        ticks: i32,
-        think: Function,
-        action: Function,
-        next: i32,
-        directional: bool,
-    ) -> Self {
+    pub fn new(id: i32, ticks: i32, next: i32, directional: bool) -> Self {
         StateBc {
             id,
             ticks,
             directional,
-            think,
-            action,
             think_offs: 0,
             action_offs: 0,
             next: next * STATE_BC_SIZE,
@@ -448,4 +431,12 @@ impl ms::Writable for SpawnInfos {
         }
         Ok(())
     }
+}
+
+#[test]
+fn test_state_bc_size() {
+    let mut c = std::io::Cursor::new(Vec::<u8>::new());
+    let state_bc = StateBc::default();
+    ms::Writable::write(&state_bc, &mut c).unwrap();
+    assert_eq!(c.into_inner().len(), STATE_BC_SIZE as usize);
 }

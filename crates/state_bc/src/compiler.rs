@@ -48,9 +48,6 @@ pub fn compile(filename: &str, outname: &str) {
                 ast::FunctionBlockElement::Label(label) => {
                     codegen = codegen.label(&label);
                 }
-                // ast::FunctionBlockElement::LoadI32 { addr } => {
-                //     codegen = codegen.load_i32(addr);
-                // }
                 ast::FunctionBlockElement::LoadiI32 { value } => {
                     codegen = codegen.loadi_i32(value);
                 }
@@ -63,9 +60,6 @@ pub fn compile(filename: &str, outname: &str) {
                 ast::FunctionBlockElement::LoadiU8 { value } => {
                     codegen = codegen.loadi_u8(value);
                 }
-                // ast::FunctionBlockElement::StoreI32 { addr } => {
-                //     codegen = codegen.store_i32(addr);
-                // }
                 ast::FunctionBlockElement::Trap => {
                     codegen = codegen.trap();
                 }
