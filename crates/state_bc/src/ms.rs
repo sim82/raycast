@@ -52,3 +52,35 @@ impl Loadable for String {
         Ok(String::from_utf8(name)?)
     }
 }
+
+pub mod we {
+    use crate::prelude::Result;
+    use std::{fmt::Write, io};
+
+    pub trait WriteExt: io::Write {
+        #[inline]
+        fn writeu8(&mut self, v: u8) -> Result<()> {
+            Ok(self.write_all(&v.to_le_bytes())?)
+        }
+        #[inline]
+        fn writei32(&mut self, v: i32) -> Result<()> {
+            Ok(self.write_all(&v.to_le_bytes())?)
+        }
+    }
+    impl<W: io::Write + ?Sized> WriteExt for W {}
+    pub trait ReadExt: io::Read {
+        #[inline]
+        fn readu8(&mut self) -> Result<u8> {
+            let mut buf = [0u8; 1];
+            self.read_exact(&mut buf)?;
+            Ok(u8::from_le_bytes(buf))
+        }
+        #[inline]
+        fn readi32(&mut self) -> Result<i32> {
+            let mut buf = [0u8; 4];
+            self.read_exact(&mut buf)?;
+            Ok(i32::from_le_bytes(buf))
+        }
+    }
+    impl<R: io::Read + ?Sized> ReadExt for R {}
+}

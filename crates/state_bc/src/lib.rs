@@ -1,11 +1,11 @@
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use ms::we::{ReadExt, WriteExt};
 use prelude::ms::Loadable;
 use std::{
     collections::HashMap,
     io::{Cursor, Read, Write},
 };
-
 pub mod ms;
 pub use anyhow::Result;
 
@@ -273,14 +273,14 @@ pub const STATE_BC_SIZE: i32 = 23;
 
 impl ms::Loadable for StateBc {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let id = r.read_i32::<LittleEndian>()?;
-        let ticks = r.read_i32::<LittleEndian>()?;
-        let directional = r.read_u8()? != 0;
-        let think = r.read_u8()?.try_into()?;
-        let action = r.read_u8()?.try_into()?;
-        let think_offs = r.read_i32::<LittleEndian>()?;
-        let action_offs = r.read_i32::<LittleEndian>()?;
-        let next = r.read_i32::<LittleEndian>()?;
+        let id = r.readi32()?;
+        let ticks = r.readi32()?;
+        let directional = r.readu8()? != 0;
+        let think = r.readu8()?.try_into()?;
+        let action = r.readu8()?.try_into()?;
+        let think_offs = r.readi32()?;
+        let action_offs = r.readi32()?;
+        let next = r.readi32()?;
         Ok(StateBc {
             id,
             ticks,
@@ -296,14 +296,14 @@ impl ms::Loadable for StateBc {
 
 impl ms::Writable for StateBc {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.id)?;
-        w.write_i32::<LittleEndian>(self.ticks)?;
-        w.write_u8(if self.directional { 1 } else { 0 })?;
-        w.write_u8(self.think.try_into()?)?;
-        w.write_u8(self.action.try_into()?)?;
-        w.write_i32::<LittleEndian>(self.think_offs)?;
-        w.write_i32::<LittleEndian>(self.action_offs)?;
-        w.write_i32::<LittleEndian>(self.next)?;
+        w.writei32(self.id)?;
+        w.writei32(self.ticks)?;
+        w.writeu8(if self.directional { 1 } else { 0 })?;
+        w.writeu8(self.think.try_into()?)?;
+        w.writeu8(self.action.try_into()?)?;
+        w.writei32(self.think_offs)?;
+        w.writei32(self.action_offs)?;
+        w.writei32(self.next)?;
         Ok(())
     }
 }
