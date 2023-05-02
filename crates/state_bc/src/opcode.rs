@@ -171,7 +171,13 @@ impl Codegen {
         self.labels.insert(label.into(), self.code.len());
         self
     }
-    pub fn into_code(mut self) -> Vec<u8> {
+    /// Finalize and return Vec of generated code. This step resolves labelled jumps to the correct
+    /// offset address.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a label name cannot be resolved
+    pub fn finalize(mut self) -> Vec<u8> {
         for (label, pos) in self.label_refs {
             let label_pos = *self
                 .labels
@@ -189,7 +195,7 @@ fn test_codegen() {
     let code = Codegen::default()
         .function_call(Function::ActionDie)
         .stop()
-        .into_code();
+        .finalize();
     assert_eq!(code[..], [0x1, 0x5, 0x2, 0xff]);
 }
 #[test]
@@ -215,7 +221,7 @@ fn test_ceq() {
         .loadi_u8(124)
         .ceq()
         .stop()
-        .into_code();
+        .finalize();
 
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -239,7 +245,7 @@ fn test_cond_jmp() {
         .loadi_i32(4712)
         .label("after2")
         .stop()
-        .into_code();
+        .finalize();
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -264,7 +270,7 @@ fn test_loop() {
         .bin_not()
         .jrc_label("loop")
         .stop()
-        .into_code();
+        .finalize();
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     for i in 0..5 {
