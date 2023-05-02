@@ -20,19 +20,20 @@ impl BytecodeOutput {
         }
     }
     pub fn append_codegen(&mut self, codegen: Codegen) -> i32 {
-        if self.code.len() >= codegen.get_code().len() {
+        let mut code = codegen.into_code();
+        if self.code.len() >= code.len() {
             // compression / size optimization:
             // search for subsequence match in previously generated code
             if let Some(pos) = self
                 .code
-                .windows(codegen.get_code().len())
-                .position(|window| window == codegen.get_code())
+                .windows(code.len())
+                .position(|window| window == code)
             {
                 return pos as i32;
             }
         }
         let pos = self.code.len() as i32;
-        self.code.append(&mut codegen.into_code());
+        self.code.append(&mut code);
         pos
     }
 
