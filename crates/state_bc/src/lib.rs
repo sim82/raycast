@@ -262,22 +262,18 @@ pub struct StateBc {
     pub id: i32,
     pub ticks: i32,
     pub directional: bool,
-    pub think: Function,
-    pub action: Function,
     pub think_offs: i32,
     pub action_offs: i32,
     pub next: i32,
 }
 
-pub const STATE_BC_SIZE: i32 = 23;
+pub const STATE_BC_SIZE: i32 = 21;
 
 impl ms::Loadable for StateBc {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let id = r.readi32()?;
         let ticks = r.readi32()?;
         let directional = r.readu8()? != 0;
-        let think = r.readu8()?.try_into()?;
-        let action = r.readu8()?.try_into()?;
         let think_offs = r.readi32()?;
         let action_offs = r.readi32()?;
         let next = r.readi32()?;
@@ -285,8 +281,6 @@ impl ms::Loadable for StateBc {
             id,
             ticks,
             directional,
-            think,
-            action,
             think_offs,
             action_offs,
             next,
@@ -299,8 +293,6 @@ impl ms::Writable for StateBc {
         w.writei32(self.id)?;
         w.writei32(self.ticks)?;
         w.writeu8(if self.directional { 1 } else { 0 })?;
-        w.writeu8(self.think.try_into()?)?;
-        w.writeu8(self.action.try_into()?)?;
         w.writei32(self.think_offs)?;
         w.writei32(self.action_offs)?;
         w.writei32(self.next)?;
@@ -309,20 +301,11 @@ impl ms::Writable for StateBc {
 }
 
 impl StateBc {
-    pub fn new(
-        id: i32,
-        ticks: i32,
-        think: Function,
-        action: Function,
-        next: i32,
-        directional: bool,
-    ) -> Self {
+    pub fn new(id: i32, ticks: i32, next: i32, directional: bool) -> Self {
         StateBc {
             id,
             ticks,
             directional,
-            think,
-            action,
             think_offs: 0,
             action_offs: 0,
             next: next * STATE_BC_SIZE,
@@ -448,4 +431,12 @@ impl ms::Writable for SpawnInfos {
         }
         Ok(())
     }
+}
+
+#[test]
+fn test_state_bc_size() {
+    let mut c = std::io::Cursor::new(Vec::<u8>::new());
+    let state_bc = StateBc::default();
+    ms::Writable::write(&state_bc, &mut c).unwrap();
+    assert_eq!(c.into_inner().len(), STATE_BC_SIZE as usize);
 }

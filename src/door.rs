@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use anyhow::anyhow;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use state_bc::opcode::Value;
 use std::{collections::HashSet, io::Cursor};
 
 impl From<Fp16> for opcode::Value {
@@ -55,13 +56,16 @@ impl Door {
             match state {
                 opcode::Event::Stop => break,
                 opcode::Event::Call(function) => self.dispatch_call(function, trigger, blocked),
-                opcode::Event::Load(0) => env.stack.push(self.open_f.into()),
-                opcode::Event::Store(0) => match env.stack.pop() {
-                    Some(opcode::Value::I32(v)) => self.open_f.v = v,
-                    Some(x) => return Err(anyhow!("unhandled opcode::Value {x:?}")),
-                    None => return Err(anyhow!("stack underflow")),
+                opcode::Event::Trap => match env.stack.pop() {
+                    Some(Value::U8(0)) => env.stack.push(self.open_f.into()),
+                    Some(Value::U8(1)) => match env.stack.pop() {
+                        Some(opcode::Value::I32(v)) => self.open_f.v = v,
+                        Some(x) => return Err(anyhow!("unhandled opcode::Value {x:?}")),
+                        None => return Err(anyhow!("stack underflow")),
+                    },
+                    x => panic!("unexpected trap code {x:?}"),
                 },
-                x => todo!("unhandled opcode::Event {x:?}"),
+                // x => todo!("unhandled opcode::Event {x:?}"),
             }
         }
         Ok(())

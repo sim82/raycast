@@ -9,14 +9,13 @@ use byteorder::{LittleEndian, ReadBytesExt};
 const STOP: u8 = 0xff;
 const PUSH_U8: u8 = 1;
 const CALL: u8 = 2;
-const LOAD_I32: u8 = 3;
-const LOADI_I32: u8 = 4;
-const STORE_I32: u8 = 5;
-const ADD: u8 = 6;
-const JRC: u8 = 7;
-const CEQ: u8 = 8;
-const NOT: u8 = 9;
-const DUP: u8 = 10;
+const LOADI_I32: u8 = 3;
+const ADD: u8 = 4;
+const JRC: u8 = 5;
+const CEQ: u8 = 6;
+const NOT: u8 = 7;
+const DUP: u8 = 8;
+const TRAP: u8 = 9;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
@@ -35,8 +34,9 @@ pub struct Env {
 pub enum Event {
     Stop,
     Call(Function),
-    Load(u8),
-    Store(u8),
+    // Load(u8),
+    // Store(u8),
+    Trap,
 }
 
 pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
@@ -51,17 +51,12 @@ pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
                     _ => return Err(anyhow!("expect U8")),
                 };
             }
-            LOAD_I32 => {
-                let addr = bc.read_u8()?;
-                return Ok(Event::Load(addr));
-            }
             LOADI_I32 => {
                 let v = bc.read_i32::<LittleEndian>()?;
                 env.stack.push(Value::I32(v));
             }
-            STORE_I32 => {
-                let addr = bc.read_u8()?;
-                return Ok(Event::Store(addr));
+            TRAP => {
+                return Ok(Event::Trap);
             }
             ADD => {
                 let a = env.stack.pop();
@@ -123,11 +118,6 @@ impl Codegen {
         self.code.push(CALL);
         self
     }
-    pub fn load_i32(mut self, addr: u8) -> Self {
-        self.code.push(LOAD_I32);
-        self.code.push(addr);
-        self
-    }
     pub fn loadi_i32(mut self, v: i32) -> Self {
         self.code.push(LOADI_I32);
         self.code.extend_from_slice(&v.to_le_bytes());
@@ -138,9 +128,8 @@ impl Codegen {
         self.code.push(v);
         self
     }
-    pub fn store_i32(mut self, addr: u8) -> Self {
-        self.code.push(STORE_I32);
-        self.code.push(addr);
+    pub fn trap(mut self) -> Self {
+        self.code.push(TRAP);
         self
     }
     pub fn add(mut self) -> Self {
@@ -182,7 +171,13 @@ impl Codegen {
         self.labels.insert(label.into(), self.code.len());
         self
     }
-    pub fn into_code(mut self) -> Vec<u8> {
+    /// Finalize and return Vec of generated code. This step resolves labelled jumps to the correct
+    /// offset address.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a label name cannot be resolved
+    pub fn finalize(mut self) -> Vec<u8> {
         for (label, pos) in self.label_refs {
             let label_pos = *self
                 .labels
@@ -193,9 +188,6 @@ impl Codegen {
         }
         self.code
     }
-    pub fn get_code(&self) -> &[u8] {
-        &self.code
-    }
 }
 
 #[test]
@@ -203,7 +195,7 @@ fn test_codegen() {
     let code = Codegen::default()
         .function_call(Function::ActionDie)
         .stop()
-        .into_code();
+        .finalize();
     assert_eq!(code[..], [0x1, 0x5, 0x2, 0xff]);
 }
 #[test]
@@ -229,7 +221,7 @@ fn test_ceq() {
         .loadi_u8(124)
         .ceq()
         .stop()
-        .into_code();
+        .finalize();
 
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -253,7 +245,7 @@ fn test_cond_jmp() {
         .loadi_i32(4712)
         .label("after2")
         .stop()
-        .into_code();
+        .finalize();
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -269,7 +261,7 @@ fn test_loop() {
         .dup() // dup counter and add 4711 (for test load event)
         .loadi_i32(4711)
         .add()
-        .store_i32(0) // addr 0 for test load event
+        .trap() // emit test event
         .loadi_i32(-1) // sub 1 from counter
         .add()
         .dup() // dup counter and compare zero
@@ -278,14 +270,14 @@ fn test_loop() {
         .bin_not()
         .jrc_label("loop")
         .stop()
-        .into_code();
+        .finalize();
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     for i in 0..5 {
         let e = exec(&mut c, &mut env);
         let v = env.stack.pop();
         println!("{e:?} {v:?}");
-        assert!(matches!(e, Ok(Event::Store(0))));
+        assert!(matches!(e, Ok(Event::Trap)));
         assert_eq!(v, Some(Value::I32(4716 - i)));
     }
     let e = exec(&mut c, &mut env);
