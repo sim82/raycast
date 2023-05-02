@@ -610,16 +610,20 @@ function WeaponCheckFire{
     call
 }
 function IncOpen {
-    loadi32 0
+    loadiu8 0
+    trap
     loadii32 1024
     add
-    storei32 0
+    loadiu8 1
+    trap
 }
 function DecOpen {
-    loadi32 0
+    loadiu8 0
+    trap
     loadii32 -1024
     add
-    storei32 0
+    loadiu8 1
+    trap
 }
 function ThinkStand {
     loadiu8 THINK_STAND

@@ -186,16 +186,16 @@ fn parse_spawn_block(input: Span) -> Res<'_, ToplevelElement> {
 }
 
 pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
-    pub fn parse_load_i32(input: Span) -> Res<'_, FunctionBlockElement> {
-        let (input, _) = ws(tag("loadi32"))(input)?;
-        let (input, addr) = ws(decimal)(input)?;
-        Ok((input, FunctionBlockElement::LoadI32 { addr: addr as u8 }))
-    }
-    pub fn parse_store_i32(input: Span) -> Res<'_, FunctionBlockElement> {
-        let (input, _) = ws(tag("storei32"))(input)?;
-        let (input, addr) = ws(decimal)(input)?;
-        Ok((input, FunctionBlockElement::StoreI32 { addr: addr as u8 }))
-    }
+    // pub fn parse_load_i32(input: Span) -> Res<'_, FunctionBlockElement> {
+    //     let (input, _) = ws(tag("loadi32"))(input)?;
+    //     let (input, addr) = ws(decimal)(input)?;
+    //     Ok((input, FunctionBlockElement::LoadI32 { addr: addr as u8 }))
+    // }
+    // pub fn parse_store_i32(input: Span) -> Res<'_, FunctionBlockElement> {
+    //     let (input, _) = ws(tag("storei32"))(input)?;
+    //     let (input, addr) = ws(decimal)(input)?;
+    //     Ok((input, FunctionBlockElement::StoreI32 { addr: addr as u8 }))
+    // }
     pub fn parse_loadi_i32(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("loadii32"))(input)?;
         let (input, value) = ws(decimal)(input)?;
@@ -211,9 +211,21 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
             },
         ))
     }
+    pub fn parse_loadi_u8(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("loadiu8"))(input)?;
+        let (input, value) = ws(decimal)(input)?;
+        if value > u8::MAX as i32 {
+            panic!("u8 out of range {value}"); // FIXME: emit proper parse error
+        }
+        Ok((input, FunctionBlockElement::LoadiU8 { value: value as u8 }))
+    }
     pub fn parse_add(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("add"))(input)?;
         Ok((input, FunctionBlockElement::Add))
+    }
+    pub fn parse_trap(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("trap"))(input)?;
+        Ok((input, FunctionBlockElement::Trap))
     }
     pub fn parse_ceq(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("ceq"))(input)?;
@@ -243,9 +255,11 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         Ok((input, FunctionBlockElement::FunctionCall))
     }
     let (input, e) = ws(alt((
-        parse_load_i32,
-        parse_store_i32,
+        // parse_load_i32,
+        // parse_store_i32,
+        parse_trap,
         parse_loadi_i32,
+        parse_loadi_u8, // FIXME: identifier parsing is crap (accepts also digit in fist place). need to match this rule first.
         parse_loadi_u8_enum,
         parse_jrc,
         parse_add,

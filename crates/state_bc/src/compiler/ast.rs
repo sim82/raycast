@@ -41,10 +41,12 @@ pub struct SpawnBlock {
 #[derive(Debug)]
 pub enum FunctionBlockElement {
     Label(String),
-    LoadI32 { addr: u8 },
+    // LoadI32 { addr: u8 },
     LoadiI32 { value: i32 },
     LoadiU8Enum { name: String },
-    StoreI32 { addr: u8 },
+    LoadiU8 { value: u8 },
+    // StoreI32 { addr: u8 },
+    Trap,
     Add,
     Ceq,
     Not,
