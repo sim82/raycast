@@ -187,6 +187,6 @@ lazy_static! {
     pub static ref RNG: std::sync::Mutex<oorandom::Rand32> = std::sync::Mutex::new(oorandom::Rand32::new(4711));
 }
 pub fn randu8() -> u8 {
-    // rand::random::<u8>()
-    RNG.lock().unwrap().rand_u32() as u8
+    let v = RNG.lock().unwrap().rand_u32().to_ne_bytes();
+    v[0] ^ v[1] ^ v[2] ^ v[3] // TODO: is this smart?
 }
