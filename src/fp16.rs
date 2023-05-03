@@ -1,6 +1,7 @@
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use state_bc::ms::we::WriteExt;
 
 use crate::{ms, Result};
 
@@ -45,7 +46,7 @@ impl From<i32> for Fp16 {
 
 impl ms::Writable for Fp16 {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.v)?;
+        w.writei32(self.v)?;
         Ok(())
     }
 }

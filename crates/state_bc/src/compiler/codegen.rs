@@ -1,4 +1,8 @@
-use crate::{ms::Writable, opcode::Codegen, SpawnInfos, StateBc};
+use crate::{
+    ms::{we::WriteExt, Writable},
+    opcode::Codegen,
+    SpawnInfos, StateBc,
+};
 use byteorder::{LittleEndian, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -141,7 +145,7 @@ pub fn codegen(
         .unwrap();
     for (name, ptr) in &label_ptrs {
         let b = name.as_bytes();
-        f.write_u8(b.len() as u8).unwrap();
+        f.writeu8(b.len() as u8).unwrap();
         let _ = f.write(b).unwrap();
         f.write_i32::<LittleEndian>(*ptr).unwrap();
     }

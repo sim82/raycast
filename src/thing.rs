@@ -39,15 +39,15 @@ impl ms::Writable for Actor {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
             Actor::Item { collected, item } => {
-                w.write_u8(0)?;
-                w.write_u8(if *collected { 1 } else { 0 })?;
+                w.writeu8(0)?;
+                w.writeu8(if *collected { 1 } else { 0 })?;
                 item.write(w)?;
             }
             Actor::Enemy { enemy } => {
-                w.write_u8(1)?;
+                w.writeu8(1)?;
                 enemy.write(w)?;
             }
-            Actor::None => w.write_u8(2)?,
+            Actor::None => w.writeu8(2)?,
         }
         Ok(())
     }
@@ -400,7 +400,7 @@ impl ms::Loadable for Collectible {
 
 impl ms::Writable for Collectible {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_u8(match self {
+        w.writeu8(match self {
             Collectible::DogFood => 29,
             Collectible::Key(t) => 43 + *t as u8,
             Collectible::Food => 47,

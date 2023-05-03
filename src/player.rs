@@ -44,14 +44,14 @@ impl Default for Player {
 
 impl Writable for Player {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.x.v)?;
-        w.write_i32::<LittleEndian>(self.y.v)?;
-        w.write_i32::<LittleEndian>(self.rot)?;
-        w.write_u8(if self.trigger { 1 } else { 0 })?;
-        w.write_u8(if self.shoot { 1 } else { 0 })?;
-        w.write_i32::<LittleEndian>(self.shoot_timeout)?;
+        w.writei32(self.x.v)?;
+        w.writei32(self.y.v)?;
+        w.writei32(self.rot)?;
+        w.writeu8(if self.trigger { 1 } else { 0 })?;
+        w.writeu8(if self.shoot { 1 } else { 0 })?;
+        w.writei32(self.shoot_timeout)?;
         self.weapon.write(w)?;
-        w.write_i32::<LittleEndian>(self.health)?;
+        w.writei32(self.health)?;
         Ok(())
     }
 }

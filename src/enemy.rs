@@ -494,17 +494,17 @@ impl ms::Writable for PathAction {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         match self {
             PathAction::Move { dist, dx, dy } => {
-                w.write_u8(0)?;
+                w.writeu8(0)?;
                 dist.write(w)?;
-                w.write_i32::<LittleEndian>(*dx)?;
-                w.write_i32::<LittleEndian>(*dy)?;
+                w.writei32(*dx)?;
+                w.writei32(*dy)?;
             }
             PathAction::WaitForDoor { door_id } => {
-                w.write_u8(1)?;
+                w.writeu8(1)?;
                 w.write_u32::<LittleEndian>(*door_id as u32)?
             }
             PathAction::MoveThroughDoor { dist, door_id } => {
-                w.write_u8(2)?;
+                w.writeu8(2)?;
                 dist.write(w)?;
                 w.write_u32::<LittleEndian>(*door_id as u32)?
             }
@@ -559,11 +559,11 @@ impl ms::Writable for Enemy {
         self.enemy_type_name.write(w)?;
         self.direction.write(w)?;
         self.path_action.write(w)?;
-        w.write_i32::<LittleEndian>(self.health)?;
+        w.writei32(self.health)?;
         self.x.write(w)?;
         self.y.write(w)?;
-        w.write_u8(if self.notify { 1 } else { 0 })?;
-        w.write_u8(if self.dead { 1 } else { 0 })?;
+        w.writeu8(if self.notify { 1 } else { 0 })?;
+        w.writeu8(if self.dead { 1 } else { 0 })?;
         Ok(())
     }
 }

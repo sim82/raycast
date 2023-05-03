@@ -13,10 +13,10 @@ impl ms::Writable for Directionality {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
             Directionality::Direction(d) => {
-                w.write_u8(0)?;
+                w.writeu8(0)?;
                 d.write(w)?;
             }
-            Directionality::Undirectional => w.write_u8(1)?,
+            Directionality::Undirectional => w.writeu8(1)?,
         }
         Ok(())
     }

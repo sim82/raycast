@@ -353,13 +353,13 @@ pub enum DoorAction {
 impl ms::Writable for DoorAction {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         match self {
-            DoorAction::Closed => w.write_u8(0)?,
-            DoorAction::Opening => w.write_u8(1)?,
+            DoorAction::Closed => w.writeu8(0)?,
+            DoorAction::Opening => w.writeu8(1)?,
             DoorAction::Open(ticks) => {
-                w.write_u8(2)?;
+                w.writeu8(2)?;
                 w.write_i32::<LittleEndian>(*ticks)?;
             }
-            DoorAction::Closing => w.write_u8(3)?,
+            DoorAction::Closing => w.writeu8(3)?,
         }
         Ok(())
     }
@@ -481,14 +481,14 @@ impl ms::Writable for PushwallState {
         w.write_i32::<LittleEndian>(self.x)?;
         w.write_i32::<LittleEndian>(self.y)?;
         match self.action {
-            PushwallAction::Closed => w.write_u8(0)?,
+            PushwallAction::Closed => w.writeu8(0)?,
             PushwallAction::Sliding(direction, f) => {
-                w.write_u8(1)?;
+                w.writeu8(1)?;
                 direction.write(w)?;
                 f.write(w)?;
             }
             PushwallAction::Open(x, y) => {
-                w.write_u8(2)?;
+                w.writeu8(2)?;
                 w.write_i32::<LittleEndian>(x)?;
                 w.write_i32::<LittleEndian>(y)?;
             }

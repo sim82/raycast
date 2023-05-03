@@ -49,7 +49,7 @@ impl ms::Writable for WeaponType {
             WeaponType::Machinegun => 3,
             WeaponType::Chaingun => 4,
         };
-        w.write_i32::<LittleEndian>(v)?;
+        w.writei32(v)?;
         Ok(())
     }
 }
@@ -178,7 +178,7 @@ impl ms::Loadable for Weapon {
 
 impl ms::Writable for Weapon {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.ammo)?;
+        w.writei32(self.ammo)?;
         self.selected_weapon.write(w)?;
         self.exec_ctx.write(w)?;
         Ok(())

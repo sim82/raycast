@@ -99,7 +99,7 @@ impl ms::Writable for BlockMap {
         for line in &self.map {
             for cell in line {
                 assert!(cell.len() <= std::u8::MAX as usize);
-                w.write_u8(cell.len().try_into()?)?;
+                w.writeu8(cell.len().try_into()?)?;
                 for e in cell {
                     w.write_u32::<LittleEndian>((*e).try_into()?)?;
                 }

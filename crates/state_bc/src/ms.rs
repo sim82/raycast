@@ -3,6 +3,8 @@ use anyhow::anyhow;
 use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 
+use self::we::WriteExt;
+
 pub trait Writable {
     fn write(&self, w: &mut dyn Write) -> Result<()>;
 }
@@ -15,10 +17,10 @@ impl<T: Writable> Writable for Option<T> {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         match self {
             Some(x) => {
-                w.write_u8(1)?;
+                w.writeu8(1)?;
                 x.write(w)?;
             }
-            None => w.write_u8(0)?,
+            None => w.writeu8(0)?,
         }
         Ok(())
     }
@@ -38,7 +40,7 @@ impl Writable for String {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         let bytes = self.as_bytes();
         assert!(bytes.len() <= 255);
-        w.write_u8(bytes.len() as u8)?;
+        w.writeu8(bytes.len() as u8)?;
         w.write_all(bytes)?;
         Ok(())
     }

@@ -113,14 +113,14 @@ impl ms::Loadable for Direction {
 impl ms::Writable for Direction {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
         match self {
-            Direction::North => w.write_u8(0)?,
-            Direction::East => w.write_u8(1)?,
-            Direction::South => w.write_u8(2)?,
-            Direction::West => w.write_u8(3)?,
-            Direction::NorthEast => w.write_u8(4)?,
-            Direction::NorthWest => w.write_u8(5)?,
-            Direction::SouthWest => w.write_u8(6)?,
-            Direction::SouthEast => w.write_u8(7)?,
+            Direction::North => w.writeu8(0)?,
+            Direction::East => w.writeu8(1)?,
+            Direction::South => w.writeu8(2)?,
+            Direction::West => w.writeu8(3)?,
+            Direction::NorthEast => w.writeu8(4)?,
+            Direction::NorthWest => w.writeu8(5)?,
+            Direction::SouthWest => w.writeu8(6)?,
+            Direction::SouthEast => w.writeu8(7)?,
         }
 
         Ok(())
