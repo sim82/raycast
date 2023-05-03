@@ -1,4 +1,4 @@
-use byteorder::{LittleEndian, ReadBytesExt};
+use state_bc::ms::we::ReadExt;
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
@@ -28,17 +28,17 @@ pub enum ChunkId {
 impl VswapFile {
     pub fn open<P: AsRef<Path>>(name: P) -> VswapFile {
         let mut f = File::open(name).unwrap();
-        let num_chunks = f.read_u16::<LittleEndian>().unwrap();
-        let last_wall = f.read_u16::<LittleEndian>().unwrap();
-        let last_sprite = f.read_u16::<LittleEndian>().unwrap();
+        let num_chunks = f.readu16().unwrap();
+        let last_wall = f.readu16().unwrap();
+        let last_sprite = f.readu16().unwrap();
         let mut offs = Vec::new();
         let mut size = Vec::new();
 
         for _ in 0..num_chunks {
-            offs.push(f.read_u32::<LittleEndian>().unwrap());
+            offs.push(f.readu32().unwrap());
         }
         for _ in 0..num_chunks {
-            size.push(f.read_u16::<LittleEndian>().unwrap());
+            size.push(f.readu16().unwrap());
         }
 
         let chunks = offs
@@ -76,11 +76,11 @@ pub struct SpritePosts {
 
 pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
     let mut cursor = Cursor::new(buf);
-    let first_col = cursor.read_u16::<LittleEndian>().unwrap();
-    let last_col = cursor.read_u16::<LittleEndian>().unwrap();
+    let first_col = cursor.readu16().unwrap();
+    let last_col = cursor.readu16().unwrap();
     // let n = (last_col - first_col) + 1;
     let offsets = (first_col..=last_col)
-        .map(|_| cursor.read_u16::<LittleEndian>().unwrap())
+        .map(|_| cursor.readu16().unwrap())
         .collect::<Vec<_>>();
     let mut pixels_cursor = cursor.clone();
     let mut posts = Vec::new();
@@ -94,12 +94,12 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
         let mut col_posts = Vec::new();
         let pixel_start = pixels;
         loop {
-            let end = cursor.read_u16::<LittleEndian>().unwrap();
+            let end = cursor.readu16().unwrap();
             if end == 0 {
                 break;
             }
-            let _ = cursor.read_u16::<LittleEndian>().unwrap();
-            let start = cursor.read_u16::<LittleEndian>().unwrap();
+            let _ = cursor.readu16().unwrap();
+            let start = cursor.readu16().unwrap();
             let post = (start / 2)..(end / 2);
             pixels += post.len() as u16;
             col_posts.push(post);
@@ -107,7 +107,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
             // let end = end as usize / 2;
 
             // for row in start..end {
-            //     texture[first_col as usize + i][row] = pixels.read_u8().unwrap();
+            //     texture[first_col as usize + i][row] = pixels.readu8().unwrap();
             // }
             // println!("post: {} {}", start, end);
         }
@@ -133,29 +133,29 @@ pub fn sprite_chunk_to_texture(buf: &[u8]) -> [[u8; TEX_SIZE]; TEX_SIZE] {
     // UInt16[?] 	Array of values describing all posts in the sprite (size unknown when decoding)
 
     let mut texture = [[255; TEX_SIZE]; TEX_SIZE];
-    let first_col = cursor.read_u16::<LittleEndian>().unwrap();
-    let last_col = cursor.read_u16::<LittleEndian>().unwrap();
+    let first_col = cursor.readu16().unwrap();
+    let last_col = cursor.readu16().unwrap();
     // let n = (last_col - first_col) + 1;
     let offsets = (first_col..=last_col)
-        .map(|_| cursor.read_u16::<LittleEndian>().unwrap())
+        .map(|_| cursor.readu16().unwrap())
         .collect::<Vec<_>>();
     let mut pixels = cursor.clone();
     for (i, col_offset) in offsets.iter().enumerate() {
         // println!("col start {}", col_offset);
         cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
         loop {
-            let end = cursor.read_u16::<LittleEndian>().unwrap();
+            let end = cursor.readu16().unwrap();
             if end == 0 {
                 break;
             }
-            let _ = cursor.read_u16::<LittleEndian>().unwrap();
-            let start = cursor.read_u16::<LittleEndian>().unwrap();
+            let _ = cursor.readu16().unwrap();
+            let start = cursor.readu16().unwrap();
 
             let start = start as usize / 2;
             let end = end as usize / 2;
 
             for row in start..end {
-                texture[first_col as usize + i][row] = pixels.read_u8().unwrap();
+                texture[first_col as usize + i][row] = pixels.readu8().unwrap();
             }
             // println!("post: {} {}", start, end);
         }
@@ -169,26 +169,26 @@ pub fn wall_chunk_to_texture(buf: &[u8]) -> Texture {
     let mut texture = [[0; TEX_SIZE]; TEX_SIZE];
     for col in &mut texture {
         for c in col {
-            *c = cursor.read_u8().unwrap();
+            *c = cursor.readu8().unwrap();
         }
     }
     texture
 }
 
 // pub fn list_chunks(r: &mut dyn Read) -> (Vec<u32>, Vec<u16>) {
-//     let num_chunks = r.read_u16::<LittleEndian>().unwrap();
-//     let num_walls = r.read_u16::<LittleEndian>().unwrap();
-//     let num_sprites = r.read_u16::<LittleEndian>().unwrap();
+//     let num_chunks = r.readu16().unwrap();
+//     let num_walls = r.readu16().unwrap();
+//     let num_sprites = r.readu16().unwrap();
 //     let num_sounds = num_chunks - num_walls - num_sprites;
 //     println!("chunks: {num_chunks} walls: {num_walls} sprites: {num_sprites} sounds: {num_sounds}");
 //     let mut offs = Vec::new();
 //     let mut size = Vec::new();
 
 //     for _ in 0..num_chunks {
-//         offs.push(r.read_u32::<LittleEndian>().unwrap());
+//         offs.push(r.readu32().unwrap());
 //     }
 //     for _ in 0..num_chunks {
-//         size.push(r.read_u16::<LittleEndian>().unwrap());
+//         size.push(r.readu16().unwrap());
 //     }
 
 //     println!("{:?} {:?}", offs, size);
@@ -231,10 +231,8 @@ impl MapsFile {
     }
     pub fn open<P: AsRef<Path>, Q: AsRef<Path>>(head: P, maps: Q) -> MapsFile {
         let mut f = File::open(head).unwrap();
-        let rlwe_tag = f.read_u16::<LittleEndian>().unwrap();
-        let header_offsets = (0..100)
-            .map(|_| f.read_u32::<LittleEndian>().unwrap())
-            .collect::<Vec<_>>();
+        let rlwe_tag = f.readu16().unwrap();
+        let header_offsets = (0..100).map(|_| f.readu32().unwrap()).collect::<Vec<_>>();
         let mut f = File::open(maps).unwrap();
         let mut map_headers = Vec::new();
         for offs in &header_offsets {
@@ -243,14 +241,14 @@ impl MapsFile {
             }
             f.seek(SeekFrom::Start(*offs as u64)).unwrap();
             map_headers.push(MapHeader {
-                plane0_offset: f.read_u32::<LittleEndian>().unwrap(),
-                plane1_offset: f.read_u32::<LittleEndian>().unwrap(),
-                plane2_offset: f.read_u32::<LittleEndian>().unwrap(),
-                plane0_size: f.read_u16::<LittleEndian>().unwrap(),
-                plane1_size: f.read_u16::<LittleEndian>().unwrap(),
-                plane2_size: f.read_u16::<LittleEndian>().unwrap(),
-                width: f.read_u16::<LittleEndian>().unwrap(),
-                height: f.read_u16::<LittleEndian>().unwrap(),
+                plane0_offset: f.readu32().unwrap(),
+                plane1_offset: f.readu32().unwrap(),
+                plane2_offset: f.readu32().unwrap(),
+                plane0_size: f.readu16().unwrap(),
+                plane1_size: f.readu16().unwrap(),
+                plane2_size: f.readu16().unwrap(),
+                width: f.readu16().unwrap(),
+                height: f.readu16().unwrap(),
                 name: Self::read_name(&mut f),
             });
         }
@@ -308,7 +306,7 @@ fn to_plane(d1: &[u8]) -> Vec<u16> {
     res.reserve(d1.len() / 2);
     let mut c = Cursor::new(d1);
     for _ in 0..(d1.len() / 2) {
-        res.push(c.read_u16::<LittleEndian>().unwrap());
+        res.push(c.readu16().unwrap());
     }
 
     res
@@ -325,14 +323,14 @@ fn carmack_decompress(input: &[u8]) -> Vec<u8> {
     let input_len = input.len() as u64;
     let mut output = Vec::new();
     let mut input = Cursor::new(input);
-    let output_len = input.read_u16::<LittleEndian>().unwrap();
+    let output_len = input.readu16().unwrap();
     output.reserve(output_len as usize);
     while input.position() < input_len {
-        let x = input.read_u8().unwrap();
-        let y = input.read_u8().unwrap();
+        let x = input.readu8().unwrap();
+        let y = input.readu8().unwrap();
 
         if y == 0xa7 {
-            let z = input.read_u8().unwrap();
+            let z = input.readu8().unwrap();
 
             if x == 0 {
                 output.push(z);
@@ -348,13 +346,13 @@ fn carmack_decompress(input: &[u8]) -> Vec<u8> {
             output.append(&mut copy);
         } else if y == 0xA8 {
             if x == 0 {
-                let z = input.read_u8().unwrap();
+                let z = input.readu8().unwrap();
                 output.push(z);
                 output.push(y);
                 continue;
             }
             let copy_size = (x as usize) * 2;
-            let offset = input.read_u16::<LittleEndian>().unwrap();
+            let offset = input.readu16().unwrap();
             let start = (offset as usize) * 2;
 
             let end = start + copy_size;
@@ -373,19 +371,19 @@ fn rlew_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
     let input_len = input.len() as u64;
     let mut output = Vec::new();
     let mut input = Cursor::new(input);
-    // let output_len = input.read_u16::<LittleEndian>().unwrap() as usize;
-    let output_len = input.read_u16::<LittleEndian>().unwrap() as usize;
+    // let output_len = input.readu16().unwrap() as usize;
+    let output_len = input.readu16().unwrap() as usize;
     output.reserve(output_len);
     // assert_eq!(data_len as u64 + 2, input_len);
     while input.position() < input_len
     /*&& output.len() < output_len*/
     {
         let start_pos = input.position();
-        let w = input.read_u16::<LittleEndian>().unwrap();
+        let w = input.readu16().unwrap();
         if w == rlwe_tag {
-            let num = input.read_u16::<LittleEndian>().unwrap();
-            let d0 = input.read_u8().unwrap();
-            let d1 = input.read_u8().unwrap();
+            let num = input.readu16().unwrap();
+            let d0 = input.readu8().unwrap();
+            let d1 = input.readu8().unwrap();
             for _ in 0..num {
                 output.push(d0);
                 output.push(d1);
@@ -393,8 +391,8 @@ fn rlew_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
         } else {
             // it is easier to re-read it bytewise than to mess around with endianness here...
             input.set_position(start_pos);
-            output.push(input.read_u8().unwrap());
-            output.push(input.read_u8().unwrap());
+            output.push(input.readu8().unwrap());
+            output.push(input.readu8().unwrap());
         }
     }
     // println!("output_len: {}", output_len);
@@ -416,7 +414,7 @@ fn test_vswap() {
     // for (offs, size) in offs.iter().zip(size.iter()) {
     //     f.seek(std::io::SeekFrom::Start(*offs as u64)).unwrap();
 
-    //     let head = f.read_u16::<LittleEndian>().unwrap();
+    //     let head = f.readu16().unwrap();
     //     println!("head: {size} {:x}", head);
     // }
 }

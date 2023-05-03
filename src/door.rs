@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use anyhow::anyhow;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use state_bc::opcode::Value;
 use std::{collections::HashSet, io::Cursor};
 
@@ -97,10 +96,10 @@ impl ms::Loadable for Door {
         let open_f = Fp16::read_from(r)?;
         let exec_ctx = ExecCtx::read_from(r, &IMG_WL6)?;
 
-        let num_blockers = r.read_u32::<LittleEndian>()?;
+        let num_blockers = r.readu32()?;
         let mut blockers = HashSet::new();
         for _ in 0..num_blockers {
-            blockers.insert(r.read_i32::<LittleEndian>()?);
+            blockers.insert(r.readi32()?);
         }
         Ok(Self {
             open_f,
@@ -114,9 +113,9 @@ impl ms::Writable for Door {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         self.open_f.write(w)?;
         self.exec_ctx.write(w)?;
-        w.write_u32::<LittleEndian>(self.blockers.len() as u32)?;
+        w.writeu32(self.blockers.len() as u32)?;
         for blocker in &self.blockers {
-            w.write_i32::<LittleEndian>(*blocker)?;
+            w.writei32(*blocker)?;
         }
         Ok(())
     }

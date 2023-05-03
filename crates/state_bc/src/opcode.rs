@@ -3,9 +3,9 @@ use std::{
     io::{Read, Seek, SeekFrom},
 };
 
-use crate::{Function, Result};
+use crate::{ms::we::ReadExt, Function, Result};
 use anyhow::anyhow;
-use byteorder::{LittleEndian, ReadBytesExt};
+
 const STOP: u8 = 0xff;
 const PUSH_U8: u8 = 1;
 const CALL: u8 = 2;
@@ -41,9 +41,9 @@ pub enum Event {
 
 pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
     loop {
-        match bc.read_u8()? {
+        match bc.readu8()? {
             STOP => return Ok(Event::Stop),
-            PUSH_U8 => env.stack.push(Value::U8(bc.read_u8()?)),
+            PUSH_U8 => env.stack.push(Value::U8(bc.readu8()?)),
             CALL => {
                 match env.stack.pop() {
                     Some(Value::U8(function)) => return Ok(Event::Call(function.try_into()?)),
@@ -52,7 +52,7 @@ pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
                 };
             }
             LOADI_I32 => {
-                let v = bc.read_i32::<LittleEndian>()?;
+                let v = bc.readi32()?;
                 env.stack.push(Value::I32(v));
             }
             TRAP => {
@@ -89,7 +89,7 @@ pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
                 _ => return Err(anyhow!("dup on empty stack")),
             },
             JRC => {
-                let offs = bc.read_i32::<LittleEndian>()?;
+                let offs = bc.readi32()?;
                 match env.stack.pop() {
                     Some(Value::Bool(b)) => {
                         if b {

@@ -1,7 +1,5 @@
 use std::io::Cursor;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-
 use crate::prelude::*;
 use crate::sprite::SpriteSceenSetup;
 use anyhow::anyhow;
@@ -37,7 +35,7 @@ impl WeaponType {
 
 impl ms::Loadable for WeaponType {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        WeaponType::from_weapon_id(r.read_i32::<LittleEndian>()?)
+        WeaponType::from_weapon_id(r.readi32()?)
     }
 }
 
@@ -168,7 +166,7 @@ impl Weapon {
 impl ms::Loadable for Weapon {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         Ok(Self {
-            ammo: r.read_i32::<LittleEndian>()?,
+            ammo: r.readi32()?,
             selected_weapon: WeaponType::read_from(r)?,
             exec_ctx: ExecCtx::read_from(r, &IMG_WL6)?,
             shoot: false,

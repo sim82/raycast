@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use byteorder::{ReadBytesExt, WriteBytesExt};
 
 pub use crate::prelude::*;
 
@@ -24,7 +23,7 @@ impl ms::Writable for Directionality {
 
 impl ms::Loadable for Directionality {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+        Ok(match r.readu8()? {
             0 => Directionality::Direction(Direction::read_from(r)?),
             1 => Directionality::Undirectional,
             x => return Err(anyhow!("unhandled Directionality discriminator {x}")),

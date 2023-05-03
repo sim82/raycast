@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 pub struct BlockMap {
     pub map: [[Vec<usize>; MAP_SIZE]; MAP_SIZE],
@@ -84,9 +83,9 @@ impl ms::Loadable for BlockMap {
 
         for line in &mut blockmap.map {
             for cell in line {
-                let num = r.read_u8()?;
+                let num = r.readu8()?;
                 for _ in 0..num {
-                    cell.push(r.read_u32::<LittleEndian>()?.try_into()?);
+                    cell.push(r.readu32()?.try_into()?);
                 }
             }
         }
@@ -101,7 +100,7 @@ impl ms::Writable for BlockMap {
                 assert!(cell.len() <= std::u8::MAX as usize);
                 w.writeu8(cell.len().try_into()?)?;
                 for e in cell {
-                    w.write_u32::<LittleEndian>((*e).try_into()?)?;
+                    w.writeu32((*e).try_into()?)?;
                 }
             }
         }

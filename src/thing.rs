@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use crate::{enemy::Enemy, ms::Loadable, prelude::*};
 use anyhow::anyhow;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 #[derive(Debug, Default)]
 pub enum Actor {
@@ -55,9 +54,9 @@ impl ms::Writable for Actor {
 
 impl ms::Loadable for Actor {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+        Ok(match r.readu8()? {
             0 => Actor::Item {
-                collected: r.read_u8()? != 0,
+                collected: r.readu8()? != 0,
                 item: Item::read_from(r)?,
             },
             1 => Actor::Enemy {
@@ -76,7 +75,7 @@ pub struct Thing {
 
 impl ms::Writable for Thing {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.unique_id as i32)?; // FIXME
+        w.writei32(self.unique_id as i32)?; // FIXME
         self.actor.write(w)?;
         Ok(())
     }
@@ -84,7 +83,7 @@ impl ms::Writable for Thing {
 
 impl ms::Loadable for Thing {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let unique_id = r.read_i32::<LittleEndian>()? as usize;
+        let unique_id = r.readi32()? as usize;
         let actor = Actor::read_from(r)?;
         Ok(Self { actor, unique_id })
     }
@@ -101,11 +100,11 @@ pub struct Things {
 
 impl ms::Writable for Things {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.write_u32::<LittleEndian>(self.things.len() as u32)?;
+        w.writeu32(self.things.len() as u32)?;
         for thing in &self.things {
             thing.write(w)?;
         }
-        w.write_i32::<LittleEndian>(self.anim_timeout)?;
+        w.writei32(self.anim_timeout)?;
         self.blockmap.write(w)?;
         Ok(())
     }
@@ -147,12 +146,12 @@ impl Things {
     }
 
     pub fn read_from(r: &mut dyn std::io::Read, thing_defs: ThingDefs) -> Result<Self> {
-        let num_things = r.read_u32::<LittleEndian>()?;
+        let num_things = r.readu32()?;
         let mut things = Vec::new();
         for _ in 0..num_things {
             things.push(Thing::read_from(r)?);
         }
-        let anim_timeout = r.read_i32::<LittleEndian>()?;
+        let anim_timeout = r.readi32()?;
         let blockmap = BlockMap::read_from(r)?;
 
         Ok(Self {
@@ -392,7 +391,7 @@ pub enum Collectible {
 }
 impl ms::Loadable for Collectible {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let id = r.read_u8()?;
+        let id = r.readu8()?;
         try_to_collectible(id as i32)
             .ok_or_else(|| anyhow!("unsupported discriminator for Collectible: {id}"))
     }
@@ -426,7 +425,7 @@ pub struct Item {
 impl ms::Loadable for Item {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let collectible = Collectible::read_from(r)?;
-        let id = r.read_i32::<LittleEndian>()?;
+        let id = r.readi32()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
         Ok(Self {
@@ -441,7 +440,7 @@ impl ms::Loadable for Item {
 impl ms::Writable for Item {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         self.collectible.write(w)?;
-        w.write_i32::<LittleEndian>(self.id)?;
+        w.writei32(self.id)?;
         self.x.write(w)?;
         self.y.write(w)?;
         Ok(())

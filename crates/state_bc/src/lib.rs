@@ -1,5 +1,4 @@
 use anyhow::anyhow;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use ms::we::{ReadExt, WriteExt};
 use prelude::ms::Loadable;
 use std::{
@@ -96,7 +95,7 @@ pub enum Direction {
 
 impl ms::Loadable for Direction {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+        Ok(match r.readu8()? {
             0 => Direction::North, // TEMP: keep backward compatible with serialized Direction enum
             1 => Direction::East,
             2 => Direction::South,
@@ -227,11 +226,11 @@ pub struct EnemySpawnInfo {
 
 impl ms::Loadable for EnemySpawnInfo {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        let id = r.read_i32::<LittleEndian>()?;
+        let id = r.readi32()?;
         let direction = Direction::read_from(r)?;
         let state = String::read_from(r)?;
 
-        let spawn_on_death = match r.read_i32::<LittleEndian>()? {
+        let spawn_on_death = match r.readi32()? {
             x if x >= 0 => Some(x),
             _ => None,
         };
@@ -248,11 +247,11 @@ impl ms::Loadable for EnemySpawnInfo {
 
 impl ms::Writable for EnemySpawnInfo {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.id)?;
+        w.writei32(self.id)?;
         self.direction.write(w)?;
         self.state.write(w)?;
 
-        w.write_i32::<LittleEndian>(self.spawn_on_death.unwrap_or(-1))?;
+        w.writei32(self.spawn_on_death.unwrap_or(-1))?;
         Ok(())
     }
 }
@@ -363,14 +362,14 @@ impl ms::Writable for ExecCtx {
 impl ExecImage {
     pub fn from_bytes(code: &'static [u8]) -> Result<ExecImage> {
         let mut f = Cursor::new(code);
-        let num_labels = f.read_i32::<LittleEndian>()?;
+        let num_labels = f.readi32()?;
         let mut labels = HashMap::new();
         // let mut tmp = [0u8; 16];
         for _ in 0..num_labels {
-            let len = f.read_u8()? as usize;
+            let len = f.readu8()? as usize;
             let mut name = vec![0u8; len];
             f.read_exact(&mut name)?;
-            let ptr = f.read_i32::<LittleEndian>()?;
+            let ptr = f.readi32()?;
 
             labels.insert(String::from_utf8(name)?, ptr);
         }
@@ -412,7 +411,7 @@ impl SpawnInfos {
 
 impl ms::Loadable for SpawnInfos {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        let num = r.read_i32::<LittleEndian>()?;
+        let num = r.readi32()?;
         let mut spawn_infos = Vec::new();
 
         for _ in 0..num {
@@ -425,7 +424,7 @@ impl ms::Loadable for SpawnInfos {
 
 impl ms::Writable for SpawnInfos {
     fn write(&self, w: &mut dyn Write) -> Result<()> {
-        w.write_i32::<LittleEndian>(self.spawn_infos.len() as i32)?;
+        w.writei32(self.spawn_infos.len() as i32)?;
         for spawn_info in &self.spawn_infos {
             spawn_info.write(w)?;
         }

@@ -3,7 +3,6 @@ use crate::{
     opcode::Codegen,
     SpawnInfos, StateBc,
 };
-use byteorder::{LittleEndian, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
     io::{Cursor, Write},
@@ -141,13 +140,12 @@ pub fn codegen(
     let mut f = std::fs::File::create(outname).expect("failed to open img file");
 
     // write labels and spawn info
-    f.write_i32::<LittleEndian>(label_ptrs.len() as i32)
-        .unwrap();
+    f.writei32(label_ptrs.len() as i32).unwrap();
     for (name, ptr) in &label_ptrs {
         let b = name.as_bytes();
         f.writeu8(b.len() as u8).unwrap();
         let _ = f.write(b).unwrap();
-        f.write_i32::<LittleEndian>(*ptr).unwrap();
+        f.writei32(*ptr).unwrap();
     }
     spawn_infos.write(&mut f).unwrap();
 

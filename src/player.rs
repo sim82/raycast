@@ -2,8 +2,6 @@
 #![allow(clippy::collapsible_else_if)]
 #![allow(clippy::collapsible_if)]
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-
 pub use crate::prelude::*;
 
 use self::ms::{Loadable, Writable};
@@ -58,18 +56,14 @@ impl Writable for Player {
 
 impl Loadable for Player {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let x = Fp16 {
-            v: r.read_i32::<LittleEndian>()?,
-        };
-        let y = Fp16 {
-            v: r.read_i32::<LittleEndian>()?,
-        };
-        let rot = r.read_i32::<LittleEndian>()?;
-        let trigger = r.read_u8()? != 0;
-        let shoot = r.read_u8()? != 0;
-        let shoot_timeout = r.read_i32::<LittleEndian>()?;
+        let x = Fp16 { v: r.readi32()? };
+        let y = Fp16 { v: r.readi32()? };
+        let rot = r.readi32()?;
+        let trigger = r.readu8()? != 0;
+        let shoot = r.readu8()? != 0;
+        let shoot_timeout = r.readi32()?;
         let weapon = Weapon::read_from(r)?;
-        let health = r.read_i32::<LittleEndian>()?;
+        let health = r.readi32()?;
         Ok(Self {
             x,
             y,

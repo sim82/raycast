@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
 // use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use crate::{
@@ -128,7 +127,7 @@ impl Mainloop {
 
             SpawnInfo::LoadSavegame(existing_static_map_data) => {
                 let mut f = std::fs::File::open("save.bin").unwrap();
-                level_id = f.read_i32::<LittleEndian>().unwrap();
+                level_id = f.readi32().unwrap();
 
                 player = Player::read_from(&mut f).expect("failed to load Player from savegame");
                 match existing_static_map_data {
@@ -404,7 +403,7 @@ impl Mainloop {
 
         if input_events.save {
             let mut f = std::fs::File::create("save.bin").unwrap();
-            f.write_i32::<LittleEndian>(self.level_id).unwrap();
+            f.writei32(self.level_id).unwrap();
             self.player
                 .write(&mut f)
                 .expect("failed to write Player to savegame");

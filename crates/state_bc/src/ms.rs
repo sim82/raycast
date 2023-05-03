@@ -1,9 +1,8 @@
 use crate::prelude::Result;
 use anyhow::anyhow;
-use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
 
-use self::we::WriteExt;
+use self::we::{ReadExt, WriteExt};
 
 pub trait Writable {
     fn write(&self, w: &mut dyn Write) -> Result<()>;
@@ -28,7 +27,7 @@ impl<T: Writable> Writable for Option<T> {
 
 impl<T: Loadable> Loadable for Option<T> {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+        Ok(match r.readu8()? {
             0 => None,
             1 => Some(T::read_from(r)?),
             x => return Err(anyhow!("unhandled Option<T> discriminator {x}")),
@@ -48,7 +47,7 @@ impl Writable for String {
 
 impl Loadable for String {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        let len = r.read_u8()? as usize;
+        let len = r.readu8()? as usize;
         let mut name = vec![0u8; len];
         r.read_exact(&mut name)?;
         Ok(String::from_utf8(name)?)
@@ -57,7 +56,7 @@ impl Loadable for String {
 
 pub mod we {
     use crate::prelude::Result;
-    use std::{fmt::Write, io};
+    use std::io;
 
     pub trait WriteExt: io::Write {
         #[inline]
@@ -65,7 +64,15 @@ pub mod we {
             Ok(self.write_all(&v.to_le_bytes())?)
         }
         #[inline]
+        fn writeu16(&mut self, v: u16) -> Result<()> {
+            Ok(self.write_all(&v.to_le_bytes())?)
+        }
+        #[inline]
         fn writei32(&mut self, v: i32) -> Result<()> {
+            Ok(self.write_all(&v.to_le_bytes())?)
+        }
+        #[inline]
+        fn writeu32(&mut self, v: u32) -> Result<()> {
             Ok(self.write_all(&v.to_le_bytes())?)
         }
     }
@@ -78,10 +85,22 @@ pub mod we {
             Ok(u8::from_le_bytes(buf))
         }
         #[inline]
+        fn readu16(&mut self) -> Result<u16> {
+            let mut buf = [0u8; 2];
+            self.read_exact(&mut buf)?;
+            Ok(u16::from_le_bytes(buf))
+        }
+        #[inline]
         fn readi32(&mut self) -> Result<i32> {
             let mut buf = [0u8; 4];
             self.read_exact(&mut buf)?;
             Ok(i32::from_le_bytes(buf))
+        }
+        #[inline]
+        fn readu32(&mut self) -> Result<u32> {
+            let mut buf = [0u8; 4];
+            self.read_exact(&mut buf)?;
+            Ok(u32::from_le_bytes(buf))
         }
     }
     impl<R: io::Read + ?Sized> ReadExt for R {}

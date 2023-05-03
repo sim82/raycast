@@ -1,7 +1,6 @@
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use state_bc::ms::we::WriteExt;
+use state_bc::ms::we::{ReadExt, WriteExt};
 
 use crate::{ms, Result};
 
@@ -53,7 +52,7 @@ impl ms::Writable for Fp16 {
 
 impl ms::Loadable for Fp16 {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
-        let v = r.read_i32::<LittleEndian>()?;
+        let v = r.readi32()?;
         Ok(Self { v })
     }
 }

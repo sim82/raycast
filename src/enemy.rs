@@ -1,6 +1,5 @@
 use crate::{fp16::FP16_FRAC_64, prelude::*, thing_def::get_capabilities_by_name};
 use anyhow::anyhow;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use rand::random;
 use std::io::{Cursor, Read, Write};
 
@@ -472,18 +471,18 @@ pub enum PathAction {
 
 impl ms::Loadable for PathAction {
     fn read_from(r: &mut dyn Read) -> Result<Self> {
-        Ok(match r.read_u8()? {
+        Ok(match r.readu8()? {
             0 => PathAction::Move {
                 dist: Fp16::read_from(r)?,
-                dx: r.read_i32::<LittleEndian>()?,
-                dy: r.read_i32::<LittleEndian>()?,
+                dx: r.readi32()?,
+                dy: r.readi32()?,
             },
             1 => PathAction::WaitForDoor {
-                door_id: r.read_u32::<LittleEndian>()? as usize,
+                door_id: r.readu32()? as usize,
             },
             2 => PathAction::MoveThroughDoor {
                 dist: Fp16::read_from(r)?,
-                door_id: r.read_u32::<LittleEndian>()? as usize,
+                door_id: r.readu32()? as usize,
             },
             x => return Err(anyhow!("unhandled PathAction discriminator: {x}")),
         })
@@ -501,12 +500,12 @@ impl ms::Writable for PathAction {
             }
             PathAction::WaitForDoor { door_id } => {
                 w.writeu8(1)?;
-                w.write_u32::<LittleEndian>(*door_id as u32)?
+                w.writeu32(*door_id as u32)?
             }
             PathAction::MoveThroughDoor { dist, door_id } => {
                 w.writeu8(2)?;
                 dist.write(w)?;
-                w.write_u32::<LittleEndian>(*door_id as u32)?
+                w.writeu32(*door_id as u32)?
             }
         }
         Ok(())
@@ -533,11 +532,11 @@ impl ms::Loadable for Enemy {
         let enemy_type_name = String::read_from(r)?;
         let direction = Direction::read_from(r)?;
         let path_action = Option::<PathAction>::read_from(r)?;
-        let health = r.read_i32::<LittleEndian>()?;
+        let health = r.readi32()?;
         let x = Fp16::read_from(r)?;
         let y = Fp16::read_from(r)?;
-        let notify = r.read_u8()? != 0;
-        let dead = r.read_u8()? != 0;
+        let notify = r.readu8()? != 0;
+        let dead = r.readu8()? != 0;
         Ok(Enemy {
             exec_ctx,
             enemy_type_name,

@@ -129,7 +129,6 @@ name = "raycast"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "byteorder",
  "lazy_static",
  "rand",
  "sdl2",

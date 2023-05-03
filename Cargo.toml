@@ -12,7 +12,6 @@ lazy_static = "1.4"
 sdl2 = "0.35.2"
 rand = { version = "0.8" }
 state_bc = {path = "crates/state_bc"}
-byteorder = "1"
 anyhow = "1"
 
 [build-dependencies]
