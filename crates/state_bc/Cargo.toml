@@ -9,8 +9,7 @@ compiler = ["nom", "nom_locate"]
 
 [dependencies]
 anyhow = "1"
-lazy_static = "1"
-byteorder = "1"
-nom = {version = "7", optional = true}
-nom_locate = { version = "4", optional = true}
+lazy_static = { workspace = true }
+nom = { workspace = true, optional = true }
+nom_locate = { workspace = true, optional = true }
 
