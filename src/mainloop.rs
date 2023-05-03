@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-use rand::random;
 // use minifb::{Key, KeyRepeat, Window, WindowOptions};
 use crate::{
     ms::{Loadable, Writable},
@@ -385,7 +384,7 @@ impl Mainloop {
                     let dy = self.player.y.get_int().abs_diff(y.get_int());
                     let boost = 5 - dx.max(dy).min(5);
                     let base_hitpoints = 7;
-                    let hitpoints = base_hitpoints + ((boost * 7) * (random::<u8>() as u32)) / 255;
+                    let hitpoints = base_hitpoints + ((boost * 7) * (randu8() as u32)) / 255;
                     println!("hit: {}", hitpoints - base_hitpoints);
                     self.things.things[hit_thing].actor.shoot(hitpoints as i32);
                 }

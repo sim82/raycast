@@ -51,6 +51,7 @@ pub mod prelude {
         ms,
         ms::we::{ReadExt, WriteExt},
         player::{Player, PlayerVel},
+        randu8,
         render::{self, COL_ANGLE},
         sprite::{self, Directionality, SpriteDef, SpriteIndex},
         state_bc::opcode,
@@ -183,4 +184,9 @@ const WL6_IMAGE: &[u8] = include_bytes!("out.img");
 lazy_static! {
     pub static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
     // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
+    pub static ref RNG: std::sync::Mutex<oorandom::Rand32> = std::sync::Mutex::new(oorandom::Rand32::new(4711));
+}
+pub fn randu8() -> u8 {
+    // rand::random::<u8>()
+    RNG.lock().unwrap().rand_u32() as u8
 }

@@ -1,6 +1,5 @@
 use crate::{fp16::FP16_FRAC_64, prelude::*, thing_def::get_capabilities_by_name};
 use anyhow::anyhow;
-use rand::random;
 use std::io::{Cursor, Read, Write};
 
 impl Enemy {
@@ -187,7 +186,7 @@ impl Enemy {
                 16 / d
             };
             // println!("chance: {chance}");
-            if (rand::random::<u8>() as u32) < chance {
+            if (randu8() as u32) < chance {
                 self.set_state("shoot");
             }
             dodge = true;
@@ -281,10 +280,10 @@ impl Enemy {
         let dy = self.y.get_int() - player.y.get_int();
         let dist = dx.max(dy);
 
-        if random::<u8>() as i32 > dist * 20 {
+        if randu8() as i32 > dist * 20 {
             let boost = 2 - dx.max(dy).min(2);
             let base_hitpoints = 7;
-            let hitpoints = base_hitpoints + ((boost * 5) * (random::<u8>() as i32)) / 255;
+            let hitpoints = base_hitpoints + ((boost * 5) * (randu8() as i32)) / 255;
             player.health -= hitpoints;
         }
     }
@@ -299,22 +298,22 @@ impl Enemy {
         let dy = things.player_y - self.y.get_int();
         let mut dirtry = [None; 3];
 
-        if (dx > 0) ^ (random::<u8>() < 16) {
+        if (dx > 0) ^ (randu8() < 16) {
             dirtry[1] = Some(Direction::East);
         } else {
             dirtry[1] = Some(Direction::West);
         }
 
-        if (dy > 0) ^ (random::<u8>() < 16) {
+        if (dy > 0) ^ (randu8() < 16) {
             dirtry[2] = Some(Direction::South);
         } else {
             dirtry[2] = Some(Direction::North);
         }
 
-        if (dy.abs() > dx.abs()) ^ (random::<u8>() < 32) {
+        if (dy.abs() > dx.abs()) ^ (randu8() < 32) {
             dirtry.swap(1, 2);
         }
-        if random::<u8>() < 192 {
+        if randu8() < 192 {
             dirtry[0] = match (dirtry[1], dirtry[2]) {
                 (Some(Direction::North), Some(Direction::East))
                 | (Some(Direction::East), Some(Direction::North)) => Some(Direction::NorthEast),
