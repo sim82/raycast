@@ -184,9 +184,13 @@ const WL6_IMAGE: &[u8] = include_bytes!("out.img");
 lazy_static! {
     pub static ref IMG_WL6: ExecImage = ExecImage::from_bytes(WL6_IMAGE).unwrap();
     // pub static ref SPAWN_INFO_WL6: SpawnInfos = SpawnInfos::from_bytes(WL6_SPAWN_INFO).unwrap();
-    pub static ref RNG: std::sync::Mutex<oorandom::Rand32> = std::sync::Mutex::new(oorandom::Rand32::new(4711));
+    // pub static ref RNG: std::sync::Mutex<oorandom::Rand32> = std::sync::Mutex::new(oorandom::Rand32::new(4711));
+}
+
+thread_local! {
+    pub static RNG: std::cell::RefCell<oorandom::Rand32>  = std::cell::RefCell::new(oorandom::Rand32::new(4711));
 }
 pub fn randu8() -> u8 {
-    let v = RNG.lock().unwrap().rand_u32().to_ne_bytes();
+    let v = RNG.with(|r| r.borrow_mut().rand_u32().to_ne_bytes());
     v[0] ^ v[1] ^ v[2] ^ v[3] // TODO: is this smart?
 }
