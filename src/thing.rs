@@ -100,10 +100,7 @@ pub struct Things {
 
 impl ms::Writable for Things {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.writeu32(self.things.len() as u32)?;
-        for thing in &self.things {
-            thing.write(w)?;
-        }
+        self.things.write(w)?;
         w.writei32(self.anim_timeout)?;
         self.blockmap.write(w)?;
         Ok(())
@@ -146,11 +143,7 @@ impl Things {
     }
 
     pub fn read_from(r: &mut dyn std::io::Read, thing_defs: ThingDefs) -> Result<Self> {
-        let num_things = r.readu32()?;
-        let mut things = Vec::new();
-        for _ in 0..num_things {
-            things.push(Thing::read_from(r)?);
-        }
+        let things = Vec::read_from(r)?;
         let anim_timeout = r.readi32()?;
         let blockmap = BlockMap::read_from(r)?;
 
