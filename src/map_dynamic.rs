@@ -84,17 +84,8 @@ impl MapDynamic {
     }
 
     pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: Map) -> Result<MapDynamic> {
-        let s = r.readi32()?;
-        let mut door_states = Vec::new();
-        for _ in 0..s {
-            door_states.push(Door::read_from(r)?);
-        }
-
-        let s = r.readi32()?;
-        let mut pushwall_states = Vec::new();
-        for _ in 0..s {
-            pushwall_states.push(PushwallState::read_from(r)?);
-        }
+        let door_states = Vec::read_from(r)?;
+        let pushwall_states = Vec::read_from(r)?;
 
         let mut door_count = 0;
         let mut pushwall_count = 0;
@@ -323,15 +314,9 @@ impl MapDynamic {
 
 impl ms::Writable for MapDynamic {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        w.writei32(self.door_states.len() as i32)?;
-        for state in &self.door_states {
-            state.write(w)?;
-        }
+        self.door_states.write(w)?;
+        self.pushwall_states.write(w)?;
 
-        w.writei32(self.pushwall_states.len() as i32)?;
-        for state in &self.pushwall_states {
-            state.write(w)?;
-        }
         w.writei32(self.notifications.len() as i32)?;
         for room_id in &self.notifications {
             w.writei32(*room_id)?;

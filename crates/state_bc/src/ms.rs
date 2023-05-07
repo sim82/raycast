@@ -4,6 +4,8 @@ use std::io::{Read, Write};
 
 use self::endian::{ReadExt, WriteExt};
 
+pub mod endian;
+
 pub trait Writable {
     fn write(&self, w: &mut dyn Write) -> Result<()>;
 }
@@ -54,4 +56,22 @@ impl Loadable for String {
     }
 }
 
-pub mod endian;
+impl<T: Writable> Writable for [T] {
+    fn write(&self, w: &mut dyn Write) -> Result<()> {
+        w.writei32(self.len() as i32)?;
+        for v in self.iter() {
+            v.write(w)?;
+        }
+        Ok(())
+    }
+}
+impl<T: Loadable> Loadable for Vec<T> {
+    fn read_from(r: &mut dyn Read) -> Result<Self> {
+        let s = r.readi32()?;
+        let mut v = Vec::new();
+        for _ in 0..s {
+            v.push(T::read_from(r)?);
+        }
+        Ok(v)
+    }
+}
