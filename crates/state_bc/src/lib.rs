@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use ms::we::{ReadExt, WriteExt};
+use ms::endian::{ReadExt, WriteExt};
 use prelude::ms::Loadable;
 use std::{
     collections::HashMap,

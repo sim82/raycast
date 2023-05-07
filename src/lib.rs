@@ -49,7 +49,7 @@ pub mod prelude {
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
         map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},
         ms,
-        ms::we::{ReadExt, WriteExt},
+        ms::endian::{ReadExt, WriteExt},
         player::{Player, PlayerVel},
         randu8,
         render::{self, COL_ANGLE},

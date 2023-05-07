@@ -1,6 +1,6 @@
 use std::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 
-use state_bc::ms::we::{ReadExt, WriteExt};
+use state_bc::ms::endian::{ReadExt, WriteExt};
 
 use crate::{ms, Result};
 

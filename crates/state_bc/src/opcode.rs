@@ -3,7 +3,7 @@ use std::{
     io::{Read, Seek, SeekFrom},
 };
 
-use crate::{ms::we::ReadExt, Function, Result};
+use crate::{ms::endian::ReadExt, Function, Result};
 use anyhow::anyhow;
 
 const STOP: u8 = 0xff;

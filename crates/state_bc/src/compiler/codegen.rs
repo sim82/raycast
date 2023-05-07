@@ -1,5 +1,5 @@
 use crate::{
-    ms::{we::WriteExt, Writable},
+    ms::{endian::WriteExt, Writable},
     opcode::Codegen,
     SpawnInfos, StateBc,
 };

@@ -1,4 +1,4 @@
-use state_bc::ms::we::ReadExt;
+use state_bc::ms::endian::ReadExt;
 use std::{
     fs::File,
     io::{Cursor, Read, Seek, SeekFrom},
