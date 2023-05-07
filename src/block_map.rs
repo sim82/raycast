@@ -80,13 +80,17 @@ impl Default for BlockMap {
 impl ms::Loadable for BlockMap {
     fn read_from(r: &mut dyn std::io::Read) -> Result<Self> {
         let mut blockmap = BlockMap::default();
+        loop {
+            let line_i = r.readu8()?;
+            let cell_i = r.readu8()?;
+            if line_i == 0xff && cell_i == 0xff {
+                break;
+            }
 
-        for line in &mut blockmap.map {
-            for cell in line {
-                let num = r.readu8()?;
-                for _ in 0..num {
-                    cell.push(r.readu32()?.try_into()?);
-                }
+            let num = r.readu8()?;
+            let cell = &mut blockmap.map[line_i as usize][cell_i as usize];
+            for _ in 0..num {
+                cell.push(r.readu32()?.try_into()?);
             }
         }
         Ok(blockmap)
@@ -95,15 +99,22 @@ impl ms::Loadable for BlockMap {
 
 impl ms::Writable for BlockMap {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
-        for line in &self.map {
-            for cell in line {
+        for (line_i, line) in self.map.iter().enumerate() {
+            for (cell_i, cell) in line.iter().enumerate() {
+                if cell.is_empty() {
+                    continue;
+                }
                 assert!(cell.len() <= std::u8::MAX as usize);
+                w.writeu8(line_i as u8)?;
+                w.writeu8(cell_i as u8)?;
                 w.writeu8(cell.len().try_into()?)?;
                 for e in cell {
                     w.writeu32((*e).try_into()?)?;
                 }
             }
         }
+        w.writeu8(0xff)?;
+        w.writeu8(0xff)?;
         Ok(())
     }
 }
