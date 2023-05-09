@@ -583,15 +583,15 @@ repeat:
 
 states door {
 closed:
-    state DEMO, false, 0, ThinkStand, None, closed
+    state DEMO, false, 0, CheckOpenDoor , None, closed
 opened: 
-    state DEMO, false, 300, ThinkPath, None, blocked
+    state DEMO, false, 300, CheckCloseDoor , None, blocked
 close:
     state DEMO, false, 64, DecOpen, None, closed
 open:
     state DEMO, false, 64, IncOpen, None, opened
 blocked: 
-    state DEMO, false, 0, ActionShoot, None, blocked
+    state DEMO, false, 0, CheckDoorBlocked, None, blocked
 }
 function ChaingunCheckIdle {
     loadiu8 ACTION_SHOOT
@@ -624,6 +624,32 @@ function DecOpen {
     add
     loadiu8 1
     trap
+}
+function CheckOpenDoor {
+    loadiu8 2
+    trap
+    not
+    jrc end
+    loadiu8 THINK_STAND
+    call
+end:
+}
+function CheckCloseDoor {
+    loadiu8 2
+    trap
+    not
+    jrc end
+    loadiu8 THINK_PATH
+    call
+end:
+}
+function CheckDoorBlocked {
+    loadiu8 3
+    trap
+    jrc end
+    loadiu8 ACTION_SHOOT
+    call
+end:
 }
 function ThinkStand {
     loadiu8 THINK_STAND

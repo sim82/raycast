@@ -247,7 +247,6 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
     }
     pub fn parse_label(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, label) = ws(terminated(take_while(is_identifier), char(':')))(input)?;
-        let (input, _) = ws(tag("not"))(input)?;
         Ok((input, FunctionBlockElement::Label(label.to_string())))
     }
     pub fn parse_call(input: Span) -> Res<'_, FunctionBlockElement> {

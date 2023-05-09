@@ -62,6 +62,8 @@ impl Door {
                         Some(x) => return Err(anyhow!("unhandled opcode::Value {x:?}")),
                         None => return Err(anyhow!("stack underflow")),
                     },
+                    Some(Value::U8(2)) => env.stack.push(Value::Bool(trigger)),
+                    Some(Value::U8(3)) => env.stack.push(Value::Bool(blocked)),
                     x => panic!("unexpected trap code {x:?}"),
                 },
                 // x => todo!("unhandled opcode::Event {x:?}"),
@@ -71,17 +73,17 @@ impl Door {
     }
     fn dispatch_call(&mut self, function: Function, trigger: bool, blocked: bool) {
         match function {
-            Function::ThinkStand if trigger => {
+            Function::ThinkStand /*if trigger*/ => {
                 self.exec_ctx
                     .jump_label("door::open")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::open: {err:?}"));
             }
-            Function::ThinkPath if trigger => {
+            Function::ThinkPath /* if trigger*/ => {
                 self.exec_ctx
                     .jump_label("door::blocked")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
             }
-            Function::ActionShoot if !blocked => {
+            Function::ActionShoot /* if !blocked */ => {
                 self.exec_ctx
                     .jump_label("door::close")
                     .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
