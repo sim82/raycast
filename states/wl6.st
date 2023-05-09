@@ -536,7 +536,7 @@ shoot:
 states weapon_knife {
 lower:
 ready:
-    state SPR_KNIFEREADY, false, 0, None, WeaponCheckFire, ready
+    state SPR_KNIFEREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
     state SPR_KNIFEATK1, false, 3, None, ActionDie, next
     state SPR_KNIFEATK2, false, 3, None, None, next
@@ -548,9 +548,9 @@ states weapon_gun {
 lower:
     state SPR_PISTOLATK4, false, 10, None, None, next
 ready:
-    state SPR_PISTOLREADY, false, 0, None, WeaponCheckFire, ready
+    state SPR_PISTOLREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_PISTOLATK1, false, 1, None, WeaponCheckIdle, next
+    state SPR_PISTOLATK1, false, 1, None, WeaponAttackCheckIdle, next
 repeat:
     state SPR_PISTOLATK2, false, 3, None, ActionShoot, next
     state SPR_PISTOLATK3, false, 10, None, None, lower
@@ -560,12 +560,12 @@ states weapon_machinegun {
 lower:
     state SPR_MACHINEGUNATK4, false, 3, None, None, ready
 ready:
-    state SPR_MACHINEGUNREADY, false, 0, None, WeaponCheckFire, ready
+    state SPR_MACHINEGUNREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_MACHINEGUNATK1, false, 4, None, ThinkPath, next
+    state SPR_MACHINEGUNATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
     state SPR_MACHINEGUNATK2, false, 4, None, ActionShoot, next
-    state SPR_MACHINEGUNATK3, false, 4, None, WeaponCheckIdle, repeat
+    state SPR_MACHINEGUNATK3, false, 4, None, WeaponAttackCheckIdle, repeat
 }
 
 
@@ -573,12 +573,12 @@ states weapon_chaingun {
 lower:
     state SPR_CHAINATK4, false, 4, None, None, ready
 ready:
-    state SPR_CHAINREADY, false, 0, None, WeaponCheckFire, ready
+    state SPR_CHAINREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_CHAINATK1, false, 4, None, ThinkPath, next
+    state SPR_CHAINATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
     state SPR_CHAINATK2, false, 4, None, ActionShoot, next
-    state SPR_CHAINATK3, false, 4, None, ChaingunCheckIdle, repeat
+    state SPR_CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
 }
 
 states door {
@@ -593,21 +593,50 @@ open:
 blocked: 
     state DEMO, false, 0, CheckDoorBlocked, None, blocked
 }
-function ChaingunCheckIdle {
-    loadiu8 ACTION_SHOOT
-    call
-    loadiu8 THINK_PATH
-    call
-}
-function WeaponCheckIdle {
-    loadiu8 ACTION_SHOOT
-    call
-    loadiu8 THINK_PATH
-    call
-}
-function WeaponCheckFire{
+function WeaponIdleCheckFire {
+    loadiu8 0
+    trap
+    not
+    jrc end
     loadiu8 THINK_STAND
     call
+    stop
+end:
+    loadiu8 THINK_PATH
+    call
+}
+function WeaponAttackCheckIdle {
+    loadiu8 1
+    trap
+    not
+    jrc have_ammo
+    loadiu8 THINK_STAND
+    call
+    stop
+have_ammo:
+    loadiu8 0
+    trap
+jrc end:
+    loadiu8 THINK_CHASE
+    call
+end:
+}
+function ChaingunAttackCheckIdle {
+    loadiu8 ACTION_SHOOT
+    loadiu8 1
+    trap
+    not
+    jrc have_ammo
+    loadiu8 THINK_STAND
+    call
+    stop
+have_ammo:
+    loadiu8 0
+    trap
+jrc end:
+    loadiu8 THINK_CHASE
+    call
+end:
 }
 function IncOpen {
     loadiu8 0

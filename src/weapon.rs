@@ -3,6 +3,7 @@ use std::io::Cursor;
 use crate::prelude::*;
 use crate::sprite::SpriteSceenSetup;
 use anyhow::anyhow;
+use state_bc::opcode::Value;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum WeaponType {
@@ -93,7 +94,13 @@ impl Weapon {
                 opcode::Event::Call(function) => {
                     self.dispatch_call(function, fire);
                 }
-                x => todo!("unhandled opcode::Event {x:?}"),
+                opcode::Event::Trap => match env.stack.pop() {
+                    Some(Value::U8(0)) => env.stack.push(opcode::Value::Bool(fire)),
+                    Some(Value::U8(1)) => env.stack.push(opcode::Value::Bool(
+                        fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0,
+                    )),
+                    x => panic!("unexpected trap code {x:?}"),
+                },
             }
         }
         Ok(())
@@ -101,27 +108,27 @@ impl Weapon {
     fn dispatch_call(&mut self, function: Function, fire: bool) {
         match function {
             // weapon idle + fire -> attack state
-            Function::ThinkStand if fire => {
+            Function::ThinkStand /*if fire*/ => {
                 self.exec_ctx
                     .jump_label(&self.selected_weapon.map_state_label("attack"))
                     .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
             }
             // weapon idle + no fire -> restart ready state of selected weapon (i.e. change weapon if requested)
-            Function::ThinkStand if !fire => {
+            Function::ThinkPath /* if !fire*/ => {
                 self.exec_ctx
                     .jump_label(&self.selected_weapon.map_state_label("ready"))
                     .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
             }
             // weapon in attack state + ammo depleted -> restart attack state (keep weapon raised, but don't proceed further)
-            Function::ThinkPath
-                if fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0 =>
-            {
-                self.exec_ctx
-                    .jump_label(&self.selected_weapon.map_state_label("attack"))
-                    .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
-            }
+            // Function::ThinkPath
+            //     if fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0 =>
+            // {
+            //     self.exec_ctx
+            //         .jump_label(&self.selected_weapon.map_state_label("attack"))
+            //         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
+            // }
             // weapon in attack state + no fire -> lower weapon, proceed to idle
-            Function::ThinkPath if !fire => {
+            Function::ThinkChase /*if !fire*/ => {
                 self.exec_ctx
                     .jump_label(&self.selected_weapon.map_state_label("lower"))
                     .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));

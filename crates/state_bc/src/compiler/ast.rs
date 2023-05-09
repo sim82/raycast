@@ -52,6 +52,7 @@ pub enum FunctionBlockElement {
     Not,
     Jrc { label: String },
     FunctionCall,
+    Stop,
 }
 #[derive(Debug)]
 pub struct FunctionBlock {

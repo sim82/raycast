@@ -231,6 +231,10 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("ceq"))(input)?;
         Ok((input, FunctionBlockElement::Ceq))
     }
+    pub fn parse_stop(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("stop"))(input)?;
+        Ok((input, FunctionBlockElement::Stop))
+    }
     pub fn parse_not(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("not"))(input)?;
         Ok((input, FunctionBlockElement::Not))
@@ -266,6 +270,7 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         parse_not,
         parse_call,
         parse_label,
+        parse_stop,
     )))(input)?;
     Ok((input, e))
 }

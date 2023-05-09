@@ -78,6 +78,9 @@ pub fn compile(filename: &str, outname: &str) {
                 ast::FunctionBlockElement::Jrc { label } => {
                     codegen = codegen.jrc_label(&label);
                 }
+                ast::FunctionBlockElement::Stop => {
+                    codegen = codegen.stop();
+                }
             }
         }
         functions.insert(function_block.name.clone(), codegen.stop());
