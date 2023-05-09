@@ -594,10 +594,13 @@ blocked:
     state DEMO, false, 0, CheckDoorBlocked, None, blocked
 }
 function WeaponIdleCheckFire {
+// get fire flag
     loadiu8 0
     trap
+// jump to end if not fire
     not
     jrc end
+// goto attack state
     loadiu8 THINK_STAND
     call
     stop
@@ -606,27 +609,37 @@ end:
     call
 }
 function WeaponAttackCheckIdle {
+// get ammo depleted flag
     loadiu8 1
     trap
     not
     jrc have_ammo
+// out of ammo. stay in this state (keep weapon raised)
     loadiu8 THINK_STAND
     call
     stop
 have_ammo:
+// get fire flag
     loadiu8 0
     trap
 jrc end:
+// if fire was released abort and goto lower state
     loadiu8 THINK_CHASE
     call
 end:
+// follow through to next (usually this mean fire/repeat)
 }
+
 function ChaingunAttackCheckIdle {
+    // BUG: need to check if ammo available before extra chaingun shot
     loadiu8 ACTION_SHOOT
+    call
+// get ammo depleted flag
     loadiu8 1
     trap
     not
     jrc have_ammo
+// out of ammo. stay in this state (keep weapon raised)
     loadiu8 THINK_STAND
     call
     stop
@@ -634,9 +647,11 @@ have_ammo:
     loadiu8 0
     trap
 jrc end:
+// if fire was released abort and goto lower state
     loadiu8 THINK_CHASE
     call
 end:
+// follow through to next (usually this mean fire/repeat)
 }
 function IncOpen {
     loadiu8 0

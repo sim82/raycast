@@ -6,9 +6,9 @@ use super::ast::{
 use crate::{Direction, EnemySpawnInfo};
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_till1, take_while},
+    bytes::complete::{is_not, tag, take_till1, take_while},
     character::complete::{alpha1, alphanumeric1, char, one_of},
-    combinator::recognize,
+    combinator::{recognize, value},
     multi::{many0, many0_count, many1, separated_list0},
     sequence::{delimited, pair, terminated},
 };
@@ -257,6 +257,13 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, _) = ws(tag("call"))(input)?;
         Ok((input, FunctionBlockElement::FunctionCall))
     }
+    pub fn parse_line_comment(input: Span) -> Res<'_, ()> {
+        value(
+            (), // Output is thrown away.
+            pair(tag("//"), is_not("\n\r")),
+        )(input)
+    }
+    let (input, _) = many0(parse_line_comment)(input)?;
     let (input, e) = ws(alt((
         // parse_load_i32,
         // parse_store_i32,
@@ -272,6 +279,7 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         parse_label,
         parse_stop,
     )))(input)?;
+    let (input, _) = many0(parse_line_comment)(input)?;
     Ok((input, e))
 }
 pub fn parse_function_block(input: Span) -> Res<'_, ToplevelElement> {
