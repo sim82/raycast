@@ -109,6 +109,7 @@ pub struct Codegen {
     code: Vec<u8>,
     labels: HashMap<String, usize>,
     label_refs: Vec<(String, usize)>,
+    annotations: HashMap<String, String>,
 }
 
 impl Codegen {
@@ -195,6 +196,11 @@ impl Codegen {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    pub fn with_annotation(mut self, key: &str, value: &str) -> Self {
+        self.annotations.insert(key.to_string(), value.to_string());
+        self
     }
 }
 

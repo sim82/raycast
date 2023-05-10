@@ -42,7 +42,7 @@ pub fn compile(filename: &str, outname: &str) {
 
     let mut functions = BTreeMap::new();
     for function_block in function_blocks {
-        let mut codegen = Codegen::default();
+        let mut codegen = Codegen::default().with_annotation("source", &function_block.name);
         for element in function_block.elements {
             match element {
                 ast::FunctionBlockElement::Label(label) => {
