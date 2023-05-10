@@ -202,6 +202,9 @@ impl Codegen {
         self.annotations.insert(key.to_string(), value.to_string());
         self
     }
+    pub fn get_annotation(&self, key: &str) -> Option<&str> {
+        self.annotations.get(key).map(|s| s.as_str())
+    }
 }
 
 #[test]

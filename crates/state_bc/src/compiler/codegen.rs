@@ -155,8 +155,21 @@ pub fn codegen(
     codegens.sort_unstable_by_key(|(_, codegen)| -(codegen.len() as i64));
     let mut bytecode_output = BytecodeOutput::new(ip);
     let mut bc_pos = HashMap::new();
+    let mut map_f =
+        std::fs::File::create(format!("{outname}.map")).expect("failed to open map file");
     for (name, codegen) in codegens {
-        bc_pos.insert(name, bytecode_output.append_codegen(codegen.clone()));
+        let pos = bytecode_output.append_codegen(codegen.clone());
+        bc_pos.insert(name, pos);
+        writeln!(
+            map_f,
+            "{} - {} {}",
+            pos,
+            pos + codegen.len() as i32,
+            codegen
+                .get_annotation("source")
+                .expect("missing annotation 'source'"),
+        )
+        .unwrap();
     }
     for (i, state) in states.iter_mut().enumerate() {
         let think_name = format!("think:{i}");
