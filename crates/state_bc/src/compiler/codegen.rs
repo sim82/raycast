@@ -90,7 +90,7 @@ pub fn codegen(
     // label_ptrs.values_mut().for_each(|i| *i += ip);
     let mut ip = 0;
 
-    let mut codegens = HashMap::new();
+    let mut codegens = Vec::new();
     for state_block in state_blocks {
         for element in &state_block.elements {
             if let StatesBlockElement::State {
@@ -124,14 +124,14 @@ pub fn codegen(
                     next: next_ptr,
                 });
 
-                codegens.insert(
+                codegens.push((
                     format!("think:{index}"),
                     codegen_for_function_name(think, functions),
-                );
-                codegens.insert(
+                ));
+                codegens.push((
                     format!("action:{index}"),
                     codegen_for_function_name(action, functions),
-                );
+                ));
                 ip += crate::STATE_BC_SIZE;
             }
         }
@@ -149,14 +149,25 @@ pub fn codegen(
     }
     spawn_infos.write(&mut f).unwrap();
 
+    // luxury feature: sort bytecode blocks by descending size. This way the bytecode
+    // compression should be approximately ideal (there might be better ordering to also
+    // leverage matches across different blocks, but yeah well...)
+    codegens.sort_unstable_by_key(|(_, codegen)| -(codegen.len() as i64));
     let mut bytecode_output = BytecodeOutput::new(ip);
+    let mut bc_pos = HashMap::new();
+    for (name, codegen) in codegens {
+        bc_pos.insert(name, bytecode_output.append_codegen(codegen));
+    }
     for (i, state) in states.iter_mut().enumerate() {
         let think_name = format!("think:{i}");
-        state.think_offs =
-            bytecode_output.append_codegen(codegens.remove(&think_name).expect("missing think gc"));
+        state.think_offs = *bc_pos
+            .get(&think_name)
+            .expect("missing bc offset for {think_name}");
+
         let action_name = format!("action:{i}");
-        state.action_offs = bytecode_output
-            .append_codegen(codegens.remove(&action_name).expect("missing action gc"));
+        state.action_offs = *bc_pos
+            .get(&action_name)
+            .expect("missing bc offset for {action_name}");
     }
     bytecode_output.write_states(&states);
     let _ = f.write(&bytecode_output.code).unwrap();
