@@ -156,7 +156,7 @@ pub fn codegen(
     let mut bytecode_output = BytecodeOutput::new(ip);
     let mut bc_pos = HashMap::new();
     for (name, codegen) in codegens {
-        bc_pos.insert(name, bytecode_output.append_codegen(codegen));
+        bc_pos.insert(name, bytecode_output.append_codegen(codegen.clone()));
     }
     for (i, state) in states.iter_mut().enumerate() {
         let think_name = format!("think:{i}");
@@ -173,9 +173,11 @@ pub fn codegen(
     let _ = f.write(&bytecode_output.code).unwrap();
 }
 
-fn codegen_for_function_name(name: &str, functions: &BTreeMap<String, Codegen>) -> Codegen {
+fn codegen_for_function_name<'a>(
+    name: &str,
+    functions: &'a BTreeMap<String, Codegen>,
+) -> &'a Codegen {
     functions
         .get(name)
         .unwrap_or_else(|| panic!("unknown function {name}"))
-        .clone()
 }
