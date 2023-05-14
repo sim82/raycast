@@ -101,6 +101,7 @@ impl Weapon {
                     )),
                     x => panic!("unexpected trap code {x:?}"),
                 },
+                opcode::Event::GoState(_) => todo!(),
             }
         }
         Ok(())

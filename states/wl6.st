@@ -674,8 +674,7 @@ function CheckOpenDoor {
     trap
     not
     jrc end
-    loadiu8 THINK_STAND
-    call
+    gostate open
 end:
 }
 function CheckCloseDoor {

@@ -22,12 +22,8 @@ impl BytecodeOutput {
             code: vec![0u8; start_ptr as usize],
         }
     }
-    pub fn append_codegen(
-        &mut self,
-        codegen: Codegen,
-        state_labels: &BTreeMap<String, i32>,
-    ) -> i32 {
-        let mut code = codegen.finalize(state_labels);
+    pub fn append_codegen(&mut self, codegen: Codegen) -> i32 {
+        let mut code = codegen.finalize();
         if self.code.len() >= code.len() {
             // compression / size optimization:
             // search for subsequence match in previously generated code
@@ -65,14 +61,17 @@ pub fn codegen(
 
     let mut states = Vec::new();
     let mut label_ptrs = BTreeMap::new(); // keep them sorted in the output file
+    let mut ps_label_ptrs = Vec::new();
 
     // pass 1: resolve label offsets
     let mut ip = 0;
     for state_block in state_blocks {
+        let mut label_ptrs2 = HashMap::new();
         for element in &state_block.elements {
             match element {
                 StatesBlockElement::Label(name) => {
                     label_ptrs.insert(format!("{}::{}", state_block.name, name), ip);
+                    label_ptrs2.insert(name.clone(), ip);
                 }
                 StatesBlockElement::State {
                     id: _,
@@ -84,6 +83,7 @@ pub fn codegen(
                 } => ip += crate::STATE_BC_SIZE,
             }
         }
+        ps_label_ptrs.push(label_ptrs2);
     }
 
     // // pass2: generate code
@@ -95,7 +95,7 @@ pub fn codegen(
     let mut ip = 0;
 
     let mut codegens = Vec::new();
-    for state_block in state_blocks {
+    for (state_block, label_ptrs2) in state_blocks.iter().zip(ps_label_ptrs) {
         for element in &state_block.elements {
             if let StatesBlockElement::State {
                 id,
@@ -130,11 +130,11 @@ pub fn codegen(
 
                 codegens.push((
                     format!("think:{index}"),
-                    codegen_for_function_name(think, functions),
+                    codegen_for_function_name(think, functions, &label_ptrs2),
                 ));
                 codegens.push((
                     format!("action:{index}"),
-                    codegen_for_function_name(action, functions),
+                    codegen_for_function_name(action, functions, &label_ptrs2),
                 ));
                 ip += crate::STATE_BC_SIZE;
             }
@@ -162,7 +162,7 @@ pub fn codegen(
     let mut map_f =
         std::fs::File::create(format!("{outname}.map")).expect("failed to open map file");
     for (name, codegen) in codegens {
-        let pos = bytecode_output.append_codegen(codegen.clone(), &label_ptrs);
+        let pos = bytecode_output.append_codegen(codegen.clone());
         bc_pos.insert(name, pos);
         writeln!(
             map_f,
@@ -193,8 +193,11 @@ pub fn codegen(
 fn codegen_for_function_name<'a>(
     name: &str,
     functions: &'a BTreeMap<String, Codegen>,
-) -> &'a Codegen {
+    label_ptrs: &HashMap<String, i32>,
+) -> Codegen {
     functions
         .get(name)
         .unwrap_or_else(|| panic!("unknown function {name}"))
+        .clone()
+        .with_state_label_ptrs(label_ptrs)
 }

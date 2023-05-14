@@ -38,6 +38,7 @@ pub enum Event {
     // Load(u8),
     // Store(u8),
     Trap,
+    GoState(i32),
 }
 
 pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
@@ -100,6 +101,10 @@ pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
                     x => return Err(anyhow!("unhandled jrc operand {x:?}")),
                 }
             }
+            GOSTATE => {
+                let offs = bc.readi32()?;
+                return Ok(Event::GoState(offs));
+            }
             x => return Err(anyhow!("unhandled opcode {x:?}")),
         }
     }
@@ -109,6 +114,7 @@ pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
 pub struct Codegen {
     code: Vec<u8>,
     labels: HashMap<String, usize>,
+    state_labels: HashMap<String, i32>,
     label_refs: Vec<(String, usize)>,
     state_label_refs: Vec<(String, usize)>,
     annotations: HashMap<String, String>,
@@ -180,13 +186,17 @@ impl Codegen {
         self.code.extend_from_slice(&0i32.to_le_bytes());
         self
     }
+    pub fn with_state_label_ptrs(mut self, label_ptrs: &HashMap<String, i32>) -> Codegen {
+        self.state_labels = label_ptrs.clone();
+        self
+    }
     /// Finalize and return Vec of generated code. This step resolves labelled jumps to the correct
     /// offset address.
     ///
     /// # Panics
     ///
     /// Panics if a label name cannot be resolved
-    pub fn finalize(mut self, state_labels: &BTreeMap<String, i32>) -> Vec<u8> {
+    pub fn finalize(mut self) -> Vec<u8> {
         for (label, pos) in self.label_refs {
             let label_pos = *self
                 .labels
@@ -196,7 +206,8 @@ impl Codegen {
             self.code[pos..(pos + 4)].copy_from_slice(&offs.to_le_bytes());
         }
         for (label, pos) in self.state_label_refs {
-            let label_pos = *state_labels
+            let label_pos = *self
+                .state_labels
                 .get(&label)
                 .unwrap_or_else(|| panic!("could not find state_label {label}"));
             self.code[pos..(pos + 4)].copy_from_slice(&label_pos.to_le_bytes());
@@ -226,7 +237,7 @@ fn test_codegen() {
     let code = Codegen::default()
         .function_call(Function::ActionDie)
         .stop()
-        .finalize(&Default::default());
+        .finalize();
     assert_eq!(code[..], [0x1, 0x5, 0x2, 0xff]);
 }
 #[test]
@@ -252,7 +263,7 @@ fn test_ceq() {
         .loadi_u8(124)
         .ceq()
         .stop()
-        .finalize(&Default::default());
+        .finalize();
 
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -276,7 +287,7 @@ fn test_cond_jmp() {
         .loadi_i32(4712)
         .label("after2")
         .stop()
-        .finalize(&Default::default());
+        .finalize();
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -301,7 +312,7 @@ fn test_loop() {
         .bin_not()
         .jrc_label("loop")
         .stop()
-        .finalize(&Default::default());
+        .finalize();
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     for i in 0..5 {

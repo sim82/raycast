@@ -66,6 +66,10 @@ impl Door {
                     Some(Value::U8(3)) => env.stack.push(Value::Bool(blocked)),
                     x => panic!("unexpected trap code {x:?}"),
                 },
+                opcode::Event::GoState(offs) => {
+                    self.exec_ctx.jump(offs);
+                    break;
+                }
                 // x => todo!("unhandled opcode::Event {x:?}"),
             }
         }
