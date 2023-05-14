@@ -22,8 +22,12 @@ impl BytecodeOutput {
             code: vec![0u8; start_ptr as usize],
         }
     }
-    pub fn append_codegen(&mut self, codegen: Codegen) -> i32 {
-        let mut code = codegen.finalize();
+    pub fn append_codegen(
+        &mut self,
+        codegen: Codegen,
+        state_labels: &BTreeMap<String, i32>,
+    ) -> i32 {
+        let mut code = codegen.finalize(state_labels);
         if self.code.len() >= code.len() {
             // compression / size optimization:
             // search for subsequence match in previously generated code
@@ -158,7 +162,7 @@ pub fn codegen(
     let mut map_f =
         std::fs::File::create(format!("{outname}.map")).expect("failed to open map file");
     for (name, codegen) in codegens {
-        let pos = bytecode_output.append_codegen(codegen.clone());
+        let pos = bytecode_output.append_codegen(codegen.clone(), &label_ptrs);
         bc_pos.insert(name, pos);
         writeln!(
             map_f,

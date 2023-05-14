@@ -44,44 +44,25 @@ pub fn compile(filename: &str, outname: &str) {
     for function_block in function_blocks {
         let mut codegen = Codegen::default().with_annotation("source", &function_block.name);
         for element in function_block.elements {
-            match element {
-                ast::FunctionBlockElement::Label(label) => {
-                    codegen = codegen.label(&label);
-                }
-                ast::FunctionBlockElement::LoadiI32 { value } => {
-                    codegen = codegen.loadi_i32(value);
-                }
+            codegen = match element {
+                ast::FunctionBlockElement::Label(label) => codegen.label(&label),
+                ast::FunctionBlockElement::LoadiI32 { value } => codegen.loadi_i32(value),
                 ast::FunctionBlockElement::LoadiU8Enum { name } => {
                     let v = enums
                         .get(&name)
                         .unwrap_or_else(|| panic!("could not find enum {name}"));
-                    codegen = codegen.loadi_u8(*v as u8);
+                    codegen.loadi_u8(*v as u8)
                 }
-                ast::FunctionBlockElement::LoadiU8 { value } => {
-                    codegen = codegen.loadi_u8(value);
-                }
-                ast::FunctionBlockElement::Trap => {
-                    codegen = codegen.trap();
-                }
-                ast::FunctionBlockElement::Add => {
-                    codegen = codegen.add();
-                }
-                ast::FunctionBlockElement::FunctionCall => {
-                    codegen = codegen.call();
-                }
-                ast::FunctionBlockElement::Ceq => {
-                    codegen = codegen.ceq();
-                }
-                ast::FunctionBlockElement::Not => {
-                    codegen = codegen.bin_not();
-                }
-                ast::FunctionBlockElement::Jrc { label } => {
-                    codegen = codegen.jrc_label(&label);
-                }
-                ast::FunctionBlockElement::Stop => {
-                    codegen = codegen.stop();
-                }
-            }
+                ast::FunctionBlockElement::LoadiU8 { value } => codegen.loadi_u8(value),
+                ast::FunctionBlockElement::Trap => codegen.trap(),
+                ast::FunctionBlockElement::Add => codegen.add(),
+                ast::FunctionBlockElement::FunctionCall => codegen.call(),
+                ast::FunctionBlockElement::Ceq => codegen.ceq(),
+                ast::FunctionBlockElement::Not => codegen.bin_not(),
+                ast::FunctionBlockElement::Jrc { label } => codegen.jrc_label(&label),
+                ast::FunctionBlockElement::Stop => codegen.stop(),
+                ast::FunctionBlockElement::GoState { label } => codegen.gostate(&label),
+            };
         }
         functions.insert(function_block.name.clone(), codegen.stop());
     }

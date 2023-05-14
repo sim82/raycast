@@ -249,6 +249,16 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
             },
         ))
     }
+    pub fn parse_gostate(input: Span) -> Res<'_, FunctionBlockElement> {
+        let (input, _) = ws(tag("gostate"))(input)?;
+        let (input, label) = ws(take_while(is_identifier))(input)?;
+        Ok((
+            input,
+            FunctionBlockElement::GoState {
+                label: label.to_string(),
+            },
+        ))
+    }
     pub fn parse_label(input: Span) -> Res<'_, FunctionBlockElement> {
         let (input, label) = ws(terminated(take_while(is_identifier), char(':')))(input)?;
         Ok((input, FunctionBlockElement::Label(label.to_string())))
@@ -272,6 +282,7 @@ pub fn parse_bytecode_directive(input: Span) -> Res<'_, FunctionBlockElement> {
         parse_loadi_u8, // FIXME: identifier parsing is crap (accepts also digit in fist place). need to match this rule first.
         parse_loadi_u8_enum,
         parse_jrc,
+        parse_gostate,
         parse_add,
         parse_ceq,
         parse_not,

@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap, HashSet},
     io::{Read, Seek, SeekFrom},
 };
 
@@ -16,6 +16,7 @@ const CEQ: u8 = 6;
 const NOT: u8 = 7;
 const DUP: u8 = 8;
 const TRAP: u8 = 9;
+const GOSTATE: u8 = 10;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Value {
@@ -109,6 +110,7 @@ pub struct Codegen {
     code: Vec<u8>,
     labels: HashMap<String, usize>,
     label_refs: Vec<(String, usize)>,
+    state_label_refs: Vec<(String, usize)>,
     annotations: HashMap<String, String>,
 }
 
@@ -172,13 +174,19 @@ impl Codegen {
         self.labels.insert(label.into(), self.code.len());
         self
     }
+    pub fn gostate(mut self, label: &str) -> Codegen {
+        self.code.push(GOSTATE);
+        self.state_label_refs.push((label.into(), self.code.len()));
+        self.code.extend_from_slice(&0i32.to_le_bytes());
+        self
+    }
     /// Finalize and return Vec of generated code. This step resolves labelled jumps to the correct
     /// offset address.
     ///
     /// # Panics
     ///
     /// Panics if a label name cannot be resolved
-    pub fn finalize(mut self) -> Vec<u8> {
+    pub fn finalize(mut self, state_labels: &BTreeMap<String, i32>) -> Vec<u8> {
         for (label, pos) in self.label_refs {
             let label_pos = *self
                 .labels
@@ -186,6 +194,12 @@ impl Codegen {
                 .unwrap_or_else(|| panic!("could not find label {label}"));
             let offs = label_pos as i32 - pos as i32 - 4;
             self.code[pos..(pos + 4)].copy_from_slice(&offs.to_le_bytes());
+        }
+        for (label, pos) in self.state_label_refs {
+            let label_pos = *state_labels
+                .get(&label)
+                .unwrap_or_else(|| panic!("could not find state_label {label}"));
+            self.code[pos..(pos + 4)].copy_from_slice(&label_pos.to_le_bytes());
         }
         self.code
     }
@@ -212,7 +226,7 @@ fn test_codegen() {
     let code = Codegen::default()
         .function_call(Function::ActionDie)
         .stop()
-        .finalize();
+        .finalize(&Default::default());
     assert_eq!(code[..], [0x1, 0x5, 0x2, 0xff]);
 }
 #[test]
@@ -238,7 +252,7 @@ fn test_ceq() {
         .loadi_u8(124)
         .ceq()
         .stop()
-        .finalize();
+        .finalize(&Default::default());
 
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -262,7 +276,7 @@ fn test_cond_jmp() {
         .loadi_i32(4712)
         .label("after2")
         .stop()
-        .finalize();
+        .finalize(&Default::default());
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     let e = exec(&mut c, &mut env);
@@ -287,7 +301,7 @@ fn test_loop() {
         .bin_not()
         .jrc_label("loop")
         .stop()
-        .finalize();
+        .finalize(&Default::default());
     println!("{bc:?}");
     let mut c = std::io::Cursor::new(bc);
     for i in 0..5 {

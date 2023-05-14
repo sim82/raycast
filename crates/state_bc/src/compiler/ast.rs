@@ -52,6 +52,7 @@ pub enum FunctionBlockElement {
     Not,
     Jrc { label: String },
     FunctionCall,
+    GoState { label: String },
     Stop,
 }
 #[derive(Debug)]
