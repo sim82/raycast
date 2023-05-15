@@ -69,30 +69,29 @@ impl Door {
                 opcode::Event::GoState(offs) => {
                     self.exec_ctx.jump(offs);
                     break;
-                }
-                // x => todo!("unhandled opcode::Event {x:?}"),
+                } // x => todo!("unhandled opcode::Event {x:?}"),
             }
         }
         Ok(())
     }
     fn dispatch_call(&mut self, function: Function, trigger: bool, blocked: bool) {
         match function {
-            Function::ThinkStand => {
-                self.exec_ctx
-                    .jump_label("door::open")
-                    .unwrap_or_else(|err| panic!("failed to jump to state door::open: {err:?}"));
-            }
-            Function::ThinkPath => {
-                self.exec_ctx
-                    .jump_label("door::blocked")
-                    .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
-            }
-            Function::ActionShoot => {
-                self.exec_ctx
-                    .jump_label("door::close")
-                    .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
-            }
-            _ => (),
+            // Function::ThinkStand => {
+            //     self.exec_ctx
+            //         .jump_label("door::open")
+            //         .unwrap_or_else(|err| panic!("failed to jump to state door::open: {err:?}"));
+            // }
+            // Function::ThinkPath => {
+            //     self.exec_ctx
+            //         .jump_label("door::blocked")
+            //         .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
+            // }
+            // Function::ActionShoot => {
+            //     self.exec_ctx
+            //         .jump_label("door::close")
+            //         .unwrap_or_else(|err| panic!("failed to jump to state door::close: {err:?}"));
+            // }
+            _ => todo!(),
         }
     }
 }

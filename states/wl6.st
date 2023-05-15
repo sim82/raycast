@@ -682,16 +682,14 @@ function CheckCloseDoor {
     trap
     not
     jrc end
-    loadiu8 THINK_PATH
-    call
+    gostate blocked
 end:
 }
 function CheckDoorBlocked {
     loadiu8 3
     trap
     jrc end
-    loadiu8 ACTION_SHOOT
-    call
+    gostate close
 end:
 }
 function ThinkStand {
