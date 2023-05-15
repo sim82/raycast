@@ -601,12 +601,10 @@ function WeaponIdleCheckFire {
     not
     jrc end
 // goto attack state
-    loadiu8 THINK_STAND
-    call
+    gostate attack
     stop
 end:
-    loadiu8 THINK_PATH
-    call
+    gostate ready
 }
 function WeaponAttackCheckIdle {
 // get ammo depleted flag
@@ -615,8 +613,7 @@ function WeaponAttackCheckIdle {
     not
     jrc have_ammo
 // out of ammo. stay in this state (keep weapon raised)
-    loadiu8 THINK_STAND
-    call
+    gostate attack
     stop
 have_ammo:
 // get fire flag
@@ -624,8 +621,7 @@ have_ammo:
     trap
 jrc end:
 // if fire was released abort and goto lower state
-    loadiu8 THINK_CHASE
-    call
+    gostate lower
 end:
 // follow through to next (usually this mean fire/repeat)
 }
@@ -640,16 +636,14 @@ function ChaingunAttackCheckIdle {
     not
     jrc have_ammo
 // out of ammo. stay in this state (keep weapon raised)
-    loadiu8 THINK_STAND
-    call
+    gostate attack
     stop
 have_ammo:
     loadiu8 0
     trap
 jrc end:
 // if fire was released abort and goto lower state
-    loadiu8 THINK_CHASE
-    call
+    gostate lower
 end:
 // follow through to next (usually this mean fire/repeat)
 }

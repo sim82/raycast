@@ -101,7 +101,10 @@ impl Weapon {
                     )),
                     x => panic!("unexpected trap code {x:?}"),
                 },
-                opcode::Event::GoState(_) => todo!(),
+                opcode::Event::GoState(offs) => {
+                    self.exec_ctx.jump(offs);
+                    break;
+                }
             }
         }
         Ok(())
