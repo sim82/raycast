@@ -5,7 +5,7 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
-    io::{Cursor, Write},
+    io::{Cursor, Seek, SeekFrom, Write},
 };
 
 use super::ast::{StatesBlock, StatesBlockElement};
@@ -161,14 +161,15 @@ pub fn codegen(
     let mut bc_pos = HashMap::new();
     let mut map_f =
         std::fs::File::create(format!("{outname}.map")).expect("failed to open map file");
+    let img_code_offs = f.stream_position().unwrap() as i32;
     for (name, codegen) in codegens {
         let pos = bytecode_output.append_codegen(codegen.clone());
         bc_pos.insert(name, pos);
         writeln!(
             map_f,
-            "{} - {} {}",
-            pos,
-            pos + codegen.len() as i32,
+            "{:04x} - {:04x} {}",
+            pos + img_code_offs,
+            pos + codegen.len() as i32 + img_code_offs,
             codegen
                 .get_annotation("source")
                 .expect("missing annotation 'source'"),
