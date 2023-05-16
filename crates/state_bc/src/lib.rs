@@ -397,6 +397,9 @@ impl ExecImage {
         }
         res
     }
+    pub fn get_state_offs_by_label(&self, label: &str) -> Option<i32> {
+        self.labels.get(label).cloned()
+    }
 }
 
 impl SpawnInfos {

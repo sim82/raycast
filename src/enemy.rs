@@ -615,7 +615,7 @@ impl Enemy {
                 // opcode::Event::Load(_) => todo!(),
                 // opcode::Event::Store(_) => todo!(),
                 opcode::Event::Trap => todo!(),
-                opcode::Event::GoState(_) => todo!(),
+                opcode::Event::GoState => todo!(),
             }
         }
     }

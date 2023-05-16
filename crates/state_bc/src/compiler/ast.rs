@@ -45,6 +45,7 @@ pub enum FunctionBlockElement {
     LoadiI32 { value: i32 },
     LoadiU8Enum { name: String },
     LoadiU8 { value: u8 },
+    LoadStateLabel { label: String },
     // StoreI32 { addr: u8 },
     Trap,
     Add,
@@ -52,7 +53,7 @@ pub enum FunctionBlockElement {
     Not,
     Jrc { label: String },
     FunctionCall,
-    GoState { label: String },
+    GoState,
     Stop,
 }
 #[derive(Debug)]

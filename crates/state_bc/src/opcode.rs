@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::HashMap,
     io::{Read, Seek, SeekFrom},
 };
 
@@ -38,7 +38,7 @@ pub enum Event {
     // Load(u8),
     // Store(u8),
     Trap,
-    GoState(i32),
+    GoState,
 }
 
 pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
@@ -102,8 +102,7 @@ pub fn exec<R: Read + Seek>(bc: &mut R, env: &mut Env) -> Result<Event> {
                 }
             }
             GOSTATE => {
-                let offs = bc.readi32()?;
-                return Ok(Event::GoState(offs));
+                return Ok(Event::GoState);
             }
             x => return Err(anyhow!("unhandled opcode {x:?}")),
         }
@@ -180,10 +179,14 @@ impl Codegen {
         self.labels.insert(label.into(), self.code.len());
         self
     }
-    pub fn gostate(mut self, label: &str) -> Codegen {
-        self.code.push(GOSTATE);
+    pub fn loadsl(mut self, label: &str) -> Codegen {
+        self.code.push(LOADI_I32);
         self.state_label_refs.push((label.into(), self.code.len()));
         self.code.extend_from_slice(&0i32.to_le_bytes());
+        self
+    }
+    pub fn gostate(mut self) -> Codegen {
+        self.code.push(GOSTATE);
         self
     }
     pub fn with_state_label_ptrs(mut self, label_ptrs: &HashMap<String, i32>) -> Codegen {

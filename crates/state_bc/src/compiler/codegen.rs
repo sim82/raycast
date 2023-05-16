@@ -190,9 +190,9 @@ pub fn codegen(
     let _ = f.write(&bytecode_output.code).unwrap();
 }
 
-fn codegen_for_function_name<'a>(
+fn codegen_for_function_name(
     name: &str,
-    functions: &'a BTreeMap<String, Codegen>,
+    functions: &BTreeMap<String, Codegen>,
     label_ptrs: &HashMap<String, i32>,
 ) -> Codegen {
     functions

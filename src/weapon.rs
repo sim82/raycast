@@ -94,40 +94,59 @@ impl Weapon {
                 opcode::Event::Call(function) => {
                     self.dispatch_call(function, fire);
                 }
-                opcode::Event::Trap => match env.stack.pop() {
-                    Some(Value::U8(0)) => env.stack.push(opcode::Value::Bool(fire)),
-                    Some(Value::U8(1)) => env.stack.push(opcode::Value::Bool(
-                        fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0,
-                    )),
-                    x => panic!("unexpected trap code {x:?}"),
-                },
-                opcode::Event::GoState(offs) => {
-                    self.exec_ctx.jump(offs);
+                opcode::Event::Trap => {
+                    match env.stack.pop() {
+                        Some(Value::U8(0)) => env.stack.push(opcode::Value::Bool(fire)),
+                        Some(Value::U8(1)) => env.stack.push(opcode::Value::Bool(
+                            fire && self.selected_weapon != WeaponType::Knife && self.ammo <= 0,
+                        )),
+                        Some(Value::U8(2)) => {
+                            if let Some(offs) = self.exec_ctx.image.get_state_offs_by_label(
+                                &self.selected_weapon.map_state_label("ready"),
+                            ) {
+                                env.stack.push(Value::I32(offs));
+                            } else {
+                                panic!("could not find ready state for current weapon");
+                            }
+                        }
+                        x => panic!("unexpected trap code {x:?}"),
+                    }
+                }
+                opcode::Event::GoState => {
+                    match env.stack.pop() {
+                        Some(Value::I32(offs)) => {
+                            self.exec_ctx
+                                .jump(offs)
+                                .unwrap_or_else(|_| panic!("jump to {offs} failed."));
+                        }
+                        Some(x) => return Err(anyhow!("unhandled opcode::Value {x:?}")),
+                        None => return Err(anyhow!("stack underflow")),
+                    };
                     break;
                 }
             }
         }
         Ok(())
     }
-    fn dispatch_call(&mut self, function: Function, fire: bool) {
+    fn dispatch_call(&mut self, function: Function, _fire: bool) {
         match function {
-            Function::ThinkStand => {
-                self.exec_ctx
-                    .jump_label(&self.selected_weapon.map_state_label("attack"))
-                    .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
-            }
-            Function::ThinkPath => {
-                self.exec_ctx
-                    .jump_label(&self.selected_weapon.map_state_label("ready"))
-                    .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
-            }
-            Function::ThinkChase => {
-                self.exec_ctx
-                    .jump_label(&self.selected_weapon.map_state_label("lower"))
-                    .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
-            }
+            // Function::ThinkStand => {
+            //     self.exec_ctx
+            //         .jump_label(&self.selected_weapon.map_state_label("attack"))
+            //         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
+            // }
+            // Function::ThinkPath => {
+            //     self.exec_ctx
+            //         .jump_label(&self.selected_weapon.map_state_label("ready"))
+            //         .unwrap_or_else(|err| panic!("failed to jump to state ready: {err:?}"));
+            // }
+            // Function::ThinkChase => {
+            //     self.exec_ctx
+            //         .jump_label(&self.selected_weapon.map_state_label("lower"))
+            //         .unwrap_or_else(|err| panic!("failed to jump to state attack: {err:?}"));
+            // }
             Function::ActionShoot => self.shoot = true,
-            _ => (),
+            _ => todo!(),
         }
     }
     pub fn run(&mut self, fire: bool, new_weapon_type: Option<i32>) -> bool {

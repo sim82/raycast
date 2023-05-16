@@ -601,10 +601,14 @@ function WeaponIdleCheckFire {
     not
     jrc end
 // goto attack state
-    gostate attack
+    loadsl attack
+    gostate
     stop
 end:
-    gostate ready
+// 'dynamically' look up ready state of currently selected weapon // i.e. this is how a weapon change is implemented
+    loadiu8 2
+    trap
+    gostate
 }
 function WeaponAttackCheckIdle {
 // get ammo depleted flag
@@ -613,7 +617,8 @@ function WeaponAttackCheckIdle {
     not
     jrc have_ammo
 // out of ammo. stay in this state (keep weapon raised)
-    gostate attack
+    loadsl attack
+    gostate
     stop
 have_ammo:
 // get fire flag
@@ -621,7 +626,8 @@ have_ammo:
     trap
 jrc end:
 // if fire was released abort and goto lower state
-    gostate lower
+    loadsl lower
+    gostate
 end:
 // follow through to next (usually this mean fire/repeat)
 }
@@ -636,14 +642,16 @@ function ChaingunAttackCheckIdle {
     not
     jrc have_ammo
 // out of ammo. stay in this state (keep weapon raised)
-    gostate attack
+    loadsl attack
+    gostate
     stop
 have_ammo:
     loadiu8 0
     trap
 jrc end:
 // if fire was released abort and goto lower state
-    gostate lower
+    loadsl lower
+    gostate
 end:
 // follow through to next (usually this mean fire/repeat)
 }
@@ -668,7 +676,8 @@ function CheckOpenDoor {
     trap
     not
     jrc end
-    gostate open
+    loadsl open
+    gostate
 end:
 }
 function CheckCloseDoor {
@@ -676,14 +685,16 @@ function CheckCloseDoor {
     trap
     not
     jrc end
-    gostate blocked
+    loadsl blocked
+    gostate
 end:
 }
 function CheckDoorBlocked {
     loadiu8 3
     trap
     jrc end
-    gostate close
+    loadsl close
+    gostate
 end:
 }
 function ThinkStand {

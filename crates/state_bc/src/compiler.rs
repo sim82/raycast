@@ -61,7 +61,8 @@ pub fn compile(filename: &str, outname: &str) {
                 ast::FunctionBlockElement::Not => codegen.bin_not(),
                 ast::FunctionBlockElement::Jrc { label } => codegen.jrc_label(&label),
                 ast::FunctionBlockElement::Stop => codegen.stop(),
-                ast::FunctionBlockElement::GoState { label } => codegen.gostate(&label),
+                ast::FunctionBlockElement::GoState => codegen.gostate(),
+                ast::FunctionBlockElement::LoadStateLabel { label } => codegen.loadsl(&label),
             };
         }
         functions.insert(function_block.name.clone(), codegen.stop());
