@@ -5,7 +5,7 @@ use crate::{
 };
 use std::{
     collections::{BTreeMap, HashMap},
-    io::{Cursor, Seek, SeekFrom, Write},
+    io::{Cursor, Seek, Write},
 };
 
 use super::ast::{StatesBlock, StatesBlockElement};

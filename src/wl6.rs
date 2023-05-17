@@ -301,6 +301,35 @@ impl MapsFile {
     }
 }
 
+struct ChunksFile {
+    f: File,
+    offsets: Vec<u32>,
+}
+impl ChunksFile {
+    pub fn open<P: AsRef<Path>, Q: AsRef<Path>>(
+        header_name: P,
+        data_name: Q,
+    ) -> crate::Result<Self> {
+        let mut headf = File::open(header_name)?;
+        let mut offsets = Vec::new();
+        while let Ok(offs) = headf.readu32() {
+            offsets.push(offs);
+        }
+        let f = File::open(data_name)?;
+        Ok(Self { offsets, f })
+    }
+    pub fn read_chunk_raw(&mut self, id: i32) -> Option<Vec<u8>> {
+        if id < 0 || id >= self.offsets.len() as i32 - 1 {
+            return None;
+        }
+        let offset = self.offsets[id as usize] as u64;
+        self.f.seek(SeekFrom::Start(offset)).ok()?;
+        let size = self.offsets[id as usize + 1] as u64 - offset;
+        let mut buf = vec![0; size as usize];
+        self.f.read_exact(&mut buf).ok()?;
+        Some(buf)
+    }
+}
 fn to_plane(d1: &[u8]) -> Vec<u16> {
     let mut res = Vec::new();
     res.reserve(d1.len() / 2);
