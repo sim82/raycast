@@ -327,10 +327,10 @@ impl Mainloop {
                     continue;
                 }
 
-                println!(
-                    "offs: {offs} {} {:?}",
-                    sprite.screen_x, self.things.things[sprite.owner].actor
-                );
+                // println!(
+                //     "offs: {offs} {} {:?}",
+                //     sprite.screen_x, self.things.things[sprite.owner].actor
+                // );
                 let offs_scale = 2; // fixme: general fettgesicht is probably wider...
                 let min = (WIDTH as i32 / 2) - offs / offs_scale;
                 let max = (WIDTH as i32 / 2) + offs / offs_scale;
@@ -339,7 +339,6 @@ impl Mainloop {
                 }
             }
         }
-
         sprite_screen_setup.push(self.player.weapon.get_sprite());
 
         if input_events.misc_selection > 0 {
@@ -377,17 +376,15 @@ impl Mainloop {
         // draw_string8x8("Get Psyched!", &mut buffer[..], 100, 160);
         hud::draw_status_bar(&mut buffer[..], self);
 
-        if self.player.shoot {
-            if let Some(hit_thing) = hit_thing {
-                if let Some((x, y)) = &self.things.things[hit_thing].actor.get_pos() {
-                    let dx = self.player.x.get_int().abs_diff(x.get_int());
-                    let dy = self.player.y.get_int().abs_diff(y.get_int());
-                    let boost = 5 - dx.max(dy).min(5);
-                    let base_hitpoints = 7;
-                    let hitpoints = base_hitpoints + ((boost * 7) * (randu8() as u32)) / 255;
-                    println!("hit: {}", hitpoints - base_hitpoints);
-                    self.things.things[hit_thing].actor.shoot(hitpoints as i32);
-                }
+        if let Some(hit_thing) = hit_thing {
+            if let Some((x, y)) = &self.things.things[hit_thing].actor.get_pos() {
+                let dx = self.player.x.get_int().abs_diff(x.get_int());
+                let dy = self.player.y.get_int().abs_diff(y.get_int());
+                let boost = 5 - dx.max(dy).min(5);
+                let base_hitpoints = 7;
+                let hitpoints = base_hitpoints + ((boost * 7) * (randu8() as u32)) / 255;
+                println!("hit: {}", hitpoints - base_hitpoints);
+                self.things.things[hit_thing].actor.shoot(hitpoints as i32);
             }
         }
 

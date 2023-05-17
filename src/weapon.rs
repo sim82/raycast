@@ -169,6 +169,9 @@ impl Weapon {
         if self.shoot && self.selected_weapon != WeaponType::Knife {
             self.ammo -= 1;
         }
+        if self.shoot {
+            println!("player shoot");
+        }
         self.shoot
     }
 
