@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use state_bc::ExecImage;
 use std::path::Path;
+use wl6::{ChunkProvider, SpritePosts, VswapFile};
 
 pub mod block_map;
 pub mod door;
@@ -74,7 +75,6 @@ const TEX_SIZE: usize = wl6::TEX_SIZE;
 
 // column first order
 pub type Texture = [[u8; TEX_SIZE]; TEX_SIZE];
-use wl6::{SpritePosts, VswapFile};
 
 pub struct Resources {
     textures: Vec<Texture>,

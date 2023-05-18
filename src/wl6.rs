@@ -1,12 +1,13 @@
+use crate::Texture;
 use state_bc::ms::endian::ReadExt;
 use std::{
     fs::File,
-    io::{Cursor, Read, Seek, SeekFrom},
+    io::{Cursor, Read, Seek, SeekFrom, Write},
     ops::{Range, RangeInclusive},
     path::Path,
 };
 
-use crate::Texture;
+pub mod chunks;
 
 pub const TEX_SIZE: usize = 64;
 
@@ -24,7 +25,9 @@ pub enum ChunkId {
     Sprite(usize),
     Sound(usize),
 }
-
+pub trait ChunkProvider {
+    fn read_chunk(&mut self, chunk: ChunkId) -> Vec<u8>;
+}
 impl VswapFile {
     pub fn open<P: AsRef<Path>>(name: P) -> VswapFile {
         let mut f = File::open(name).unwrap();
@@ -56,7 +59,12 @@ impl VswapFile {
         }
     }
 
-    pub fn read_chunk(&mut self, chunk: ChunkId) -> Vec<u8> {
+    pub fn num_sounds(&self) -> usize {
+        (self.num_chunks - self.num_walls - self.num_sprites).into()
+    }
+}
+impl ChunkProvider for VswapFile {
+    fn read_chunk(&mut self, chunk: ChunkId) -> Vec<u8> {
         let chunk_index = match chunk {
             ChunkId::Wall(id) => id,
             ChunkId::Sprite(id) => self.num_walls as usize + id,
@@ -67,7 +75,6 @@ impl VswapFile {
         read_vec_from_pos_size(&mut self.f, offs, size)
     }
 }
-
 pub struct SpritePosts {
     pub range: RangeInclusive<u16>,
     pub posts: Vec<(Vec<Range<u16>>, u16)>,
@@ -301,35 +308,6 @@ impl MapsFile {
     }
 }
 
-struct ChunksFile {
-    f: File,
-    offsets: Vec<u32>,
-}
-impl ChunksFile {
-    pub fn open<P: AsRef<Path>, Q: AsRef<Path>>(
-        header_name: P,
-        data_name: Q,
-    ) -> crate::Result<Self> {
-        let mut headf = File::open(header_name)?;
-        let mut offsets = Vec::new();
-        while let Ok(offs) = headf.readu32() {
-            offsets.push(offs);
-        }
-        let f = File::open(data_name)?;
-        Ok(Self { offsets, f })
-    }
-    pub fn read_chunk_raw(&mut self, id: i32) -> Option<Vec<u8>> {
-        if id < 0 || id >= self.offsets.len() as i32 - 1 {
-            return None;
-        }
-        let offset = self.offsets[id as usize] as u64;
-        self.f.seek(SeekFrom::Start(offset)).ok()?;
-        let size = self.offsets[id as usize + 1] as u64 - offset;
-        let mut buf = vec![0; size as usize];
-        self.f.read_exact(&mut buf).ok()?;
-        Some(buf)
-    }
-}
 fn to_plane(d1: &[u8]) -> Vec<u16> {
     let mut res = Vec::new();
     res.reserve(d1.len() / 2);
@@ -434,12 +412,45 @@ fn map_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
     rlew_decompress(&d1, rlwe_tag)
 }
 
+pub struct DigiSounds {
+    pub sounds: Vec<Vec<u8>>,
+}
+
+impl DigiSounds {
+    pub fn new(chunk_provider: &mut dyn ChunkProvider, map_chunk: ChunkId) -> Self {
+        let map = chunk_provider.read_chunk(map_chunk);
+        let mut sounds = Vec::new();
+        let mut mc = Cursor::new(map);
+        while let Ok(mut chunk) = mc.readu16() {
+            let mut size = mc.readu16().expect("failed to read sound size");
+            let mut sound = Vec::new();
+            // piece together sounds from multiple pages if necessary
+            loop {
+                sound.append(&mut chunk_provider.read_chunk(ChunkId::Sound(chunk as usize)));
+                if size > 4096 {
+                    size -= 4096;
+                    chunk += 1;
+                } else {
+                    break;
+                }
+            }
+            sounds.push(sound);
+        }
+        Self { sounds }
+    }
+}
+
 #[test]
 fn test_vswap() {
-    let vs = VswapFile::open("vswap.wl6");
+    let mut vs = VswapFile::open("vswap.wl6");
 
     println!("chunks: {:?}", vs.chunks);
 
+    for i in 0..vs.num_sounds() {
+        let chunk = vs.read_chunk(ChunkId::Sound(i));
+        let mut f = File::create(format!("wl6/sound.{i:03}")).unwrap();
+        f.write_all(&chunk).unwrap();
+    }
     // for (offs, size) in offs.iter().zip(size.iter()) {
     //     f.seek(std::io::SeekFrom::Start(*offs as u64)).unwrap();
 
@@ -447,7 +458,16 @@ fn test_vswap() {
     //     println!("head: {size} {:x}", head);
     // }
 }
-
+#[test]
+fn test_digisound() {
+    let mut vs = VswapFile::open("vswap.wl6");
+    let map_chunk = ChunkId::Sound(vs.num_sounds() - 1);
+    let digisound = DigiSounds::new(&mut vs, map_chunk);
+    for i in 0..digisound.sounds.len() {
+        let mut f = File::create(format!("wl6/digi.{i:03}")).unwrap();
+        f.write_all(&digisound.sounds[i]).unwrap();
+    }
+}
 #[test]
 fn test_maps() {
     let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");

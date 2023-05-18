@@ -11,3 +11,4 @@ map.txt
 *.bc
 *.lb
 src/*.bak
+wl6/*
