@@ -412,6 +412,7 @@ fn map_decompress(input: &[u8], rlwe_tag: u16) -> Vec<u8> {
     rlew_decompress(&d1, rlwe_tag)
 }
 
+#[derive(Default)]
 pub struct DigiSounds {
     pub sounds: Vec<Vec<u8>>,
 }

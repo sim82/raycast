@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use state_bc::ExecImage;
 use std::path::Path;
+use wl6::DigiSounds;
 use wl6::{ChunkProvider, SpritePosts, VswapFile};
 
 pub mod block_map;
@@ -81,6 +82,7 @@ pub struct Resources {
     sprites: Vec<Texture>,
     sprite_posts: Vec<SpritePosts>,
     fallback_texture: Texture,
+    pub digisounds: DigiSounds,
 }
 impl Default for Resources {
     fn default() -> Self {
@@ -89,6 +91,7 @@ impl Default for Resources {
             textures: Default::default(),
             sprites: Default::default(),
             sprite_posts: Default::default(),
+            digisounds: Default::default(),
         }
     }
 }
@@ -118,6 +121,13 @@ impl Resources {
         }
     }
 
+    pub fn get_digisound(&self, id: i32) -> &Vec<u8> {
+        if id >= 0 && (id as usize) < self.digisounds.sounds.len() {
+            &self.digisounds.sounds[id as usize]
+        } else {
+            panic!("unknown sound {id}");
+        }
+    }
     // pub fn load_textures<P: AsRef<Path>>(list: P) -> Resources {
     // let textures = if let Ok(f) = File::open(list) {
     //     BufReader::new(f)
@@ -167,10 +177,13 @@ impl Resources {
             .map(|i| wl6::sprite_chunk_to_posts(&vs.read_chunk(wl6::ChunkId::Sprite(i))))
             .collect();
 
+        let map_chunk = wl6::ChunkId::Sound(vs.num_sounds() - 1);
+        let digisounds = DigiSounds::new(&mut vs, map_chunk);
         Resources {
             textures,
             sprites,
             sprite_posts,
+            digisounds,
             ..Default::default()
         }
     }

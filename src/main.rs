@@ -1,6 +1,12 @@
-use raycast::{palette::PALETTE, prelude::*, wl6};
+use raycast::{mainloop, palette::PALETTE, prelude::*, wl6};
 use sdl2::{
-    event::Event, keyboard::Scancode, mouse::MouseButton, pixels::PixelFormatEnum, EventPump,
+    audio::AudioSpecDesired,
+    event::Event,
+    keyboard::Scancode,
+    mixer::{InitFlag, AUDIO_U8, DEFAULT_CHANNELS},
+    mouse::MouseButton,
+    pixels::PixelFormatEnum,
+    EventPump,
 };
 
 fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
@@ -66,7 +72,27 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
     input_state.shoot |= mouse_state.is_mouse_button_pressed(MouseButton::Left);
     input_state
 }
-
+struct SdlSoundChunks {
+    chunks: Vec<sdl2::mixer::Chunk>,
+}
+impl SdlSoundChunks {
+    pub fn new(resources: &Resources) -> Self {
+        let chunks = resources
+            .digisounds
+            .sounds
+            .iter()
+            .map(|buf| sdl2::mixer::Chunk::from_raw_buffer(buf.clone().into_boxed_slice()).unwrap())
+            .collect();
+        Self { chunks }
+    }
+}
+impl mainloop::AudioService for SdlSoundChunks {
+    fn play_sound(&self, id: i32) {
+        sdl2::mixer::Channel::all()
+            .play(&self.chunks[id as usize], 0)
+            .unwrap();
+    }
+}
 fn main() -> raycast::prelude::Result<()> {
     let mut buffer: Vec<u8> = vec![0; WIDTH * HEIGHT];
 
@@ -75,6 +101,15 @@ fn main() -> raycast::prelude::Result<()> {
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
+    let _audio = sdl_context.audio().unwrap();
+    let freq = 8000;
+    let format = AUDIO_U8;
+    let channels = 1;
+    let chunk_size = 256;
+    sdl2::mixer::open_audio(freq, format, channels, chunk_size).unwrap();
+    let _mixer_context = sdl2::mixer::init(InitFlag::empty());
+    sdl2::mixer::allocate_channels(4);
+    let sound_chunks = SdlSoundChunks::new(&resources);
     let window = video_subsystem
         .window("Raycastle3D", WIDTH as u32 * 4, HEIGHT as u32 * 4)
         .position_centered()
@@ -97,7 +132,7 @@ fn main() -> raycast::prelude::Result<()> {
         input_state.misc_selection += last_misc_selection;
         last_misc_selection = input_state.misc_selection;
         mainloop.use_mouse_move = mouse_grabbed;
-        mainloop.run(&input_state, &mut buffer, &resources);
+        mainloop.run(&input_state, &mut buffer, &resources, &sound_chunks);
         if input_state.quit {
             break;
         }

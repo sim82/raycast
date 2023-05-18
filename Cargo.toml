@@ -10,7 +10,7 @@ lazy_static = "1.4"
 nom_locate = { version = "4" }
 nom = {version = "7" }
 oorandom = "11"
-sdl2 = "0.35.2"
+sdl2 = {version = "0.35.2", features = ["mixer"]}
 
 [dependencies]
 anyhow = { workspace = true }

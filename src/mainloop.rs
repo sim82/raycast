@@ -22,6 +22,9 @@ pub enum SpawnInfo {
     LoadSavegame(Option<StaticMapData>),
 }
 
+pub trait AudioService {
+    fn play_sound(&self, id: i32);
+}
 #[derive(Default)]
 pub struct InputState {
     // one-shot events
@@ -179,7 +182,13 @@ impl Mainloop {
         }
     }
 
-    pub fn run(&mut self, input_events: &InputState, buffer: &mut [u8], resources: &Resources) {
+    pub fn run(
+        &mut self,
+        input_events: &InputState,
+        buffer: &mut [u8],
+        resources: &Resources,
+        audio_service: &dyn AudioService,
+    ) {
         let dt: Fp16 = (1.0f32 / 60.0f32).into();
         let mut zbuffer = [Fp16::default(); WIDTH];
 
@@ -302,6 +311,7 @@ impl Mainloop {
             .weapon
             .run(input_events.shoot, input_events.select_weapon)
         {
+            audio_service.play_sound(5);
             if let Some(room_id) = self
                 .map_dynamic
                 .get_room_id(self.player.x.get_int(), self.player.y.get_int())
