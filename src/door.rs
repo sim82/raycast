@@ -79,7 +79,6 @@ impl Door {
                         if let Some(Value::U8(snd_id)) = env.stack.pop() {
                             audio_service.play_sound(snd_id as i32);
                         }
-                        // todo play sound
                     }
                     x => panic!("unexpected trap code {x:?}"),
                 },

@@ -837,13 +837,13 @@ function DeathScreamMecha {
     loadiu8 0
     trap
 }
-function SightMecha{
+function SightMecha {
     loadiu8 SND_UTT_SCHWEINHUND
     loadiu8 1
     loadiu8 0
     trap
 }
-function DeathScreamGrofaz{
+function DeathScreamGrofaz {
     loadiu8 SND_GIBB
     loadiu8 1
     loadiu8 0
@@ -855,13 +855,13 @@ function DeathScreamGrofazTalk {
     loadiu8 0
     trap
 }
-function DeathScreamAlp{
+function DeathScreamAlp {
     loadiu8 SND_LAUGH_ALP
     loadiu8 1
     loadiu8 0
     trap
 }
-function SightAlp{
+function SightAlp {
     loadiu8 SND_UTT_RAPUNZ
     loadiu8 1
     loadiu8 0

@@ -74,6 +74,7 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
 }
 struct SdlSoundChunks {
     chunks: Vec<sdl2::mixer::Chunk>,
+    queue: Vec<(u8, i32)>,
 }
 impl SdlSoundChunks {
     pub fn new(resources: &Resources) -> Self {
@@ -83,15 +84,33 @@ impl SdlSoundChunks {
             .iter()
             .map(|buf| sdl2::mixer::Chunk::from_raw_buffer(buf.clone().into_boxed_slice()).unwrap())
             .collect();
-        Self { chunks }
+        Self {
+            chunks,
+            queue: Default::default(),
+        }
+    }
+    pub fn update(&mut self) {
+        for (latency, id) in &mut self.queue {
+            *latency -= 1;
+            if *latency == 0 {
+                let res = sdl2::mixer::Channel::all().play(&self.chunks[*id as usize], 0);
+                if res.is_err() {
+                    println!("could not play sound.");
+                }
+            }
+        }
+        self.queue.retain(|(latency, _)| *latency != 0);
     }
 }
 impl mainloop::AudioService for SdlSoundChunks {
     fn play_sound(&mut self, id: i32) {
-        let res = sdl2::mixer::Channel::all().play(&self.chunks[id as usize], 0);
-        if res.is_err() {
-            println!("could not play sound.");
-        }
+        // add a bit of random latancy if this sound is already queued
+        let latency = if self.queue.iter().any(|(_, queued_id)| id == *queued_id) {
+            1 + (randu8() % 5) * 8
+        } else {
+            1
+        };
+        self.queue.push((latency, id));
     }
 }
 fn main() -> raycast::prelude::Result<()> {
@@ -134,6 +153,7 @@ fn main() -> raycast::prelude::Result<()> {
         last_misc_selection = input_state.misc_selection;
         mainloop.use_mouse_move = mouse_grabbed;
         mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
+        sound_chunks.update();
         if input_state.quit {
             break;
         }
