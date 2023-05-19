@@ -30,7 +30,7 @@ chase:
     state BROWN_W3_1, true, 3, None, None, next
     state BROWN_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state BROWN_DIE_1, false, 15, None, None, next
+    state BROWN_DIE_1, false, 15, None, DeathScreamBrown, next
     state BROWN_DIE_2, false, 15, None, ActionDie, next
     state BROWN_DIE_3, false, 15, None, None, next
 dead:
@@ -73,7 +73,7 @@ chase:
     state BLUE_W3_1, true, 3, None, None, next
     state BLUE_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state BLUE_DIE_1, false, 15, None, None, next
+    state BLUE_DIE_1, false, 15, None, DeathScreamBlue, next
     state BLUE_DIE_2, false, 15, None, None, next
     state BLUE_DIE_3, false, 15, None, ActionDie, next
 dead:
@@ -123,7 +123,7 @@ chase:
     state WHITE_W3_1, true, 3, None, None, next
     state WHITE_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state WHITE_DIE_1, false, 15, None, None, next
+    state WHITE_DIE_1, false, 15, None, DeathScreamWhite, next
     state WHITE_DIE_2, false, 15, None, None, next
     state WHITE_DIE_3, false, 15, None, None, next
     state WHITE_DIE_4, false, 15, None, ActionDie, next
@@ -168,7 +168,7 @@ chase:
     state ROTTEN_W3_1, true, 3, None, None, next
     state ROTTEN_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state ROTTEN_DIE_1, false, 15, None, None, next
+    state ROTTEN_DIE_1, false, 15, None, DeathScreamRotten, next
     state ROTTEN_DIE_2, false, 15, None, None, next
     state ROTTEN_DIE_3, false, 15, None, None, next
     state ROTTEN_DIE_4, false, 15, None, ActionDie, next
@@ -214,7 +214,7 @@ chase:
     state FURRY_W3_1, true, 3, None, None, next
     state FURRY_W4_1, true, 8, ThinkDogChase, None, chase
 die:
-    state FURRY_DIE_1, false, 15, None, None, next
+    state FURRY_DIE_1, false, 15, None, DeathScreamFurry, next
     state FURRY_DIE_2, false, 15, None, None, next
     state FURRY_DIE_3, false, 15, None, ActionDie, next
 dead:
@@ -552,7 +552,7 @@ ready:
 attack:
     state SPR_PISTOLATK1, false, 1, None, WeaponAttackCheckIdle, next
 repeat:
-    state SPR_PISTOLATK2, false, 3, None, ActionShoot, next
+    state SPR_PISTOLATK2, false, 3, None, ActionShootPistol, next
     state SPR_PISTOLATK3, false, 10, None, None, lower
 }
 
@@ -564,7 +564,7 @@ ready:
 attack:
     state SPR_MACHINEGUNATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
-    state SPR_MACHINEGUNATK2, false, 4, None, ActionShoot, next
+    state SPR_MACHINEGUNATK2, false, 4, None, ActionShootMg, next
     state SPR_MACHINEGUNATK3, false, 4, None, WeaponAttackCheckIdle, repeat
 }
 
@@ -577,7 +577,7 @@ ready:
 attack:
     state SPR_CHAINATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
-    state SPR_CHAINATK2, false, 4, None, ActionShoot, next
+    state SPR_CHAINATK2, false, 4, None, ActionShootChain, next
     state SPR_CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
 }
 
@@ -634,6 +634,9 @@ end:
 
 function ChaingunAttackCheckIdle {
     // BUG: need to check if ammo available before extra chaingun shot
+    loadiu8 SND_SHOT_MG
+    loadiu8 4
+    trap
     loadiu8 ACTION_SHOOT
     call
 // get ammo depleted flag
@@ -676,6 +679,9 @@ function CheckOpenDoor {
     trap
     not
     jrc end
+    loadiu8 SND_DOOR_OPEN
+    loadiu8 4
+    trap
     loadsl open
     gostate
 end:
@@ -693,6 +699,9 @@ function CheckDoorBlocked {
     loadiu8 3
     trap
     jrc end
+    loadiu8 SND_DOOR_CLOSE
+    loadiu8 4
+    trap
     loadsl close
     gostate
 end:
@@ -717,6 +726,27 @@ function ActionDie {
     loadiu8 ACTION_DIE
     call
 }
+function ActionShootPistol {
+    loadiu8 SND_SHOT_PISTOL
+    loadiu8 4
+    trap
+    loadiu8 ACTION_SHOOT
+    call
+}
+function ActionShootMg {
+    loadiu8 SND_SHOT_MG
+    loadiu8 4
+    trap
+    loadiu8 ACTION_SHOOT
+    call
+}
+function ActionShootChain {
+    loadiu8 SND_SHOT_CHAIN
+    loadiu8 4
+    trap
+    loadiu8 ACTION_SHOOT
+    call
+}
 function ActionShoot {
     loadiu8 ACTION_SHOOT
     call
@@ -727,7 +757,42 @@ function ActionBite {
 }
 function None {
 }
-
+function DeathScreamBrown {
+    loadiu8 SND_SCREAM_CHHHA
+    loadiu8 SND_SCREAM_HUUGH
+    loadiu8 SND_SCREAM_UWWWGH
+    loadiu8 SND_SCREAM_AIIII
+    loadiu8 SND_SCREAM_OOHHH
+    loadiu8 SND_SCREAM_AAGH
+    loadiu8 SND_SCREAM_AYYY
+    loadiu8 7
+    loadiu8 0
+    trap
+}
+function DeathScreamBlue {
+    loadiu8 SND_SCREAM_MEINLEBEN
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamWhite {
+    loadiu8 SND_SCREAM_NEINSOWAS
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamFurry {
+    loadiu8 SND_YIFF
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamRotten {
+    loadiu8 SND_SCREAM_ROTTEN_AAAH
+    loadiu8 1
+    loadiu8 0
+    trap
+}
 enum
 {
     FUNC_NONE,
@@ -917,4 +982,52 @@ enum
     SPR_CHAINREADY,SPR_CHAINATK1,SPR_CHAINATK2,SPR_CHAINATK3,
     SPR_CHAINATK4,
 
+}
+enum {
+    SND_HALTSTOP,
+    SND_WOOF,
+    SND_DOOR_CLOSE,
+    SND_DOOR_OPEN,
+    SND_SHOT_MG,
+    SND_SHOT_PISTOL,
+    SND_SHOT_CHAIN,
+    SND_GREET_BLUE,
+    SND_UTT_GUTENTAG,
+    SND_UTT_MUTTI,
+    SND_SHOT_BOSS,
+    SND_SHOT_BLUE,
+    SND_SCREAM_AAGH,
+    SND_SCREAM_AYYY,
+    SND_PLAYER_DAMAGE,
+    SND_SECRET,
+    SND_YIFF,
+    SND_SCREAM_ROTTEN_AAAH,
+    SND_UTT_SCHWEINHUND,
+    SND_UTT_EVA_AUFWIEDERSEHN,
+    SND_SCREAM_MEINLEBEN,
+    SND_SHOT_BROWN,
+    SND_GIBB,
+    SND_UTT_RAPUNZ,
+    SND_UTT_MEINGOTTIMHIMMEL,
+    SND_LAUGH_HUHUHAHA,
+    SND_LAUGH_ALP,
+    SND_UTT_SPION,
+    SND_SCREAM_NEINSOWAS,
+    SND_WAU_WAU,
+    SND_BREAKING,
+    SND_MECHA_STEP,
+    SND_YEAH,
+    SND_SCREAM_SCHEISS,
+    SND_SCREAM_AIIII,
+    SND_SCREAM_OOHHH,
+    SND_UTT_DONNERWETTER,
+    SND_UTT_KLEINEAMERIKANER,
+    SND_UTT_ERLAUBENSIEBITTE,
+    SND_FART,
+    SND_SCREAM_CHHHA,
+    SND_SCREAM_HUUGH,
+    SND_SCREAM_UWWWGH,
+    SND_UTT_KEINDEUTSCHKANN,
+    SND_UTT_MEINFUSSE,
+    SND_UTT_ROSENOSPE,
 }

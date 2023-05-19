@@ -602,6 +602,7 @@ impl Enemy {
         things: &Things,
         unique_id: usize,
         player: &mut Player,
+        audio_service: &mut dyn AudioService,
     ) {
         let mut env = opcode::Env::default();
         let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
@@ -614,7 +615,27 @@ impl Enemy {
                 }
                 // opcode::Event::Load(_) => todo!(),
                 // opcode::Event::Store(_) => todo!(),
-                opcode::Event::Trap => todo!(),
+                opcode::Event::Trap => match env.stack.pop() {
+                    Some(opcode::Value::U8(0)) => {
+                        let Some(opcode::Value::U8(snd_num)) = env.stack.pop() else { panic!("failed to get sound num") };
+
+                        if env.stack.len() < snd_num as usize {
+                            panic!("stack underflow: not enough sound ids");
+                        }
+                        let new_len = env.stack.len() - snd_num as usize;
+                        let sound_choice = (randu8() % snd_num) as usize;
+                        let opcode::Value::U8(snd_id) = env.stack[new_len + sound_choice] else { panic!( "expected U8 as sound id")};
+                        audio_service.play_sound(snd_id as i32);
+                        env.stack.truncate(new_len);
+
+                        // Some(opcode::Value::U8(snd_id)) => {
+                        //     // println!("play sound {snd_id}");
+                        //     audio_service.play_sound(snd_id as i32);
+                        // }
+                        // x => panic!("invalid snd id {x:?}"),
+                    }
+                    x => panic!("unexpected stack top {x:?}"),
+                },
                 opcode::Event::GoState => todo!(),
             }
         }
@@ -625,6 +646,7 @@ impl Enemy {
         things: &Things,
         unique_id: usize,
         player: &mut Player,
+        audio_service: &mut dyn AudioService,
     ) {
         // // NOTE: actions are meant to be executed exactly once per state enter (i.e. 'take_action_offs' resets state.action_offs to -1)
         // // this is different from wolf3d where actions execute on state exit (don't understand why...)
@@ -637,6 +659,7 @@ impl Enemy {
                 things,
                 unique_id,
                 player,
+                audio_service,
             );
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
@@ -647,6 +670,7 @@ impl Enemy {
             things,
             unique_id,
             player,
+            audio_service,
         );
 
         // self.states[self.cur].2();

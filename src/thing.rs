@@ -178,7 +178,12 @@ impl Things {
         }
     }
 
-    pub fn update(&mut self, player: &mut Player, map_dynamic: &mut MapDynamic) {
+    pub fn update(
+        &mut self,
+        player: &mut Player,
+        map_dynamic: &mut MapDynamic,
+        audio_service: &mut dyn AudioService,
+    ) {
         // temporarily take out things during mutation
         let mut things = std::mem::take(&mut self.things);
         let mut new_notifications = HashSet::new();
@@ -236,7 +241,7 @@ impl Things {
                             _ => (),
                         }
                     }
-                    enemy.update(map_dynamic, self, thing.unique_id, player);
+                    enemy.update(map_dynamic, self, thing.unique_id, player, audio_service);
 
                     // update blockmal link
                     if !enemy.dead {
@@ -275,7 +280,7 @@ impl Things {
                     }
                 }
                 Actor::Enemy { enemy } if enemy.dead => {
-                    enemy.update(map_dynamic, self, thing.unique_id, player);
+                    enemy.update(map_dynamic, self, thing.unique_id, player, audio_service);
                 }
                 _ => (),
             }

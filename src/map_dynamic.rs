@@ -188,7 +188,7 @@ impl MapDynamic {
         }
     }
 
-    pub fn update(&mut self, player: &Player) {
+    pub fn update(&mut self, player: &Player, audio_service: &mut dyn AudioService) {
         // use (and consume) door triggers accumulated since last update
         let mut trigger_doors = std::mem::take(&mut self.tmp_door_triggers);
         let mut trigger_pushwalls = HashMap::new();
@@ -234,6 +234,7 @@ impl MapDynamic {
             door_state.update(
                 trigger_doors.contains(&i),
                 blocked_doors.contains(&i) || !door_state.blockers.is_empty(),
+                audio_service,
             );
         }
 

@@ -84,7 +84,12 @@ impl Default for Weapon {
 }
 
 impl Weapon {
-    fn exec_code(&mut self, code_offs: i32, fire: bool) -> Result<()> {
+    fn exec_code(
+        &mut self,
+        code_offs: i32,
+        fire: bool,
+        audio_service: &mut dyn AudioService,
+    ) -> Result<()> {
         let mut env = opcode::Env::default();
         let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
         loop {
@@ -107,6 +112,11 @@ impl Weapon {
                                 env.stack.push(Value::I32(offs));
                             } else {
                                 panic!("could not find ready state for current weapon");
+                            }
+                        }
+                        Some(Value::U8(4)) => {
+                            if let Some(Value::U8(snd_id)) = env.stack.pop() {
+                                audio_service.play_sound(snd_id as i32);
                             }
                         }
                         x => panic!("unexpected trap code {x:?}"),
@@ -149,7 +159,12 @@ impl Weapon {
             _ => todo!(),
         }
     }
-    pub fn run(&mut self, fire: bool, new_weapon_type: Option<i32>) -> bool {
+    pub fn run(
+        &mut self,
+        fire: bool,
+        new_weapon_type: Option<i32>,
+        audio_service: &mut dyn AudioService,
+    ) -> bool {
         self.shoot = false;
         if let Some(new_weapon_type) = new_weapon_type {
             if let Ok(weapon_type) = WeaponType::from_weapon_id(new_weapon_type) {
@@ -158,7 +173,7 @@ impl Weapon {
         }
 
         if self.exec_ctx.state.ticks <= 0 {
-            self.exec_code(self.exec_ctx.state.action_offs, fire)
+            self.exec_code(self.exec_ctx.state.action_offs, fire, audio_service)
                 .expect("exec_code failed.");
             if self.exec_ctx.state.ticks <= 0 {
                 self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();

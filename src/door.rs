@@ -35,7 +35,7 @@ impl Default for Door {
 }
 
 impl Door {
-    pub fn update(&mut self, trigger: bool, blocked: bool) {
+    pub fn update(&mut self, trigger: bool, blocked: bool, audio_service: &mut dyn AudioService) {
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_ctx.jump(self.exec_ctx.state.next).unwrap();
         }
@@ -43,11 +43,22 @@ impl Door {
 
         // let function = self.exec_ctx.state.think;
         // self.dispatch_call(function, trigger, blocked);
-        self.exec_code(self.exec_ctx.state.think_offs, trigger, blocked)
-            .expect("exec_code failed");
+        self.exec_code(
+            self.exec_ctx.state.think_offs,
+            trigger,
+            blocked,
+            audio_service,
+        )
+        .expect("exec_code failed");
     }
 
-    fn exec_code(&mut self, code_offs: i32, trigger: bool, blocked: bool) -> Result<()> {
+    fn exec_code(
+        &mut self,
+        code_offs: i32,
+        trigger: bool,
+        blocked: bool,
+        audio_service: &mut dyn AudioService,
+    ) -> Result<()> {
         let mut env = opcode::Env::default();
         let mut cursor = Cursor::new(&self.exec_ctx.image.code[code_offs as usize..]);
         loop {
@@ -64,6 +75,12 @@ impl Door {
                     },
                     Some(Value::U8(2)) => env.stack.push(Value::Bool(trigger)),
                     Some(Value::U8(3)) => env.stack.push(Value::Bool(blocked)),
+                    Some(Value::U8(4)) => {
+                        if let Some(Value::U8(snd_id)) = env.stack.pop() {
+                            audio_service.play_sound(snd_id as i32);
+                        }
+                        // todo play sound
+                    }
                     x => panic!("unexpected trap code {x:?}"),
                 },
                 opcode::Event::GoState => {

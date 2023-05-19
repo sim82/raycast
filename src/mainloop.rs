@@ -23,7 +23,7 @@ pub enum SpawnInfo {
 }
 
 pub trait AudioService {
-    fn play_sound(&self, id: i32);
+    fn play_sound(&mut self, id: i32);
 }
 #[derive(Default)]
 pub struct InputState {
@@ -187,7 +187,7 @@ impl Mainloop {
         input_events: &InputState,
         buffer: &mut [u8],
         resources: &Resources,
-        audio_service: &dyn AudioService,
+        audio_service: &mut dyn AudioService,
     ) {
         let dt: Fp16 = (1.0f32 / 60.0f32).into();
         let mut zbuffer = [Fp16::default(); WIDTH];
@@ -253,8 +253,9 @@ impl Mainloop {
         for _ in 0..num_ticks {
             self.things.player_x = self.player.x.get_int();
             self.things.player_y = self.player.y.get_int();
-            self.things.update(&mut self.player, &mut self.map_dynamic);
-            self.map_dynamic.update(&self.player);
+            self.things
+                .update(&mut self.player, &mut self.map_dynamic, audio_service);
+            self.map_dynamic.update(&self.player, audio_service);
         }
         self.player.apply_vel(
             &self.player_vel,
@@ -306,12 +307,12 @@ impl Mainloop {
             sprite::setup_screen_pos_for_player(self.things.get_sprites(), &self.player);
 
         let mut hit_thing = None;
-        if self
-            .player
-            .weapon
-            .run(input_events.shoot, input_events.select_weapon)
-        {
-            audio_service.play_sound(5);
+        if self.player.weapon.run(
+            input_events.shoot,
+            input_events.select_weapon,
+            audio_service,
+        ) {
+            // audio_service.play_sound(5);
             if let Some(room_id) = self
                 .map_dynamic
                 .get_room_id(self.player.x.get_int(), self.player.y.get_int())

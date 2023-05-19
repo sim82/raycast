@@ -87,10 +87,11 @@ impl SdlSoundChunks {
     }
 }
 impl mainloop::AudioService for SdlSoundChunks {
-    fn play_sound(&self, id: i32) {
-        sdl2::mixer::Channel::all()
-            .play(&self.chunks[id as usize], 0)
-            .unwrap();
+    fn play_sound(&mut self, id: i32) {
+        let res = sdl2::mixer::Channel::all().play(&self.chunks[id as usize], 0);
+        if res.is_err() {
+            println!("could not play sound.");
+        }
     }
 }
 fn main() -> raycast::prelude::Result<()> {
@@ -108,8 +109,8 @@ fn main() -> raycast::prelude::Result<()> {
     let chunk_size = 256;
     sdl2::mixer::open_audio(freq, format, channels, chunk_size).unwrap();
     let _mixer_context = sdl2::mixer::init(InitFlag::empty());
-    sdl2::mixer::allocate_channels(4);
-    let sound_chunks = SdlSoundChunks::new(&resources);
+    sdl2::mixer::allocate_channels(16);
+    let mut sound_chunks = SdlSoundChunks::new(&resources);
     let window = video_subsystem
         .window("Raycastle3D", WIDTH as u32 * 4, HEIGHT as u32 * 4)
         .position_centered()
@@ -132,7 +133,7 @@ fn main() -> raycast::prelude::Result<()> {
         input_state.misc_selection += last_misc_selection;
         last_misc_selection = input_state.misc_selection;
         mainloop.use_mouse_move = mouse_grabbed;
-        mainloop.run(&input_state, &mut buffer, &resources, &sound_chunks);
+        mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
         if input_state.quit {
             break;
         }

@@ -47,7 +47,7 @@ pub mod prelude {
             FP16_ZERO,
         },
         hud,
-        mainloop::{InputState, Mainloop, SpawnInfo},
+        mainloop::{AudioService, InputState, Mainloop, SpawnInfo},
         map::{bresenham_trace, DoorType, Map, MapTile, PlaneOrientation, MAP_SIZE},
         map_dynamic::{DoorAction, DoorState, MapDynamic, PushwallAction, PushwallState},
         ms,
