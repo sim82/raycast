@@ -22,6 +22,8 @@ pain1:
     state BROWN_PAIN_1, false, 10, None, None, chase
 pain2:
     state BROWN_PAIN_2, false, 10, None, None, chase
+sight:
+    state BROWN_W1_1, true, 0, None, SightBrown, next
 chase:
     state BROWN_W1_1, true, 10, ThinkChase, None, next
     state BROWN_W1_1, true, 3, None, None, next
@@ -65,6 +67,8 @@ pain1:
     state BLUE_PAIN_1, false, 10, None, None, chase
 pain2:
     state BLUE_PAIN_2, false, 10, None, None, chase
+sight:
+    state BLUE_W1_1, true, 0, None, SightBlue, next
 chase:
     state BLUE_W1_1, true, 10, ThinkChase, None, next
     state BLUE_W1_1, true, 3, None, None, next
@@ -115,6 +119,8 @@ pain1:
     state WHITE_PAIN_1, false, 10, None, None, chase
 pain2:
     state WHITE_PAIN_2, false, 10, None, None, chase
+sight:
+    state WHITE_W1_1, true, 0, None, SightWhite, next
 chase:
     state WHITE_W1_1, true, 10, ThinkChase, None, next
     state WHITE_W1_1, true, 3, None, None, next
@@ -160,6 +166,7 @@ pain1:
     state ROTTEN_PAIN_1, false, 10, None, None, chase
 pain2:
     state ROTTEN_PAIN_2, false, 10, None, None, chase
+sight:
 chase:
     state ROTTEN_W1_1, true, 10, ThinkChase, None, next
     state ROTTEN_W1_1, true, 3, None, None, next
@@ -207,6 +214,7 @@ pain1:
 pain2:
     state FURRY_DIE_1, false, 10, None, None, chase
 chase:
+sight:
     state FURRY_W1_1, true, 10, ThinkDogChase, None, next
     state FURRY_W1_1, true, 3, None, None, next
     state FURRY_W2_1, true, 8, ThinkDogChase, None, next
@@ -246,6 +254,7 @@ pain1:
     state BOSS_DIE1, false, 10, None, None, chase
 pain2:
     state BOSS_DIE1, false, 10, None, None, chase
+sight:
 chase:
     state BOSS_W1, false, 10, ThinkChase, None, next
     state BOSS_W1, false, 3, None, None, next
@@ -283,6 +292,7 @@ pain1:
     state GOOD_DR_W1, false, 10, None, None, chase
 pain2:
     state GOOD_DR_W1, false, 10, None, None, chase
+sight:
 chase:
     state GOOD_DR_W1, false, 10, ThinkChase, None, next
     state GOOD_DR_W1, false, 3, None, None, next
@@ -320,6 +330,7 @@ pain1:
     state GROFAZ_W1, false, 10, None, None, chase
 pain2:
     state GROFAZ_W1, false, 10, None, None, chase
+sight:
 chase:
     state GROFAZ_W1, false, 10, ThinkChase, None, next
     state GROFAZ_W1, false, 3, None, None, next
@@ -328,7 +339,9 @@ chase:
     state GROFAZ_W3, false, 3, None, None, next
     state GROFAZ_W4, false, 8, ThinkChase, None, chase
 die:
-    state GROFAZ_DIE1, false, 15, None, None, next
+    state GROFAZ_W1, false, 0, None, DeathScreamGrofazTalk, next
+    state GROFAZ_W1, false, 90, None, None, next
+    state GROFAZ_DIE1, false, 15, None, DeathScreamGrofaz, next
     state GROFAZ_DIE2, false, 15, None, None, next
     state GROFAZ_DIE3, false, 15, None, None, next
     state GROFAZ_DIE4, false, 15, None, None, next
@@ -362,6 +375,8 @@ pain1:
     state MECHA_DIE1, false, 10, None, None, chase
 pain2:
     state MECHA_DIE1, false, 10, None, None, chase
+sight:
+    state MECHA_W1, false, 0, None, SightMecha, next
 chase:
     state MECHA_W1, false, 10, ThinkChase, None, next
     state MECHA_W1, false, 3, None, None, next
@@ -370,7 +385,7 @@ chase:
     state MECHA_W3, false, 3, None, None, next
     state MECHA_W4, false, 8, ThinkChase, None, chase
 die:
-    state MECHA_DIE1, false, 15, None, None, next
+    state MECHA_DIE1, false, 15, None, DeathScreamMecha, next
     state MECHA_DIE2, false, 15, None, None, next
     state MECHA_DIE3, false, 15, None, ActionDie, next
     state MECHA_DIE3, false, 0, None, None, next
@@ -400,6 +415,8 @@ pain1:
     state ALP_DIE1, false, 10, None, None, chase
 pain2:
     state ALP_DIE1, false, 10, None, None, chase
+sight:
+    state ALP_W1, false, 0, None, SightAlp, next
 chase:
     state ALP_W1, false, 10, ThinkChase, None, next
     state ALP_W1, false, 3, None, None, next
@@ -408,7 +425,7 @@ chase:
     state ALP_W3, false, 3, None, None, next
     state ALP_W4, false, 8, ThinkChase, None, chase
 die:
-    state ALP_DIE1, false, 15, None, None, next
+    state ALP_DIE1, false, 15, None, DeathScreamAlp, next
     state ALP_DIE2, false, 15, None, None, next
     state ALP_DIE3, false, 15, None, None, next
     state ALP_DIE4, false, 15, None, ActionDie, next
@@ -439,6 +456,7 @@ pain1:
     state HERMANN_W1, false, 10, None, None, chase
 pain2:
     state HERMANN_W1, false, 10, None, None, chase
+sight:
 chase:
     state HERMANN_W1, false, 10, ThinkChase, None, next
     state HERMANN_W1, false, 3, None, None, next
@@ -475,6 +493,7 @@ pain1:
     state GRETEL_W1, false, 10, None, None, chase
 pain2:
     state GRETEL_W1, false, 10, None, None, chase
+sight:
 chase:
     state GRETEL_W1, false, 10, ThinkChase, None, next
     state GRETEL_W1, false, 3, None, None, next
@@ -511,6 +530,7 @@ pain1:
     state FETTGEISCHT_W1, false, 10, None, None, chase
 pain2:
     state FETTGEISCHT_W1, false, 10, None, None, chase
+sight:
 chase:
     state FETTGEISCHT_W1, false, 10, ThinkChase, None, next
     state FETTGEISCHT_W1, false, 3, None, None, next
@@ -769,14 +789,32 @@ function DeathScreamBrown {
     loadiu8 0
     trap
 }
+function SightBrown{
+    loadiu8 SND_HALTSTOP
+    loadiu8 1
+    loadiu8 0
+    trap
+}
 function DeathScreamBlue {
     loadiu8 SND_SCREAM_MEINLEBEN
     loadiu8 1
     loadiu8 0
     trap
 }
+function SightBlue{
+    loadiu8 SND_GREET_BLUE 
+    loadiu8 1
+    loadiu8 0
+    trap
+}
 function DeathScreamWhite {
     loadiu8 SND_SCREAM_NEINSOWAS
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function SightWhite {
+    loadiu8 SND_UTT_SPION
     loadiu8 1
     loadiu8 0
     trap
@@ -789,6 +827,42 @@ function DeathScreamFurry {
 }
 function DeathScreamRotten {
     loadiu8 SND_SCREAM_ROTTEN_AAAH
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamMecha {
+    loadiu8 SND_UTT_SCHEISS
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function SightMecha{
+    loadiu8 SND_UTT_SCHWEINHUND
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamGrofaz{
+    loadiu8 SND_GIBB
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamGrofazTalk {
+    loadiu8 SND_UTT_EVAAUFWIEDERSEHN
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function DeathScreamAlp{
+    loadiu8 SND_LAUGH_ALP
+    loadiu8 1
+    loadiu8 0
+    trap
+}
+function SightAlp{
+    loadiu8 SND_UTT_RAPUNZ
     loadiu8 1
     loadiu8 0
     trap
@@ -1003,7 +1077,7 @@ enum {
     SND_YIFF,
     SND_SCREAM_ROTTEN_AAAH,
     SND_UTT_SCHWEINHUND,
-    SND_UTT_EVA_AUFWIEDERSEHN,
+    SND_UTT_EVAAUFWIEDERSEHN,
     SND_SCREAM_MEINLEBEN,
     SND_SHOT_BROWN,
     SND_GIBB,
@@ -1017,7 +1091,7 @@ enum {
     SND_BREAKING,
     SND_MECHA_STEP,
     SND_YEAH,
-    SND_SCREAM_SCHEISS,
+    SND_UTT_SCHEISS,
     SND_SCREAM_AIIII,
     SND_SCREAM_OOHHH,
     SND_UTT_DONNERWETTER,

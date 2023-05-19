@@ -208,7 +208,7 @@ impl Enemy {
     }
     fn think_path(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
         if self.notify || self.check_player_sight(things, map_dynamic, unique_id) {
-            self.set_state("chase");
+            self.set_state("sight");
             self.notify = true;
             return;
         }
@@ -224,7 +224,7 @@ impl Enemy {
 
     fn think_stand(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
         if self.notify || self.check_player_sight(things, map_dynamic, unique_id) {
-            self.set_state("chase");
+            self.set_state("sight");
             self.notify = true;
         }
     }
