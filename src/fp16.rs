@@ -140,6 +140,29 @@ impl Mul<i32> for Fp16 {
     }
 }
 
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+pub struct Vec216 {
+    pub x: Fp16,
+    pub y: Fp16,
+}
+
+impl Sub<Vec216> for Vec216 {
+    type Output = Vec216;
+
+    fn sub(self, rhs: Vec216) -> Self::Output {
+        Vec216 {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+impl Vec216 {
+    pub fn new(x: Fp16, y: Fp16) -> Self {
+        Vec216 { x, y }
+    }
+}
+
 #[test]
 fn test_fp16() {
     let v1: Fp16 = 123.456.into();
