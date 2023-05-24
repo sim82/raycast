@@ -157,6 +157,16 @@ impl Sub<Vec216> for Vec216 {
     }
 }
 
+impl Add<Vec216> for Vec216 {
+    type Output = Vec216;
+
+    fn add(self, rhs: Vec216) -> Self::Output {
+        Vec216 {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
 impl Vec216 {
     pub fn new(x: Fp16, y: Fp16) -> Self {
         Vec216 { x, y }
@@ -174,4 +184,28 @@ fn test_fp16() {
 
     assert_eq!(v2.get_int(), -124);
     // assert_eq!(v2.get_fract(), ((1.0 - 0.456) * FP16_F) as u32 + 1);
+}
+#[test]
+fn test_vec2() {
+    let x1 = 123.456.into();
+    let y1 = 234.567.into();
+    let v1 = Vec216::new(x1, y1);
+
+    let x2 = 654.321.into();
+    let y2 = 765.432.into();
+    let v2 = Vec216::new(x2, y2);
+
+    let d1 = v1 - v2;
+    assert_eq!(d1.x, (x1 - x2));
+    assert_eq!(d1.y, (y1 - y2));
+    let d2 = v2 - v1;
+    assert_eq!(d2.x, (x2 - x1));
+    assert_eq!(d2.y, (y2 - y1));
+
+    let s1 = v1 + v2;
+    assert_eq!(s1.x, (x1 + x2));
+    assert_eq!(s1.y, (y1 + y2));
+    let s2 = v2 + v1;
+    assert_eq!(s2.x, (x2 + x1));
+    assert_eq!(s2.y, (y2 + y1));
 }
