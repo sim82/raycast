@@ -10,7 +10,7 @@ use std::{
 
 use super::ast::{StatesBlock, StatesBlockElement};
 #[derive(Default)]
-struct BytecodeOutput {
+pub struct BytecodeOutput {
     code: Vec<u8>,
     start_ptr: i32,
 }

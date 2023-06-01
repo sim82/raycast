@@ -21,6 +21,7 @@ state_bc = {path = "crates/state_bc"}
 
 [build-dependencies]
 state_bc = {path = "crates/state_bc", features = ["compiler"]}
+state_lang_nt = {path = "crates/state_lang_nt" }
 
 [profile.release]
 opt-level = 3     # Optimize for size
@@ -36,4 +37,5 @@ opt-level = 3
 [workspace]
 members = [
     "crates/state_bc",
+    "crates/state_lang_nt"
 ]

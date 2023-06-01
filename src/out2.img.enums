@@ -1,0 +1,3 @@
+const ENUM_NAMES: [(&str, i32); 4] = [
+(",", 45), ("FUNC_NONE", 0), ("SND_HALTSTOP", 0), ("SPR_NONE", 0), 
+];

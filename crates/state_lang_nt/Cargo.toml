@@ -1,0 +1,18 @@
+[package]
+name = "state_lang_nt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cfgrammar = "0.13.1"
+lrlex = "0.13.1"
+lrpar = "0.13.1"
+state_bc = { path = "../state_bc", features = ["compiler"] }
+
+[build-dependencies]
+cfgrammar = "0.13.1"
+lrlex = "0.13.1"
+lrpar = "0.13.1"
+lazy_static = { workspace = true }
