@@ -10,7 +10,7 @@ pub mod frontent {
     use super::util;
     use lrlex::lrlex_mod;
     use lrpar::{lrpar_mod, Lexer, NonStreamingLexer};
-    use state_bc::{EnemySpawnInfo, SpawnInfos};
+    use state_bc::{Direction, EnemySpawnInfo, SpawnInfos};
 
     lrlex_mod!("state_bc.l");
     lrpar_mod!("state_bc.y");
@@ -52,21 +52,41 @@ pub mod frontent {
                     elements,
                 } => {
                     let name = lexer.span_str(name_span);
-                    // for spawn_element in elements.iter() {
-                    //     let state = lexer.span_str(spawn_element.state);
-                    //     let spawn_info = EnemySpawnInfo {
-                    //         id: spawn_element.id as i32,
-                    //         direction: Direction::East,
-                    //         state: format!("{}::{}", name, spawn_element.state),
-                    //         spawn_on_death: None,
-                    //     };
-                    //     spawn_info.state = ;
-                    //     spawn_infos.push(spawn_info);
-                    // }
+                    for spawn_element in elements.iter() {
+                        let state = lexer.span_str(spawn_element.state);
+                        let state = format!("{}::{}", name, state);
+                        println!("{state}");
+                        if spawn_element.directional {
+                            for (i, direction) in [
+                                Direction::East,
+                                Direction::North,
+                                Direction::West,
+                                Direction::South,
+                            ]
+                            .iter()
+                            .enumerate()
+                            {
+                                spawn_infos.push(EnemySpawnInfo {
+                                    id: spawn_element.id as i32 + i as i32,
+                                    direction: *direction,
+                                    state: state.clone(),
+                                    spawn_on_death: None, // spawn_on_death(&bonus_item_name),
+                                })
+                            }
+                        } else {
+                            spawn_infos.push(EnemySpawnInfo {
+                                id: spawn_element.id as i32,
+                                direction: Direction::South, // FIXME: not really
+                                state,
+                                spawn_on_death: None, // spawn_on_death(&bonus_item_name),
+                            })
+                        }
+                    }
                 }
                 Toplevel::Enum(enum_decl) => {
                     for (i, name_span) in enum_decl.iter().enumerate() {
                         let name = lexer.span_str(*name_span);
+                        // println!("{i} {name}");
                         enums.insert(name.into(), i);
                     }
                 }

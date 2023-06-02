@@ -39,7 +39,7 @@ StateElement -> Result<StateElement,Box<dyn Error>>:
 
 EnumBody -> Result<Vec<Span>,Box<dyn Error>>:
 	'IDENTIFIER' { Ok(vec![$1?.span()])}
-	| EnumBody ',' 'IDENTIFIER' { flatten($1,Ok($2?.span()))	}
+	| EnumBody ',' 'IDENTIFIER' { flatten($1,Ok($3?.span()))	}
 	;
 	
 	
