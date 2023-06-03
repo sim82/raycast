@@ -108,7 +108,7 @@ fn parse_states_block(input: Span) -> Res<'_, ToplevelElement> {
     ))
 }
 
-fn spawn_on_death(name: &str) -> Option<i32> {
+pub fn spawn_on_death(name: &str) -> Option<i32> {
     match name {
         "ammo" => Some(49),
         "silver_key" => Some(43),

@@ -102,6 +102,16 @@ pub mod frontent {
                     for spawn_element in elements.iter() {
                         let state = lexer.span_str(spawn_element.state);
                         let state = format!("{}::{}", name, state);
+                        let bonus_item_name = lexer.span_str(spawn_element.drop);
+                        // FIXME: horrible hack: put this mapping in a better location
+                        fn spawn_on_death(name: &str) -> Option<i32> {
+                            match name {
+                                "ammo" => Some(49),
+                                "silver_key" => Some(43),
+                                "grofaz" => Some(224), // FIXME: abuse blinky
+                                _ => None,
+                            }
+                        }
                         // println!("{state}");
                         if spawn_element.directional {
                             for (i, direction) in [
@@ -117,7 +127,7 @@ pub mod frontent {
                                     id: spawn_element.id as i32 + i as i32,
                                     direction: *direction,
                                     state: state.clone(),
-                                    spawn_on_death: None, // spawn_on_death(&bonus_item_name),
+                                    spawn_on_death: spawn_on_death(&bonus_item_name),
                                 })
                             }
                         } else {
@@ -125,7 +135,7 @@ pub mod frontent {
                                 id: spawn_element.id as i32,
                                 direction: Direction::South, // FIXME: not really
                                 state,
-                                spawn_on_death: None, // spawn_on_death(&bonus_item_name),
+                                spawn_on_death: spawn_on_death(&bonus_item_name),
                             })
                         }
                     }
