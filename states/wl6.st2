@@ -644,7 +644,7 @@ function WeaponAttackCheckIdle {
     // follow through to next (usually this mean fire/repeat)
 }
 
-// function ChaingunAttackCheckIdle {
+function ChaingunAttackCheckIdle {
 //     // BUG: need to check if ammo available before extra chaingun shot
 //     loadiu8 SND_SHOT_MG
 //     loadiu8 4
@@ -669,7 +669,8 @@ function WeaponAttackCheckIdle {
 //     gostate
 // end:
 // // follow through to next (usually this mean fire/repeat)
-// }
+    stop
+}
 function IncOpen {
     0u8 trap
     1024i32 add
@@ -680,7 +681,7 @@ function DecOpen {
     -1024i32 add
     1u8 trap
 }
-// function CheckOpenDoor {
+function CheckOpenDoor {
 //     loadiu8 2
 //     trap
 //     not
@@ -691,8 +692,9 @@ function DecOpen {
 //     loadsl open
 //     gostate
 // end:
-// }
-// function CheckCloseDoor {
+    stop
+}
+function CheckCloseDoor {
 //     loadiu8 2
 //     trap
 //     not
@@ -700,8 +702,9 @@ function DecOpen {
 //     loadsl blocked
 //     gostate
 // end:
-// }
-// function CheckDoorBlocked {
+    stop
+}
+function CheckDoorBlocked {
 //     loadiu8 3
 //     trap
 //     jrc end
@@ -711,59 +714,71 @@ function DecOpen {
 //     loadsl close
 //     gostate
 // end:
-// }
-// function ThinkStand {
+    stop
+}
+function ThinkStand {
 //     loadiu8 THINK_STAND
 //     call
-// }
-// function ThinkPath {
+    stop
+}
+function ThinkPath {
 //     loadiu8 THINK_PATH
 //     call
-// }
-// function ThinkChase {
+    stop
+}
+function ThinkChase {
 //     loadiu8 THINK_CHASE
 //     call
-// }
-// function ThinkDogChase {
+    stop
+}
+function ThinkDogChase {
 //     loadiu8 THINK_DOG_CHASE
 //     call
-// }
-// function ActionDie {
+    stop
+}
+function ActionDie {
 //     loadiu8 ACTION_DIE
 //     call
-// }
-// function ActionShootPistol {
+    stop
+}
+function ActionShootPistol {
 //     loadiu8 SND_SHOT_PISTOL
 //     loadiu8 4
 //     trap
 //     loadiu8 ACTION_SHOOT
 //     call
-// }
-// function ActionShootMg {
+    stop
+}
+function ActionShootMg {
 //     loadiu8 SND_SHOT_MG
 //     loadiu8 4
 //     trap
 //     loadiu8 ACTION_SHOOT
 //     call
-// }
-// function ActionShootChain {
+    stop
+}
+function ActionShootChain {
 //     loadiu8 SND_SHOT_CHAIN
 //     loadiu8 4
 //     trap
 //     loadiu8 ACTION_SHOOT
 //     call
-// }
-// function ActionShoot {
+    stop
+}
+function ActionShoot {
 //     loadiu8 ACTION_SHOOT
 //     call
-// }
-// function ActionBite {
+    stop
+}
+function ActionBite {
 //     loadiu8 ACTION_BITE
 //     call
-// }
-// function None {
-// }
-// function DeathScreamBrown {
+    stop
+}
+function None {
+    stop
+}
+function DeathScreamBrown {
 //     loadiu8 SND_SCREAM_CHHHA
 //     loadiu8 SND_SCREAM_HUUGH
 //     loadiu8 SND_SCREAM_UWWWGH
@@ -774,85 +789,99 @@ function DecOpen {
 //     loadiu8 7
 //     loadiu8 0
 //     trap
-// }
-// function SightBrown{
+    stop
+}
+function SightBrown{
 //     loadiu8 SND_HALTSTOP
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamBlue {
+    stop
+}
+function DeathScreamBlue {
 //     loadiu8 SND_SCREAM_MEINLEBEN
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function SightBlue{
+    stop
+}
+function SightBlue{
 //     loadiu8 SND_GREET_BLUE 
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamWhite {
+    stop
+}
+function DeathScreamWhite {
 //     loadiu8 SND_SCREAM_NEINSOWAS
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function SightWhite {
+    stop
+}
+function SightWhite {
 //     loadiu8 SND_UTT_SPION
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamFurry {
+    stop
+}
+function DeathScreamFurry {
 //     loadiu8 SND_YIFF
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamRotten {
+    stop
+}
+function DeathScreamRotten {
 //     loadiu8 SND_SCREAM_ROTTEN_AAAH
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamMecha {
+    stop
+}
+function DeathScreamMecha {
 //     loadiu8 SND_UTT_SCHEISS
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function SightMecha {
+    stop
+}
+function SightMecha {
 //     loadiu8 SND_UTT_SCHWEINHUND
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamGrofaz {
+    stop
+}
+function DeathScreamGrofaz {
 //     loadiu8 SND_GIBB
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamGrofazTalk {
+    stop
+}
+function DeathScreamGrofazTalk {
 //     loadiu8 SND_UTT_EVAAUFWIEDERSEHN
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function DeathScreamAlp {
+    stop
+}
+function DeathScreamAlp {
 //     loadiu8 SND_LAUGH_ALP
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
-// function SightAlp {
+    stop
+}
+function SightAlp {
 //     loadiu8 SND_UTT_RAPUNZ
 //     loadiu8 1
 //     loadiu8 0
 //     trap
-// }
+    stop
+}
 enum
 {
     FUNC_NONE,

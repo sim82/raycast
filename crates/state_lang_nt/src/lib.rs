@@ -10,7 +10,11 @@ pub mod frontent {
     use super::util;
     use lrlex::lrlex_mod;
     use lrpar::{lrpar_mod, Lexer, NonStreamingLexer};
-    use state_bc::{Direction, EnemySpawnInfo, SpawnInfos};
+    use state_bc::{
+        compiler::ast::{FunctionBlock, StatesBlock, StatesBlockElement},
+        opcode::Codegen,
+        Direction, EnemySpawnInfo, SpawnInfos,
+    };
 
     lrlex_mod!("state_bc.l");
     lrpar_mod!("state_bc.y");
@@ -43,10 +47,53 @@ pub mod frontent {
         let mut state_blocks = Vec::new();
         let mut spawn_infos = Vec::new();
         // let mut function_blocks = Vec::new();
+        let mut functions = BTreeMap::new();
 
         for tle in toplevel_elements {
             match tle {
-                Toplevel::States { name, elements } => {}
+                Toplevel::States { name, elements } => {
+                    let mut out_elements = Vec::new();
+                    let name = lexer.span_str(name).into();
+                    for e in elements.iter() {
+                        match e {
+                            state_bc_y::StateElement::State {
+                                sprite,
+                                directional,
+                                timeout,
+                                think,
+                                action,
+                                next,
+                            } => {
+                                let id = lexer.span_str(*sprite).into();
+                                let think = lexer.span_str(*think).into();
+                                let action = lexer.span_str(*action).into();
+                                let next = lexer.span_str(*next).into();
+
+                                out_elements.push(StatesBlockElement::State {
+                                    id,
+                                    directional: *directional,
+                                    ticks: *timeout as i32,
+                                    think,
+                                    action,
+                                    next,
+                                })
+                            }
+                            state_bc_y::StateElement::Label(label_name) => {
+                                // let mut full_label_name =
+                                //     format!("{}::{}", name, lexer.span_str(*label_name));
+                                // full_label_name.pop(); // FIXME: get rid of the : in some other way...
+                                // println!("'{full_label_name}'");
+                                let mut label_name: String = lexer.span_str(*label_name).into();
+                                label_name.pop();
+                                out_elements.push(StatesBlockElement::Label(label_name));
+                            }
+                        }
+                    }
+                    state_blocks.push(StatesBlock {
+                        name,
+                        elements: out_elements,
+                    });
+                }
                 Toplevel::Spawn {
                     name: name_span,
                     elements,
@@ -55,7 +102,7 @@ pub mod frontent {
                     for spawn_element in elements.iter() {
                         let state = lexer.span_str(spawn_element.state);
                         let state = format!("{}::{}", name, state);
-                        println!("{state}");
+                        // println!("{state}");
                         if spawn_element.directional {
                             for (i, direction) in [
                                 Direction::East,
@@ -90,10 +137,15 @@ pub mod frontent {
                         enums.insert(name.into(), i);
                     }
                 }
-                Toplevel::Function { name, body } => {}
+                Toplevel::Function { name, body } => {
+                    let name: String = lexer.span_str(name).into();
+
+                    let mut codegen = Codegen::default().with_annotation("source", &name);
+                    println!("'{name}'");
+                    functions.insert(name, codegen.stop());
+                }
             }
         }
-        let mut functions = BTreeMap::new();
         {
             let mut enum_file = std::fs::File::create(format!("{outname}.enums")).unwrap();
             // write!(enum_file, "{enums:?}").unwrap();
