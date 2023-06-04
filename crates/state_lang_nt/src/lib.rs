@@ -36,13 +36,16 @@ pub mod frontent {
         for e in &errs {
             println!("{}", e.pp(&lexer, &state_bc_y::token_epp));
         }
-        if errs.is_empty() {
-            match &res {
-                Some(Ok(r)) => println!("Result: {:?}", r),
-                Some(Err(e)) => eprintln!("{}", e),
-                _ => eprintln!("Unable to evaluate expression."),
-            }
+        if !errs.is_empty() {
+            panic!("parse error. abort.");
         }
+        // if errs.is_empty() {
+        match &res {
+            Some(Ok(r)) => println!("Result: {:?}", r),
+            Some(Err(e)) => eprintln!("{}", e),
+            _ => eprintln!("Unable to evaluate expression."),
+        }
+        // }
         let toplevel_elements = res.unwrap().unwrap();
 
         let mut enums = BTreeMap::new();
@@ -201,6 +204,7 @@ pub mod frontent {
                 Word::GoState => codegen.gostate(),
                 Word::Stop => codegen.stop(),
                 Word::Add => codegen.add(),
+                Word::Call => codegen.call(),
             }
         }
         codegen

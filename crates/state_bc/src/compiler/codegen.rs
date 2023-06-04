@@ -156,7 +156,7 @@ pub fn codegen(
     // luxury feature: sort bytecode blocks by descending size. This way the bytecode
     // compression should be approximately ideal (there might be better ordering to also
     // leverage matches across different blocks, but yeah well...)
-    codegens.sort_unstable_by_key(|(_, codegen)| -(codegen.len() as i64));
+    codegens.sort_unstable_by_key(|(name, codegen)| (-(codegen.len() as i64), name.clone()));
     let mut bytecode_output = BytecodeOutput::new(ip);
     let mut bc_pos = HashMap::new();
     let mut map_f =

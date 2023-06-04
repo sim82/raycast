@@ -150,7 +150,11 @@ impl Codegen {
         self
     }
     pub fn bin_not(mut self) -> Self {
-        self.code.push(NOT);
+        if self.code.last() == Some(&NOT) {
+            self.code.pop();
+        } else {
+            self.code.push(NOT);
+        }
         self
     }
     pub fn call(mut self) -> Self {
@@ -162,7 +166,9 @@ impl Codegen {
         self
     }
     pub fn stop(mut self) -> Self {
-        self.code.push(STOP);
+        if self.code.last() != Some(&STOP) {
+            self.code.push(STOP);
+        }
         self
     }
     pub fn jrc(mut self, offs: i32) -> Self {

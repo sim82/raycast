@@ -72,6 +72,7 @@ Word -> Result<Word, Box<dyn Error>>:
 	| 'gostate' { Ok(Word::GoState) }
 	| 'stop' { Ok(Word::Stop) }
 	| 'add' { Ok(Word::Add)}
+	| 'call' { Ok(Word::Call)}
 	;
 
 TypedIntExpr -> Result<TypedInt, Box<dyn Error>>:
@@ -179,5 +180,6 @@ pub enum Word {
 	If(Vec<Word>),
 	GoState,
 	Stop,
-	Add
+	Add,
+	Call
 }
