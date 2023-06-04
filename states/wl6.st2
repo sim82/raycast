@@ -651,25 +651,22 @@ function ChaingunAttackCheckIdle {
 //     trap
 //     loadiu8 ACTION_SHOOT
 //     call
-// // get ammo depleted flag
-//     loadiu8 1
-//     trap
-//     not
-//     jrc have_ammo
-// // out of ammo. stay in this state (keep weapon raised)
-//     loadsl attack
-//     gostate
-//     stop
-// have_ammo:
-//     loadiu8 0
-//     trap
-// jrc end:
-// // if fire was released abort and goto lower state
-//     loadsl lower
-//     gostate
-// end:
-// // follow through to next (usually this mean fire/repeat)
-    stop
+    0u8 4u8 trap // TODO: play correct sound
+    0u8 call // TODO: use correct action
+    // get ammo depleted flag
+    1u8 trap
+    if
+        // out of ammo. stay in this state (keep weapon raised)
+        @attack gostate
+        stop
+    then
+    // get fire flag
+    0u8 trap
+    not if
+        // if fire was released abort and goto lower state
+        @lower gostate
+    then
+    // follow through to next (usually this mean fire/repeat)
 }
 function IncOpen {
     0u8 trap

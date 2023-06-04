@@ -5,7 +5,9 @@ pub mod frontent {
         path::Path,
     };
 
-    use self::state_bc_y::Toplevel;
+    use crate::util::SpanResolver;
+
+    use self::state_bc_y::{Toplevel, TypedInt, Word};
 
     use super::util;
     use lrlex::lrlex_mod;
@@ -151,6 +153,7 @@ pub mod frontent {
                     let name: String = lexer.span_str(name).into();
 
                     let mut codegen = Codegen::default().with_annotation("source", &name);
+                    let codegen = emit_code(codegen, &body, &lexer);
                     println!("'{name}'");
                     functions.insert(name, codegen.stop());
                 }
@@ -181,8 +184,33 @@ pub mod frontent {
         );
         std::fs::rename(tmp_outname, outname).unwrap();
     }
+
+    fn emit_code(mut codegen: Codegen, body: &[Word], span_resolver: &dyn SpanResolver) -> Codegen {
+        for word in body {
+            codegen = match word {
+                Word::Push(TypedInt::U8(v)) => codegen.loadi_u8(*v),
+                Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
+                Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
+                Word::Trap => codegen.trap(),
+                Word::Not => codegen.bin_not(),
+                Word::If(body) => {
+                    let end_label = codegen.next_autolabel();
+                    emit_code(codegen.bin_not().jrc_label(&end_label), body, span_resolver)
+                        .label(&end_label)
+                }
+                Word::GoState => codegen.gostate(),
+                Word::Stop => codegen.stop(),
+                Word::Add => codegen.add(),
+            }
+        }
+        codegen
+    }
 }
 pub mod util {
+    use cfgrammar::Span;
+    use lrlex::{DefaultLexerTypes, LRNonStreamingLexer};
+    use lrpar::NonStreamingLexer;
+
     pub fn remove_comments(input: &mut String) {
         let mut comments = Vec::new();
         let mut in_comment = false;
@@ -208,6 +236,14 @@ pub mod util {
         comments.reverse();
         for (start, end) in comments {
             input.replace_range(start..end, "");
+        }
+    }
+    pub trait SpanResolver {
+        fn get_span(&self, span: Span) -> &str;
+    }
+    impl SpanResolver for LRNonStreamingLexer<'_, '_, DefaultLexerTypes> {
+        fn get_span(&self, span: Span) -> &str {
+            self.span_str(span)
         }
     }
 }

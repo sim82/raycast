@@ -117,6 +117,7 @@ pub struct Codegen {
     label_refs: Vec<(String, usize)>,
     state_label_refs: Vec<(String, usize)>,
     annotations: HashMap<String, String>,
+    autolabel_index: i32,
 }
 
 impl Codegen {
@@ -232,6 +233,11 @@ impl Codegen {
     }
     pub fn get_annotation(&self, key: &str) -> Option<&str> {
         self.annotations.get(key).map(|s| s.as_str())
+    }
+    pub fn next_autolabel(&mut self) -> String {
+        let label = format!("autolabel{}", self.autolabel_index);
+        self.autolabel_index += 1;
+        label
     }
 }
 
