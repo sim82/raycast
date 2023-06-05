@@ -156,7 +156,7 @@ pub mod frontent {
                     let name: String = lexer.span_str(name).into();
 
                     let mut codegen = Codegen::default().with_annotation("source", &name);
-                    let codegen = emit_code(codegen, &body, &lexer);
+                    let codegen = emit_code(codegen, &body, &lexer, &enums);
                     println!("'{name}'");
                     functions.insert(name, codegen.stop());
                 }
@@ -188,18 +188,35 @@ pub mod frontent {
         std::fs::rename(tmp_outname, outname).unwrap();
     }
 
-    fn emit_code(mut codegen: Codegen, body: &[Word], span_resolver: &dyn SpanResolver) -> Codegen {
+    fn emit_code(
+        mut codegen: Codegen,
+        body: &[Word],
+        span_resolver: &dyn SpanResolver,
+        enums: &BTreeMap<String, usize>,
+    ) -> Codegen {
         for word in body {
             codegen = match word {
                 Word::Push(TypedInt::U8(v)) => codegen.loadi_u8(*v),
                 Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
                 Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
+                Word::PushEnum(name) => {
+                    let name = span_resolver.get_span(*name);
+                    let v = enums
+                        .get(name)
+                        .unwrap_or_else(|| panic!("could not find enum {name}"));
+                    codegen.loadi_u8(*v as u8)
+                }
                 Word::Trap => codegen.trap(),
                 Word::Not => codegen.bin_not(),
                 Word::If(body) => {
                     let end_label = codegen.next_autolabel();
-                    emit_code(codegen.bin_not().jrc_label(&end_label), body, span_resolver)
-                        .label(&end_label)
+                    emit_code(
+                        codegen.bin_not().jrc_label(&end_label),
+                        body,
+                        span_resolver,
+                        enums,
+                    )
+                    .label(&end_label)
                 }
                 Word::GoState => codegen.gostate(),
                 Word::Stop => codegen.stop(),

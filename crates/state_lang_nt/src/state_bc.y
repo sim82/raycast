@@ -65,6 +65,7 @@ WordList -> Result<Vec<Word>, Box<dyn Error>>:
 	
 Word -> Result<Word, Box<dyn Error>>:
 	TypedIntExpr { Ok(Word::Push($1?)) }
+	| 'IDENTIFIER' { Ok(Word::PushEnum($1?.span()))}
 	| 'trap' { Ok(Word::Trap )}
 	| 'not' { Ok(Word::Not)}
 	| 'if' WordList 'then' { Ok(Word::If($2?))}
@@ -175,6 +176,7 @@ pub enum TypeName {
 pub enum Word {
 	Push(TypedInt),
 	PushStateLabel(Span),
+	PushEnum(Span), // FIXME: only u8 for now
 	Trap,
 	Not,
 	If(Vec<Word>),
