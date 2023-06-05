@@ -647,7 +647,8 @@ function WeaponAttackCheckIdle {
 function ChaingunAttackCheckIdle {
      // BUG: need to check if ammo available before extra chaingun shot
     SND_SHOT_MG 4u8 trap 
-    ACTION_SHOOT call // TODO: use correct action
+    ACTION_SHOOT call 
+
     // get ammo depleted flag
     1u8 trap
     if
@@ -690,60 +691,48 @@ function CheckCloseDoor {
 function CheckDoorBlocked {
     3u8 trap
     not if 
-        SND_DOOR_CLOSE
-        4u8 trap
+        SND_DOOR_CLOSE 4u8 trap
         @close gostate
     then
 }
 function ThinkStand {
-    THINK_STAND
-    call
+    THINK_STAND call
 }
 function ThinkPath {
-    THINK_PATH
-    call
+    THINK_PATH call
 }
 function ThinkChase {
-    THINK_CHASE
-    call
+    THINK_CHASE call
 }
 function ThinkDogChase {
-    THINK_DOG_CHASE
-    call
+    THINK_DOG_CHASE call
 }
 function ActionDie {
-    ACTION_DIE
-    call
+    ACTION_DIE call
 }
 function ActionShootPistol {
-    SND_SHOT_PISTOL
-    4u8 trap
-    ACTION_SHOOT
-    call
+    SND_SHOT_PISTOL 4u8 trap
+    ACTION_SHOOT call
 }
 function ActionShootMg {
-    SND_SHOT_MG
-    4u8 trap
-    ACTION_SHOOT
-    call
+    SND_SHOT_MG 4u8 trap
+    ACTION_SHOOT call
 }
 function ActionShootChain {
-    SND_SHOT_CHAIN
-    4u8 trap
-    ACTION_SHOOT
-    call
+    SND_SHOT_CHAIN 4u8 trap
+    ACTION_SHOOT call
 }
 function ActionShoot {
-    ACTION_SHOOT
-    call
+    ACTION_SHOOT call
 }
 function ActionBite {
-    ACTION_BITE
-    call
+    ACTION_BITE call
 }
 function None {
     stop
 }
+// NOTE: the enemy play sound trap works different than doors/weapons
+// it supports a list of alternatives from which to choose randomly.
 function DeathScreamBrown {
     SND_SCREAM_CHHHA
     SND_SCREAM_HUUGH
@@ -756,56 +745,43 @@ function DeathScreamBrown {
 
 }
 function SightBrown{
-    SND_HALTSTOP
-    1u8 0u8 trap
+    SND_HALTSTOP 1u8 0u8 trap
 }
 function DeathScreamBlue {
-    SND_SCREAM_MEINLEBEN
-    1u8 0u8 trap
+    SND_SCREAM_MEINLEBEN 1u8 0u8 trap
 }
 function SightBlue{
-    SND_GREET_BLUE 
-    1u8 0u8 trap
+    SND_GREET_BLUE 1u8 0u8 trap
 }
 function DeathScreamWhite {
-    SND_SCREAM_NEINSOWAS
-    1u8 0u8 trap
+    SND_SCREAM_NEINSOWAS 1u8 0u8 trap
 }
 function SightWhite {
-    SND_UTT_SPION
-    1u8 0u8 trap
+    SND_UTT_SPION 1u8 0u8 trap
 }
 function DeathScreamFurry {
-    SND_YIFF
-    1u8 0u8 trap
+    SND_YIFF 1u8 0u8 trap
 }
 function DeathScreamRotten {
-    SND_SCREAM_ROTTEN_AAAH
-    1u8 0u8 trap
+    SND_SCREAM_ROTTEN_AAAH 1u8 0u8 trap
 }
 function DeathScreamMecha {
-    SND_UTT_SCHEISS
-    1u8 0u8 trap
+    SND_UTT_SCHEISS 1u8 0u8 trap
 }
 function SightMecha {
-    SND_UTT_SCHWEINHUND
-    1u8 0u8 trap
+    SND_UTT_SCHWEINHUND 1u8 0u8 trap
 }
 function DeathScreamGrofaz {
-    SND_GIBB
-    1u8 0u8 trap
+    SND_GIBB 1u8 0u8 trap
 }
 function DeathScreamGrofazTalk {
-    SND_UTT_EVAAUFWIEDERSEHN
-    1u8 0u8 trap
+    SND_UTT_EVAAUFWIEDERSEHN 1u8 0u8 trap
 }
 function DeathScreamAlp {
-    SND_LAUGH_ALP
-    1u8 0u8 trap
+    SND_LAUGH_ALP 1u8 0u8 trap
 }
 function SightAlp {
-    SND_UTT_RAPUNZ
-    1u8 0u8 trap
+    SND_UTT_RAPUNZ 1u8 0u8 trap
 }
 enum
 {
