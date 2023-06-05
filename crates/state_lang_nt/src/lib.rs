@@ -51,8 +51,7 @@ pub mod frontent {
         let mut enums = BTreeMap::new();
         let mut state_blocks = Vec::new();
         let mut spawn_infos = Vec::new();
-        // let mut function_blocks = Vec::new();
-        let mut functions = BTreeMap::new();
+        let mut function_blocks = Vec::new();
 
         for tle in toplevel_elements {
             match tle {
@@ -153,14 +152,18 @@ pub mod frontent {
                     }
                 }
                 Toplevel::Function { name, body } => {
-                    let name: String = lexer.span_str(name).into();
-
-                    let mut codegen = Codegen::default().with_annotation("source", &name);
-                    let codegen = emit_code(codegen, &body, &lexer, &enums);
-                    println!("'{name}'");
-                    functions.insert(name, codegen.stop());
+                    function_blocks.push((name, body));
                 }
             }
+        }
+        let mut functions = BTreeMap::new();
+        for (name, body) in function_blocks {
+            let name: String = lexer.span_str(name).into();
+
+            let mut codegen = Codegen::default().with_annotation("source", &name);
+            let codegen = emit_code(codegen, &body, &lexer, &enums);
+            println!("'{name}'");
+            functions.insert(name, codegen.stop());
         }
         {
             let mut enum_file = std::fs::File::create(format!("{outname}.enums")).unwrap();

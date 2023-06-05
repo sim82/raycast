@@ -646,8 +646,8 @@ function WeaponAttackCheckIdle {
 
 function ChaingunAttackCheckIdle {
      // BUG: need to check if ammo available before extra chaingun shot
-    0u8 4u8 trap // TODO: play correct sound
-    0u8 call // TODO: use correct action
+    SND_SHOT_MG 4u8 trap 
+    ACTION_SHOOT call // TODO: use correct action
     // get ammo depleted flag
     1u8 trap
     if
@@ -676,8 +676,7 @@ function DecOpen {
 function CheckOpenDoor {
     2u8 trap
     if
-        10u8 // FIXME
-        4u8 trap
+        SND_DOOR_OPEN 4u8 trap
         @open gostate
     then
 }
@@ -691,124 +690,121 @@ function CheckCloseDoor {
 function CheckDoorBlocked {
     3u8 trap
     not if 
-        10u8 // FIXME SND_DOOR_CLOSE
+        SND_DOOR_CLOSE
         4u8 trap
         @close gostate
     then
 }
 function ThinkStand {
-    9u8 // FIXME THINK_STAND
+    THINK_STAND
     call
 }
 function ThinkPath {
-    11u8 // FIXME THINK_PATH
+    THINK_PATH
     call
 }
 function ThinkChase {
-    12u8 // FIXME THINK_PATH
+    THINK_CHASE
     call
 }
 function ThinkDogChase {
-    13u8 // FIXME THINK_DOG_CHASE
+    THINK_DOG_CHASE
     call
 }
 function ActionDie {
-    14u8 // FIXME ACTION_DIE
+    ACTION_DIE
     call
 }
 function ActionShootPistol {
-    25u8 // FIXME SND_SHOT_PISTOL
+    SND_SHOT_PISTOL
     4u8 trap
-    15u8 // FIXME ACTION_SHOOT
+    ACTION_SHOOT
     call
 }
 function ActionShootMg {
-    26u8 // FIXME SND_SHOT_MG
+    SND_SHOT_MG
     4u8 trap
-    16u8 // FIXME ACTION_SHOOT
+    ACTION_SHOOT
     call
 }
 function ActionShootChain {
-    27u8 // FIXME SND_SHOT_CHAIN
+    SND_SHOT_CHAIN
     4u8 trap
-    17u8 // FIXME ACTION_SHOOT
+    ACTION_SHOOT
     call
 }
 function ActionShoot {
-    15u8 // FIXME ACTION_SHOOT
+    ACTION_SHOOT
     call
 }
 function ActionBite {
-    18u8 // FIXME ACTION_BITE
+    ACTION_BITE
     call
 }
 function None {
     stop
 }
 function DeathScreamBrown {
-    1u8 2u8 3u8 4u8 5u8 6u8 7u8
+    SND_SCREAM_CHHHA
+    SND_SCREAM_HUUGH
+    SND_SCREAM_UWWWGH
+    SND_SCREAM_AIIII
+    SND_SCREAM_OOHHH
+    SND_SCREAM_AAGH
+    SND_SCREAM_AYYY
     7u8 0u8 trap
-//     loadiu8 SND_SCREAM_CHHHA
-//     loadiu8 SND_SCREAM_HUUGH
-//     loadiu8 SND_SCREAM_UWWWGH
-//     loadiu8 SND_SCREAM_AIIII
-//     loadiu8 SND_SCREAM_OOHHH
-//     loadiu8 SND_SCREAM_AAGH
-//     loadiu8 SND_SCREAM_AYYY
-//     loadiu8 7
-//     loadiu8 0
-//     trap
+
 }
 function SightBrown{
-    2u8 // FIXME SND_HALTSTOP
+    SND_HALTSTOP
     1u8 0u8 trap
 }
 function DeathScreamBlue {
-    3u8 // FIXME SND_SCREAM_MEINLEBEN
+    SND_SCREAM_MEINLEBEN
     1u8 0u8 trap
 }
 function SightBlue{
-    4u8 // FIXME SND_GREET_BLUE 
+    SND_GREET_BLUE 
     1u8 0u8 trap
 }
 function DeathScreamWhite {
-    19u8 // FIXME SND_SCREAM_NEINSOWAS
+    SND_SCREAM_NEINSOWAS
     1u8 0u8 trap
 }
 function SightWhite {
-    5u8 // FIXME SND_UTT_SPION
+    SND_UTT_SPION
     1u8 0u8 trap
 }
 function DeathScreamFurry {
-    6u8 // FIXME SND_YIFF
+    SND_YIFF
     1u8 0u8 trap
 }
 function DeathScreamRotten {
-    9u8 // FIXME SND_SCREAM_ROTTEN_AAAH
+    SND_SCREAM_ROTTEN_AAAH
     1u8 0u8 trap
 }
 function DeathScreamMecha {
-    13u8 // FIXME SND_UTT_SCHEISS
+    SND_UTT_SCHEISS
     1u8 0u8 trap
 }
 function SightMecha {
-    14u8 // FIXME SND_UTT_SCHWEINHUND
+    SND_UTT_SCHWEINHUND
     1u8 0u8 trap
 }
 function DeathScreamGrofaz {
-    15u8 // FIXME SND_GIBB
+    SND_GIBB
     1u8 0u8 trap
 }
 function DeathScreamGrofazTalk {
-    16u8 // FIXME SND_UTT_EVAAUFWIEDERSEHN
+    SND_UTT_EVAAUFWIEDERSEHN
     1u8 0u8 trap
 }
 function DeathScreamAlp {
-    17u8 // FIXME SND_LAUGH_ALP
+    SND_LAUGH_ALP
     1u8 0u8 trap
 }
 function SightAlp {
-    18u8 // FIXME SND_UTT_RAPUNZ
+    SND_UTT_RAPUNZ
     1u8 0u8 trap
 }
 enum
