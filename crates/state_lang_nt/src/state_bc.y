@@ -74,6 +74,7 @@ Word -> Result<Word, Box<dyn Error>>:
 	| 'stop' { Ok(Word::Stop) }
 	| 'add' { Ok(Word::Add)}
 	| 'call' { Ok(Word::Call)}
+	| '[' WordList ']' { Ok(Word::WordList($2?))}
 	;
 
 TypedIntExpr -> Result<TypedInt, Box<dyn Error>>:
@@ -186,5 +187,6 @@ pub enum Word {
 	GoState,
 	Stop,
 	Add,
-	Call
+	Call,
+	WordList(Vec<Word>),
 }

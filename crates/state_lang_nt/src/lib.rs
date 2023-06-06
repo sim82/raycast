@@ -225,6 +225,9 @@ pub mod frontent {
                 Word::Stop => codegen.stop(),
                 Word::Add => codegen.add(),
                 Word::Call => codegen.call(),
+                Word::WordList(body) => {
+                    emit_code(codegen, body, span_resolver, enums).loadi_u8(body.len() as u8)
+                }
             }
         }
         codegen

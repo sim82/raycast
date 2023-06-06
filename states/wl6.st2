@@ -734,54 +734,55 @@ function None {
 // NOTE: the enemy play sound trap works different than doors/weapons
 // it supports a list of alternatives from which to choose randomly.
 function DeathScreamBrown {
-    SND_SCREAM_CHHHA
-    SND_SCREAM_HUUGH
-    SND_SCREAM_UWWWGH
-    SND_SCREAM_AIIII
-    SND_SCREAM_OOHHH
-    SND_SCREAM_AAGH
-    SND_SCREAM_AYYY
-    7 RND_SOUND trap
+    [
+        SND_SCREAM_CHHHA
+        SND_SCREAM_HUUGH
+        SND_SCREAM_UWWWGH
+        SND_SCREAM_AIIII
+        SND_SCREAM_OOHHH
+        SND_SCREAM_AAGH
+        SND_SCREAM_AYYY
+    ] RND_SOUND trap
 
 }
 function SightBrown{
-    SND_HALTSTOP 1 RND_SOUND trap
+    [SND_HALTSTOP] RND_SOUND trap
 }
 function DeathScreamBlue {
-    SND_SCREAM_MEINLEBEN 1 RND_SOUND trap
+    [SND_SCREAM_MEINLEBEN] RND_SOUND trap
 }
 function SightBlue{
-    SND_GREET_BLUE 1 RND_SOUND trap
+    [SND_GREET_BLUE] RND_SOUND trap
 }
 function DeathScreamWhite {
-    SND_SCREAM_NEINSOWAS 1 RND_SOUND trap
+    [SND_SCREAM_NEINSOWAS] RND_SOUND trap
 }
 function SightWhite {
-    SND_UTT_SPION 1 RND_SOUND trap
+    [SND_UTT_SPION] RND_SOUND trap
 }
 function DeathScreamFurry {
-    SND_YIFF 1 RND_SOUND trap
+    [SND_YIFF] RND_SOUND trap
 }
 function DeathScreamRotten {
-    SND_SCREAM_ROTTEN_AAAH 1 RND_SOUND trap
+    [SND_SCREAM_ROTTEN_AAAH] RND_SOUND trap
 }
 function DeathScreamMecha {
-    SND_UTT_SCHEISS 1 RND_SOUND trap
+    [SND_UTT_SCHEISS] RND_SOUND trap
 }
 function SightMecha {
-    SND_UTT_SCHWEINHUND 1 RND_SOUND trap
+    [SND_UTT_SCHWEINHUND] RND_SOUND trap
 }
 function DeathScreamGrofaz {
-    SND_GIBB 1 RND_SOUND trap
+    [SND_GIBB] RND_SOUND trap
 }
 function DeathScreamGrofazTalk {
-    SND_UTT_EVAAUFWIEDERSEHN 1 RND_SOUND trap
+    [SND_UTT_EVAAUFWIEDERSEHN] RND_SOUND trap
 }
 function DeathScreamAlp {
-    SND_LAUGH_ALP 1 RND_SOUND trap
+    [SND_LAUGH_ALP] RND_SOUND trap
 }
 function SightAlp {
-    SND_UTT_RAPUNZ 1 RND_SOUND trap
+    [SND_UTT_RAPUNZ] RND_SOUND trap
 }
 enum
 {
