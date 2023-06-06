@@ -83,6 +83,9 @@ TypedIntExpr -> Result<TypedInt, Box<dyn Error>>:
 			TypeName::I32 => Ok(TypedInt::I32($1? as i32)),
 		}
 	}
+	| Expr {
+		Ok(TypedInt::U8($1? as u8))
+	}
 	;
 
 TypeName -> Result<TypeName, Box<dyn Error>>: 

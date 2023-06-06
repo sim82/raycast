@@ -615,7 +615,7 @@ blocked:
 }
 function WeaponIdleCheckFire {
 // get fire flag
-    0u8 trap
+    WEAPON_TRIGGER trap
 
     if
         // goto attack state
@@ -623,19 +623,19 @@ function WeaponIdleCheckFire {
         stop
     then
 // 'dynamically' look up ready state of currently selected weapon // i.e. this is how a weapon change is implemented
-    2u8 trap
+    WEAPON_NEXT_STATE trap
     gostate
 }
 function WeaponAttackCheckIdle {
     // get ammo depleted flag
-    1u8 trap
+    WEAPON_DEPLETED trap
     if
         // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    0u8 trap
+    WEAPON_TRIGGER trap
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -645,19 +645,19 @@ function WeaponAttackCheckIdle {
 }
 
 function ChaingunAttackCheckIdle {
-     // BUG: need to check if ammo available before extra chaingun shot
-    SND_SHOT_MG 4u8 trap 
+    // BUG: need to check if ammo available before extra chaingun shot
+    SND_SHOT_MG WEAPON_SOUND trap 
     ACTION_SHOOT call 
 
     // get ammo depleted flag
-    1u8 trap
+    WEAPON_DEPLETED trap
     if
         // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    0u8 trap
+    WEAPON_TRIGGER trap
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -665,33 +665,33 @@ function ChaingunAttackCheckIdle {
     // follow through to next (usually this mean fire/repeat)
 }
 function IncOpen {
-    0u8 trap
+    DOOR_GET_F trap
     1024i32 add
-    1u8 trap
+    DOOR_SET_F  trap
 }
 function DecOpen {
-    0u8 trap
+    DOOR_GET_F  trap
     -1024i32 add
-    1u8 trap
+    DOOR_SET_F  trap
 }
 function CheckOpenDoor {
-    2u8 trap
+    DOOR_TRIGGER trap
     if
-        SND_DOOR_OPEN 4u8 trap
+        SND_DOOR_OPEN DOOR_SOUND trap
         @open gostate
     then
 }
 function CheckCloseDoor {
     // stop
-    2u8 trap
+    DOOR_TRIGGER trap
     if
         @blocked gostate
     then
 }
 function CheckDoorBlocked {
-    3u8 trap
+    DOOR_BLOCKED trap
     not if 
-        SND_DOOR_CLOSE 4u8 trap
+        SND_DOOR_CLOSE DOOR_SOUND  trap
         @close gostate
     then
 }
@@ -711,15 +711,15 @@ function ActionDie {
     ACTION_DIE call
 }
 function ActionShootPistol {
-    SND_SHOT_PISTOL 4u8 trap
+    SND_SHOT_PISTOL WEAPON_SOUND trap
     ACTION_SHOOT call
 }
 function ActionShootMg {
-    SND_SHOT_MG 4u8 trap
+    SND_SHOT_MG WEAPON_SOUND trap
     ACTION_SHOOT call
 }
 function ActionShootChain {
-    SND_SHOT_CHAIN 4u8 trap
+    SND_SHOT_CHAIN WEAPON_SOUND trap
     ACTION_SHOOT call
 }
 function ActionShoot {
@@ -741,47 +741,47 @@ function DeathScreamBrown {
     SND_SCREAM_OOHHH
     SND_SCREAM_AAGH
     SND_SCREAM_AYYY
-    7u8 0u8 trap
+    7 RND_SOUND trap
 
 }
 function SightBrown{
-    SND_HALTSTOP 1u8 0u8 trap
+    SND_HALTSTOP 1 RND_SOUND trap
 }
 function DeathScreamBlue {
-    SND_SCREAM_MEINLEBEN 1u8 0u8 trap
+    SND_SCREAM_MEINLEBEN 1 RND_SOUND trap
 }
 function SightBlue{
-    SND_GREET_BLUE 1u8 0u8 trap
+    SND_GREET_BLUE 1 RND_SOUND trap
 }
 function DeathScreamWhite {
-    SND_SCREAM_NEINSOWAS 1u8 0u8 trap
+    SND_SCREAM_NEINSOWAS 1 RND_SOUND trap
 }
 function SightWhite {
-    SND_UTT_SPION 1u8 0u8 trap
+    SND_UTT_SPION 1 RND_SOUND trap
 }
 function DeathScreamFurry {
-    SND_YIFF 1u8 0u8 trap
+    SND_YIFF 1 RND_SOUND trap
 }
 function DeathScreamRotten {
-    SND_SCREAM_ROTTEN_AAAH 1u8 0u8 trap
+    SND_SCREAM_ROTTEN_AAAH 1 RND_SOUND trap
 }
 function DeathScreamMecha {
-    SND_UTT_SCHEISS 1u8 0u8 trap
+    SND_UTT_SCHEISS 1 RND_SOUND trap
 }
 function SightMecha {
-    SND_UTT_SCHWEINHUND 1u8 0u8 trap
+    SND_UTT_SCHWEINHUND 1 RND_SOUND trap
 }
 function DeathScreamGrofaz {
-    SND_GIBB 1u8 0u8 trap
+    SND_GIBB 1 RND_SOUND trap
 }
 function DeathScreamGrofazTalk {
-    SND_UTT_EVAAUFWIEDERSEHN 1u8 0u8 trap
+    SND_UTT_EVAAUFWIEDERSEHN 1 RND_SOUND trap
 }
 function DeathScreamAlp {
-    SND_LAUGH_ALP 1u8 0u8 trap
+    SND_LAUGH_ALP 1 RND_SOUND trap
 }
 function SightAlp {
-    SND_UTT_RAPUNZ 1u8 0u8 trap
+    SND_UTT_RAPUNZ 1 RND_SOUND trap
 }
 enum
 {
@@ -793,6 +793,26 @@ enum
     ACTION_DIE,
     ACTION_SHOOT,
     ACTION_BITE
+}
+enum 
+{
+    RND_SOUND
+}
+enum 
+{
+    DOOR_GET_F,
+    DOOR_SET_F,
+    DOOR_TRIGGER,
+    DOOR_BLOCKED,
+    DOOR_SOUND 
+}
+enum 
+{
+    WEAPON_TRIGGER,
+    WEAPON_DEPLETED,
+    WEAPON_NEXT_STATE,
+    WEAPON3,
+    WEAPON_SOUND
 }
 enum
 {
