@@ -711,7 +711,7 @@ function ActionDie {
     ACTION_DIE call
 }
 function ActionShootPistol {
-    SND_SHOT_PISTOL WEAPON_SOUND trap
+    Snd::SND_SHOT_PISTOL Op::WEAPON_SOUND trap
     ACTION_SHOOT call
 }
 function ActionShootMg {
@@ -994,7 +994,7 @@ enum
     SPR_CHAINATK4
 
 }
-enum {
+xnum Snd {
     SND_HALTSTOP,
     SND_WOOF,
     SND_DOOR_CLOSE,

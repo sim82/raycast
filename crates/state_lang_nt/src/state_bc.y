@@ -13,6 +13,9 @@ Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	| 'enum' '{' EnumBody '}' {
 		Ok(Toplevel::Enum($3?))
 	}
+	| 'xnum' 'IDENTIFIER' '{' EnumBody '}' {
+		Ok(Toplevel::Xnum{name: $2?.span(), elements: $4?})
+	} 
 	| 'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
 		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
 	}
@@ -31,7 +34,7 @@ StateElement -> Result<StateElement,Box<dyn Error>>:
 	'state' 'IDENTIFIER' ',' Bool ',' Expr ',' 'IDENTIFIER' ',' 'IDENTIFIER' ',' 'IDENTIFIER' {
 		Ok(StateElement::State { sprite: $2?.span(), directional: $4?, timeout: $6?, think: $8?.span(), action: $10?.span(), next: $12?.span() })
 	}
-	| 'LABEL' {
+	| 'IDENTIFIER' ':' {
 		Ok(StateElement::Label ( $1?.span() ))
 	}
 	;
@@ -66,6 +69,7 @@ WordList -> Result<Vec<Word>, Box<dyn Error>>:
 Word -> Result<Word, Box<dyn Error>>:
 	TypedIntExpr { Ok(Word::Push($1?)) }
 	| 'IDENTIFIER' { Ok(Word::PushEnum($1?.span()))}
+	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushXnum($1?.span(),$3?.span()))}
 	| 'trap' { Ok(Word::Trap )}
 	| 'not' { Ok(Word::Not)}
 	| 'if' WordList 'then' { Ok(Word::If($2?))}
@@ -147,6 +151,7 @@ pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
 	Enum(Vec<Span>),
+	Xnum{name: Span, elements: Vec<Span>},
 	Function { name: Span, body: Vec<Word> },
 }
 
@@ -181,6 +186,7 @@ pub enum Word {
 	Push(TypedInt),
 	PushStateLabel(Span),
 	PushEnum(Span), // FIXME: only u8 for now
+	PushXnum(Span,Span), // FIXME: only u8 for now
 	Trap,
 	Not,
 	If(Vec<Word>),

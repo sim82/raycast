@@ -88,7 +88,7 @@ pub mod frontent {
                                 // full_label_name.pop(); // FIXME: get rid of the : in some other way...
                                 // println!("'{full_label_name}'");
                                 let mut label_name: String = lexer.span_str(*label_name).into();
-                                label_name.pop();
+                                // label_name.pop();
                                 out_elements.push(StatesBlockElement::Label(label_name));
                             }
                         }
@@ -151,6 +151,13 @@ pub mod frontent {
                         enums.insert(name.into(), i);
                     }
                 }
+                Toplevel::Xnum { name, elements } => {
+                    for (i, name_span) in elements.iter().enumerate() {
+                        let name = lexer.span_str(*name_span);
+                        // println!("{i} {name}");
+                        enums.insert(name.into(), i);
+                    }
+                }
                 Toplevel::Function { name, body } => {
                     function_blocks.push((name, body));
                 }
@@ -203,6 +210,13 @@ pub mod frontent {
                 Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
                 Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
                 Word::PushEnum(name) => {
+                    let name = span_resolver.get_span(*name);
+                    let v = enums
+                        .get(name)
+                        .unwrap_or_else(|| panic!("could not find enum {name}"));
+                    codegen.loadi_u8(*v as u8)
+                }
+                Word::PushXnum(_enum_name, name) => {
                     let name = span_resolver.get_span(*name);
                     let v = enums
                         .get(name)
@@ -285,4 +299,14 @@ fn test_remove_comments() {
     .into();
     util::remove_comments(&mut input);
     println!("{input}");
+}
+mod test {
+    enum Test {
+        A,
+        B,
+        C,
+    }
+    fn test() {
+        let a = Test::A;
+    }
 }
