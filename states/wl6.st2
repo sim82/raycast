@@ -696,13 +696,13 @@ function CheckDoorBlocked {
     then
 }
 function ThinkStand {
-    Func::THINK_STAND call
+    Func::ThinkStand call
 }
 function ThinkPath {
-    Func::THINK_PATH call
+    Func::ThinkPath call
 }
 function ThinkChase {
-    Func::THINK_CHASE call
+    Func::ThinkChase call
 }
 function ThinkDogChase {
     Func::THINK_DOG_CHASE call
@@ -742,54 +742,54 @@ function DeathScreamBrown {
         Snd::SCREAM_OOHHH
         Snd::SCREAM_AAGH
         Snd::SCREAM_AYYY
-    ] EnemyOp::RND_SOUND trap
+    ] EnemyOp::Play trap
 
 }
 function SightBrown{
-    [Snd::HALTSTOP] EnemyOp::RND_SOUND trap
+    [Snd::HALTSTOP] EnemyOp::Play trap
 }
 function DeathScreamBlue {
-    [Snd::SCREAM_MEINLEBEN] EnemyOp::RND_SOUND trap
+    [Snd::SCREAM_MEINLEBEN] EnemyOp::Play trap
 }
 function SightBlue{
-    [Snd::GREET_BLUE] EnemyOp::RND_SOUND trap
+    [Snd::GREET_BLUE] EnemyOp::Play trap
 }
 function DeathScreamWhite {
-    [Snd::SCREAM_NEINSOWAS] EnemyOp::RND_SOUND trap
+    [Snd::SCREAM_NEINSOWAS] EnemyOp::Play trap
 }
 function SightWhite {
-    [Snd::UTT_SPION] EnemyOp::RND_SOUND trap
+    [Snd::UTT_SPION] EnemyOp::Play trap
 }
 function DeathScreamFurry {
-    [Snd::YIFF] EnemyOp::RND_SOUND trap
+    [Snd::YIFF] EnemyOp::Play trap
 }
 function DeathScreamRotten {
-    [Snd::SCREAM_ROTTEN_AAAH] EnemyOp::RND_SOUND trap
+    [Snd::SCREAM_ROTTEN_AAAH] EnemyOp::Play trap
 }
 function DeathScreamMecha {
-    [Snd::UTT_SCHEISS] EnemyOp::RND_SOUND trap
+    [Snd::UTT_SCHEISS] EnemyOp::Play trap
 }
 function SightMecha {
-    [Snd::UTT_SCHWEINHUND] EnemyOp::RND_SOUND trap
+    [Snd::UTT_SCHWEINHUND] EnemyOp::Play trap
 }
 function DeathScreamGrofaz {
-    [Snd::GIBB] EnemyOp::RND_SOUND trap
+    [Snd::GIBB] EnemyOp::Play trap
 }
 function DeathScreamGrofazTalk {
-    [Snd::UTT_EVAAUFWIEDERSEHN] EnemyOp::RND_SOUND trap
+    [Snd::UTT_EVAAUFWIEDERSEHN] EnemyOp::Play trap
 }
 function DeathScreamAlp {
-    [Snd::LAUGH_ALP] EnemyOp::RND_SOUND trap
+    [Snd::LAUGH_ALP] EnemyOp::Play trap
 }
 function SightAlp {
-    [Snd::UTT_RAPUNZ] EnemyOp::RND_SOUND trap
+    [Snd::UTT_RAPUNZ] EnemyOp::Play trap
 }
 enum Func
 {
     FUNC_NONE,
-    THINK_STAND,
-    THINK_PATH,
-    THINK_CHASE,
+    ThinkStand,
+    ThinkPath,
+    ThinkChase,
     THINK_DOG_CHASE,
     ACTION_DIE,
     ACTION_SHOOT,
@@ -797,7 +797,7 @@ enum Func
 }
 enum EnemyOp 
 {
-    RND_SOUND
+    Play
 }
 enum DoorOp
 {
