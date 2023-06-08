@@ -630,7 +630,7 @@ function WeaponAttackCheckIdle {
     // get ammo depleted flag
     WeaponOp::DEPLETED trap
     if
-        // out of ammo. stay in this state Spr::(keep weapon raised)
+        // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
@@ -662,10 +662,11 @@ function ChaingunAttackCheckIdle {
         // if fire was released abort and goto lower state
         @lower gostate
     then
-    // follow through to next (usually this mean fire/repeat)
+    // follow through to next (usually this means fire/repeat)
 }
 function IncOpen {
     DoorOp::GET_F trap
+    // 1024 equals 1/64 in fp16 repr (i.e. open door in 64 steps)
     1024i32 add
     DoorOp::SET_F  trap
 }
@@ -682,7 +683,6 @@ function CheckOpenDoor {
     then
 }
 function CheckCloseDoor {
-    // stop
     DoorOp::TRIGGER trap
     if
         @blocked gostate
