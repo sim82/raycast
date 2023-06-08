@@ -646,7 +646,7 @@ function WeaponAttackCheckIdle {
 
 function ChaingunAttackCheckIdle {
     // BUG: need to check if ammo available before extra chaingun shot
-    Snd::ShotMg WeaponOp::Sound trap 
+    Snd::ShotMg WeaponOp::Play trap 
     Func::ActionShoot call 
 
     // get ammo depleted flag
@@ -678,7 +678,7 @@ function DecOpen {
 function CheckOpenDoor {
     DoorOp::Trigger trap
     if
-        Snd::DoorOpen DoorOp::Sound trap
+        Snd::DoorOpen DoorOp::Play trap
         @open gostate
     then
 }
@@ -691,7 +691,7 @@ function CheckCloseDoor {
 function CheckDoorBlocked {
     DoorOp::Blocked trap
     not if 
-        Snd::DoorClose DoorOp::Sound  trap
+        Snd::DoorClose DoorOp::Play trap
         @close gostate
     then
 }
@@ -711,15 +711,15 @@ function ActionDie {
     Func::ActionDie call
 }
 function ActionShootPistol {
-    Snd::ShotPistol WeaponOp::Sound trap
+    Snd::ShotPistol WeaponOp::Play trap
     Func::ActionShoot call
 }
 function ActionShootMg {
-    Snd::ShotMg WeaponOp::Sound trap
+    Snd::ShotMg WeaponOp::Play trap
     Func::ActionShoot call
 }
 function ActionShootChain {
-    Snd::ShotChain WeaponOp::Sound trap
+    Snd::ShotChain WeaponOp::Play trap
     Func::ActionShoot call
 }
 function ActionShoot {
@@ -752,7 +752,7 @@ function DeathScreamBlue {
     [Snd::ScreamMeinleben] EnemyOp::Play trap
 }
 function SightBlue{
-    [Snd::GreetBlue] EnemyOp::Play trap
+    [Snd::SchuhzApfel] EnemyOp::Play trap
 }
 function DeathScreamWhite {
     [Snd::ScreamNeinsowas] EnemyOp::Play trap
@@ -801,11 +801,11 @@ enum EnemyOp
 }
 enum DoorOp
 {
-GetF,
+    GetF,
     SetF,
     Trigger,
     Blocked,
-    Sound 
+    Play 
 }
 enum WeaponOp 
 {
@@ -813,7 +813,7 @@ enum WeaponOp
     Depleted,
     NextState,
     Unused3,
-    Sound
+    Play
 }
 enum Spr
 {
@@ -1002,7 +1002,7 @@ enum Snd {
     ShotMg,
     ShotPistol,
     ShotChain,
-    GreetBlue,
+    SchuhzApfel,
     UttGutentag,
     UttMutti,
     ShotBoss,
