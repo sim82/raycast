@@ -758,7 +758,7 @@ function DeathScreamWhite {
     [Snd::ScreamNeinsowas] EnemyOp::Play trap
 }
 function SightWhite {
-    [Snd::UttSpion] EnemyOp::Play trap
+    [Snd::Spion] EnemyOp::Play trap
 }
 function DeathScreamFurry {
     [Snd::Yiff] EnemyOp::Play trap
@@ -767,22 +767,22 @@ function DeathScreamRotten {
     [Snd::ScreamRottenAaah] EnemyOp::Play trap
 }
 function DeathScreamMecha {
-    [Snd::UttScheiss] EnemyOp::Play trap
+    [Snd::Scheiss] EnemyOp::Play trap
 }
 function SightMecha {
-    [Snd::UttSchweinhund] EnemyOp::Play trap
+    [Snd::Schweinhund] EnemyOp::Play trap
 }
 function DeathScreamGrofaz {
     [Snd::Gibb] EnemyOp::Play trap
 }
 function DeathScreamGrofazTalk {
-    [Snd::UttEvaaufwiedersehn] EnemyOp::Play trap
+    [Snd::Evaaufwiedersehn] EnemyOp::Play trap
 }
 function DeathScreamAlp {
     [Snd::LaughAlp] EnemyOp::Play trap
 }
 function SightAlp {
-    [Snd::UttRapunz] EnemyOp::Play trap
+    [Snd::Rapunz] EnemyOp::Play trap
 }
 enum Func
 {
@@ -1003,8 +1003,8 @@ enum Snd {
     ShotPistol,
     ShotChain,
     SchuhzApfel,
-    UttGutentag,
-    UttMutti,
+    Gutentag,
+    Mutti,
     ShotBoss,
     ShotBlue,
     ScreamAagh,
@@ -1013,32 +1013,32 @@ enum Snd {
     Secret,
     Yiff,
     ScreamRottenAaah,
-    UttSchweinhund,
-    UttEvaaufwiedersehn,
+    Schweinhund,
+    Evaaufwiedersehn,
     ScreamMeinleben,
     ShotBrown,
     Gibb,
-    UttRapunz,
-    UttMeingottimhimmel,
+    Rapunz,
+    Meingottimhimmel,
     LaughHuhuhaha,
     LaughAlp,
-    UttSpion,
+    Spion,
     ScreamNeinsowas,
     WauWau,
     Breaking,
     MechaStep,
     Yeah,
-    UttScheiss,
+    Scheiss,
     ScreamAiiii,
     ScreamOohhh,
-    UttDonnerwetter,
-    UttKleineamerikaner,
-    UttErlaubensiebitte,
+    Donnerwetter,
+    Kleineamerikaner,
+    Erlaubensiebitte,
     Fart,
     ScreamChhha,
     ScreamHuugh,
     ScreamUwwwgh,
-    UttKeindeutschkann,
-    UttMeinfusse,
-    UttRosenospe
+    Keindeutschkann,
+    Meinfusse,
+    Rosenospe
 }
