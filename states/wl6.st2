@@ -615,7 +615,7 @@ blocked:
 }
 function WeaponIdleCheckFire {
 // get fire flag
-    WeaponOp::TRIGGER trap
+    WeaponOp::Trigger trap
 
     if
         // goto attack state
@@ -623,19 +623,19 @@ function WeaponIdleCheckFire {
         stop
     then
 // 'dynamically' look up ready state Spr::of currently selected weapon // i.e. this is how a weapon change is implemented
-    WeaponOp::NEXT_STATE trap
+    WeaponOp::NextState trap
     gostate
 }
 function WeaponAttackCheckIdle {
     // get ammo depleted flag
-    WeaponOp::DEPLETED trap
+    WeaponOp::Depleted trap
     if
         // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    WeaponOp::TRIGGER trap
+    WeaponOp::Trigger trap
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -646,18 +646,18 @@ function WeaponAttackCheckIdle {
 
 function ChaingunAttackCheckIdle {
     // BUG: need to check if ammo available before extra chaingun shot
-    Snd::SHOT_MG WeaponOp::SOUND trap 
-    Func::ACTION_SHOOT call 
+    Snd::ShotMg WeaponOp::Sound trap 
+    Func::ActionShoot call 
 
     // get ammo depleted flag
-    WeaponOp::DEPLETED trap
+    WeaponOp::Depleted trap
     if
         // out of ammo. stay in this state Spr::(keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    WeaponOp::TRIGGER trap
+    WeaponOp::Trigger trap
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -665,33 +665,33 @@ function ChaingunAttackCheckIdle {
     // follow through to next (usually this means fire/repeat)
 }
 function IncOpen {
-    DoorOp::GET_F trap
+    DoorOp::GetF trap
     // 1024 equals 1/64 in fp16 repr (i.e. open door in 64 steps)
     1024i32 add
-    DoorOp::SET_F  trap
+    DoorOp::SetF  trap
 }
 function DecOpen {
-    DoorOp::GET_F  trap
+    DoorOp::GetF  trap
     -1024i32 add
-    DoorOp::SET_F  trap
+    DoorOp::SetF  trap
 }
 function CheckOpenDoor {
-    DoorOp::TRIGGER trap
+    DoorOp::Trigger trap
     if
-        Snd::DOOR_OPEN DoorOp::SOUND trap
+        Snd::DoorOpen DoorOp::Sound trap
         @open gostate
     then
 }
 function CheckCloseDoor {
-    DoorOp::TRIGGER trap
+    DoorOp::Trigger trap
     if
         @blocked gostate
     then
 }
 function CheckDoorBlocked {
-    DoorOp::BLOCKED trap
+    DoorOp::Blocked trap
     not if 
-        Snd::DOOR_CLOSE DoorOp::SOUND  trap
+        Snd::DoorClose DoorOp::Sound  trap
         @close gostate
     then
 }
@@ -705,28 +705,28 @@ function ThinkChase {
     Func::ThinkChase call
 }
 function ThinkDogChase {
-    Func::THINK_DOG_CHASE call
+    Func::ThinkDogChase call
 }
 function ActionDie {
-    Func::ACTION_DIE call
+    Func::ActionDie call
 }
 function ActionShootPistol {
-    Snd::SHOT_PISTOL WeaponOp::SOUND trap
-    Func::ACTION_SHOOT call
+    Snd::ShotPistol WeaponOp::Sound trap
+    Func::ActionShoot call
 }
 function ActionShootMg {
-    Snd::SHOT_MG WeaponOp::SOUND trap
-    Func::ACTION_SHOOT call
+    Snd::ShotMg WeaponOp::Sound trap
+    Func::ActionShoot call
 }
 function ActionShootChain {
-    Snd::SHOT_CHAIN WeaponOp::SOUND trap
-    Func::ACTION_SHOOT call
+    Snd::ShotChain WeaponOp::Sound trap
+    Func::ActionShoot call
 }
 function ActionShoot {
-    Func::ACTION_SHOOT call
+    Func::ActionShoot call
 }
 function ActionBite {
-    Func::ACTION_BITE call
+    Func::ActionBite call
 }
 function None {
     stop
@@ -735,54 +735,54 @@ function None {
 // it supports a list of alternatives from which to choose randomly.
 function DeathScreamBrown {
     [
-        Snd::SCREAM_CHHHA
-        Snd::SCREAM_HUUGH
-        Snd::SCREAM_UWWWGH
-        Snd::SCREAM_AIIII
-        Snd::SCREAM_OOHHH
-        Snd::SCREAM_AAGH
-        Snd::SCREAM_AYYY
+        Snd::ScreamChhha
+        Snd::ScreamHuugh
+        Snd::ScreamUwwwgh
+        Snd::ScreamAiiii
+        Snd::ScreamOohhh
+        Snd::ScreamAagh
+        Snd::ScreamAyyy
     ] EnemyOp::Play trap
 
 }
 function SightBrown{
-    [Snd::HALTSTOP] EnemyOp::Play trap
+    [Snd::Haltstop] EnemyOp::Play trap
 }
 function DeathScreamBlue {
-    [Snd::SCREAM_MEINLEBEN] EnemyOp::Play trap
+    [Snd::ScreamMeinleben] EnemyOp::Play trap
 }
 function SightBlue{
-    [Snd::GREET_BLUE] EnemyOp::Play trap
+    [Snd::GreetBlue] EnemyOp::Play trap
 }
 function DeathScreamWhite {
-    [Snd::SCREAM_NEINSOWAS] EnemyOp::Play trap
+    [Snd::ScreamNeinsowas] EnemyOp::Play trap
 }
 function SightWhite {
-    [Snd::UTT_SPION] EnemyOp::Play trap
+    [Snd::UttSpion] EnemyOp::Play trap
 }
 function DeathScreamFurry {
-    [Snd::YIFF] EnemyOp::Play trap
+    [Snd::Yiff] EnemyOp::Play trap
 }
 function DeathScreamRotten {
-    [Snd::SCREAM_ROTTEN_AAAH] EnemyOp::Play trap
+    [Snd::ScreamRottenAaah] EnemyOp::Play trap
 }
 function DeathScreamMecha {
-    [Snd::UTT_SCHEISS] EnemyOp::Play trap
+    [Snd::UttScheiss] EnemyOp::Play trap
 }
 function SightMecha {
-    [Snd::UTT_SCHWEINHUND] EnemyOp::Play trap
+    [Snd::UttSchweinhund] EnemyOp::Play trap
 }
 function DeathScreamGrofaz {
-    [Snd::GIBB] EnemyOp::Play trap
+    [Snd::Gibb] EnemyOp::Play trap
 }
 function DeathScreamGrofazTalk {
-    [Snd::UTT_EVAAUFWIEDERSEHN] EnemyOp::Play trap
+    [Snd::UttEvaaufwiedersehn] EnemyOp::Play trap
 }
 function DeathScreamAlp {
-    [Snd::LAUGH_ALP] EnemyOp::Play trap
+    [Snd::LaughAlp] EnemyOp::Play trap
 }
 function SightAlp {
-    [Snd::UTT_RAPUNZ] EnemyOp::Play trap
+    [Snd::UttRapunz] EnemyOp::Play trap
 }
 enum Func
 {
@@ -790,10 +790,10 @@ enum Func
     ThinkStand,
     ThinkPath,
     ThinkChase,
-    THINK_DOG_CHASE,
-    ACTION_DIE,
-    ACTION_SHOOT,
-    ACTION_BITE
+    ThinkDogChase,
+    ActionDie,
+    ActionShoot,
+    ActionBite
 }
 enum EnemyOp 
 {
@@ -801,19 +801,19 @@ enum EnemyOp
 }
 enum DoorOp
 {
-    GET_F,
-    SET_F,
-    TRIGGER,
-    BLOCKED,
-    SOUND 
+GetF,
+    SetF,
+    Trigger,
+    Blocked,
+    Sound 
 }
 enum WeaponOp 
 {
-    TRIGGER,
-    DEPLETED,
-    NEXT_STATE,
-    UNUSED_3,
-    SOUND
+    Trigger,
+    Depleted,
+    NextState,
+    Unused3,
+    Sound
 }
 enum Spr
 {
@@ -995,50 +995,50 @@ enum Spr
 
 }
 enum Snd {
-    HALTSTOP,
-    WOOF,
-    DOOR_CLOSE,
-    DOOR_OPEN,
-    SHOT_MG,
-    SHOT_PISTOL,
-    SHOT_CHAIN,
-    GREET_BLUE,
-    UTT_GUTENTAG,
-    UTT_MUTTI,
-    SHOT_BOSS,
-    SHOT_BLUE,
-    SCREAM_AAGH,
-    SCREAM_AYYY,
-    PLAYER_DAMAGE,
-    SECRET,
-    YIFF,
-    SCREAM_ROTTEN_AAAH,
-    UTT_SCHWEINHUND,
-    UTT_EVAAUFWIEDERSEHN,
-    SCREAM_MEINLEBEN,
-    SHOT_BROWN,
-    GIBB,
-    UTT_RAPUNZ,
-    UTT_MEINGOTTIMHIMMEL,
-    LAUGH_HUHUHAHA,
-    LAUGH_ALP,
-    UTT_SPION,
-    SCREAM_NEINSOWAS,
-    WAU_WAU,
-    BREAKING,
-    MECHA_STEP,
-    YEAH,
-    UTT_SCHEISS,
-    SCREAM_AIIII,
-    SCREAM_OOHHH,
-    UTT_DONNERWETTER,
-    UTT_KLEINEAMERIKANER,
-    UTT_ERLAUBENSIEBITTE,
-    FART,
-    SCREAM_CHHHA,
-    SCREAM_HUUGH,
-    SCREAM_UWWWGH,
-    UTT_KEINDEUTSCHKANN,
-    UTT_MEINFUSSE,
-    UTT_ROSENOSPE
+    Haltstop,
+    Woof,
+    DoorClose,
+    DoorOpen,
+    ShotMg,
+    ShotPistol,
+    ShotChain,
+    GreetBlue,
+    UttGutentag,
+    UttMutti,
+    ShotBoss,
+    ShotBlue,
+    ScreamAagh,
+    ScreamAyyy,
+    PlayerDamage,
+    Secret,
+    Yiff,
+    ScreamRottenAaah,
+    UttSchweinhund,
+    UttEvaaufwiedersehn,
+    ScreamMeinleben,
+    ShotBrown,
+    Gibb,
+    UttRapunz,
+    UttMeingottimhimmel,
+    LaughHuhuhaha,
+    LaughAlp,
+    UttSpion,
+    ScreamNeinsowas,
+    WauWau,
+    Breaking,
+    MechaStep,
+    Yeah,
+    UttScheiss,
+    ScreamAiiii,
+    ScreamOohhh,
+    UttDonnerwetter,
+    UttKleineamerikaner,
+    UttErlaubensiebitte,
+    Fart,
+    ScreamChhha,
+    ScreamHuugh,
+    ScreamUwwwgh,
+    UttKeindeutschkann,
+    UttMeinfusse,
+    UttRosenospe
 }
