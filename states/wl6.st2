@@ -10,37 +10,37 @@ spawn brown {
 
 states brown {
 stand:
-    state BROWN_S_1, true, 0, ThinkStand, None, stand
+    state Spr::BROWN_S_1, true, 0, ThinkStand, None, stand
 path:
-    state BROWN_W1_1, true, 20, ThinkPath, None, next
-    state BROWN_W1_1, true, 5, None, None, next
-    state BROWN_W2_1, true, 15, ThinkPath, None, next
-    state BROWN_W3_1, true, 20, ThinkPath, None, next
-    state BROWN_W3_1, true, 5, None, None, next
-    state BROWN_W4_1, true, 15, ThinkPath, None, path
+    state Spr::BROWN_W1_1, true, 20, ThinkPath, None, next
+    state Spr::BROWN_W1_1, true, 5, None, None, next
+    state Spr::BROWN_W2_1, true, 15, ThinkPath, None, next
+    state Spr::BROWN_W3_1, true, 20, ThinkPath, None, next
+    state Spr::BROWN_W3_1, true, 5, None, None, next
+    state Spr::BROWN_W4_1, true, 15, ThinkPath, None, path
 pain1:
-    state BROWN_PAIN_1, false, 10, None, None, chase
+    state Spr::BROWN_PAIN_1, false, 10, None, None, chase
 pain2:
-    state BROWN_PAIN_2, false, 10, None, None, chase
+    state Spr::BROWN_PAIN_2, false, 10, None, None, chase
 sight:
-    state BROWN_W1_1, true, 0, None, SightBrown, next
+    state Spr::BROWN_W1_1, true, 0, None, SightBrown, next
 chase:
-    state BROWN_W1_1, true, 10, ThinkChase, None, next
-    state BROWN_W1_1, true, 3, None, None, next
-    state BROWN_W2_1, true, 8, ThinkChase, None, next
-    state BROWN_W3_1, true, 10, ThinkChase, None, next
-    state BROWN_W3_1, true, 3, None, None, next
-    state BROWN_W4_1, true, 8, ThinkChase, None, chase
+    state Spr::BROWN_W1_1, true, 10, ThinkChase, None, next
+    state Spr::BROWN_W1_1, true, 3, None, None, next
+    state Spr::BROWN_W2_1, true, 8, ThinkChase, None, next
+    state Spr::BROWN_W3_1, true, 10, ThinkChase, None, next
+    state Spr::BROWN_W3_1, true, 3, None, None, next
+    state Spr::BROWN_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state BROWN_DIE_1, false, 15, None, DeathScreamBrown, next
-    state BROWN_DIE_2, false, 15, None, ActionDie, next
-    state BROWN_DIE_3, false, 15, None, None, next
+    state Spr::BROWN_DIE_1, false, 15, None, DeathScreamBrown, next
+    state Spr::BROWN_DIE_2, false, 15, None, ActionDie, next
+    state Spr::BROWN_DIE_3, false, 15, None, None, next
 dead:
-    state BROWN_DEAD, false, 0, None, None, dead
+    state Spr::BROWN_DEAD, false, 0, None, None, dead
 shoot:
-    state BROWN_SHOOT1, false, 20, None, None, next
-    state BROWN_SHOOT2, false, 20, None, ActionShoot, next
-    state BROWN_SHOOT3, false, 20, None, None, chase
+    state Spr::BROWN_SHOOT1, false, 20, None, None, next
+    state Spr::BROWN_SHOOT2, false, 20, None, ActionShoot, next
+    state Spr::BROWN_SHOOT3, false, 20, None, None, chase
 }
 
 
@@ -55,44 +55,44 @@ spawn blue {
 
 states blue {
 stand:
-    state BLUE_S_1, true, 0, ThinkStand, None, stand
+    state Spr::BLUE_S_1, true, 0, ThinkStand, None, stand
 path:
-    state BLUE_W1_1, true, 20, ThinkPath, None, next
-    state BLUE_W1_1, true, 5, None, None, next
-    state BLUE_W2_1, true, 15, ThinkPath, None, next
-    state BLUE_W3_1, true, 20, ThinkPath, None, next
-    state BLUE_W3_1, true, 5, None, None, next
-    state BLUE_W4_1, true, 15, ThinkPath, None, path
+    state Spr::BLUE_W1_1, true, 20, ThinkPath, None, next
+    state Spr::BLUE_W1_1, true, 5, None, None, next
+    state Spr::BLUE_W2_1, true, 15, ThinkPath, None, next
+    state Spr::BLUE_W3_1, true, 20, ThinkPath, None, next
+    state Spr::BLUE_W3_1, true, 5, None, None, next
+    state Spr::BLUE_W4_1, true, 15, ThinkPath, None, path
 pain1:
-    state BLUE_PAIN_1, false, 10, None, None, chase
+    state Spr::BLUE_PAIN_1, false, 10, None, None, chase
 pain2:
-    state BLUE_PAIN_2, false, 10, None, None, chase
+    state Spr::BLUE_PAIN_2, false, 10, None, None, chase
 sight:
-    state BLUE_W1_1, true, 0, None, SightBlue, next
+    state Spr::BLUE_W1_1, true, 0, None, SightBlue, next
 chase:
-    state BLUE_W1_1, true, 10, ThinkChase, None, next
-    state BLUE_W1_1, true, 3, None, None, next
-    state BLUE_W2_1, true, 8, ThinkChase, None, next
-    state BLUE_W3_1, true, 10, ThinkChase, None, next
-    state BLUE_W3_1, true, 3, None, None, next
-    state BLUE_W4_1, true, 8, ThinkChase, None, chase
+    state Spr::BLUE_W1_1, true, 10, ThinkChase, None, next
+    state Spr::BLUE_W1_1, true, 3, None, None, next
+    state Spr::BLUE_W2_1, true, 8, ThinkChase, None, next
+    state Spr::BLUE_W3_1, true, 10, ThinkChase, None, next
+    state Spr::BLUE_W3_1, true, 3, None, None, next
+    state Spr::BLUE_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state BLUE_DIE_1, false, 15, None, DeathScreamBlue, next
-    state BLUE_DIE_2, false, 15, None, None, next
-    state BLUE_DIE_3, false, 15, None, ActionDie, next
+    state Spr::BLUE_DIE_1, false, 15, None, DeathScreamBlue, next
+    state Spr::BLUE_DIE_2, false, 15, None, None, next
+    state Spr::BLUE_DIE_3, false, 15, None, ActionDie, next
 dead:
-    state BLUE_DEAD, false, 0, None, None, dead
+    state Spr::BLUE_DEAD, false, 0, None, None, dead
 
 shoot:
-    state BLUE_SHOOT1, false, 20, None, None, next
-    state BLUE_SHOOT2, false, 10, None, ActionShoot, next
-    state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, None, ActionShoot, next
-    state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, None, ActionShoot, next
-    state BLUE_SHOOT3, false, 10, None, None, next
-    state BLUE_SHOOT2, false, 10, None, ActionShoot, next
-    state BLUE_SHOOT3, false, 10, None, None, chase
+    state Spr::BLUE_SHOOT1, false, 20, None, None, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT3, false, 10, None, None, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT3, false, 10, None, None, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT3, false, 10, None, None, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT3, false, 10, None, None, chase
 }
 
 
@@ -107,38 +107,38 @@ spawn white {
 
 states white {
 stand:
-    state WHITE_S_1, true, 0, ThinkStand, None, stand
+    state Spr::WHITE_S_1, true, 0, ThinkStand, None, stand
 path:
-    state WHITE_W1_1, true, 20, ThinkPath, None, next
-    state WHITE_W1_1, true, 5, None, None, next
-    state WHITE_W2_1, true, 15, ThinkPath, None, next
-    state WHITE_W3_1, true, 20, ThinkPath, None, next
-    state WHITE_W3_1, true, 5, None, None, next
-    state WHITE_W4_1, true, 15, ThinkPath, None, path
+    state Spr::WHITE_W1_1, true, 20, ThinkPath, None, next
+    state Spr::WHITE_W1_1, true, 5, None, None, next
+    state Spr::WHITE_W2_1, true, 15, ThinkPath, None, next
+    state Spr::WHITE_W3_1, true, 20, ThinkPath, None, next
+    state Spr::WHITE_W3_1, true, 5, None, None, next
+    state Spr::WHITE_W4_1, true, 15, ThinkPath, None, path
 pain1:
-    state WHITE_PAIN_1, false, 10, None, None, chase
+    state Spr::WHITE_PAIN_1, false, 10, None, None, chase
 pain2:
-    state WHITE_PAIN_2, false, 10, None, None, chase
+    state Spr::WHITE_PAIN_2, false, 10, None, None, chase
 sight:
-    state WHITE_W1_1, true, 0, None, SightWhite, next
+    state Spr::WHITE_W1_1, true, 0, None, SightWhite, next
 chase:
-    state WHITE_W1_1, true, 10, ThinkChase, None, next
-    state WHITE_W1_1, true, 3, None, None, next
-    state WHITE_W2_1, true, 8, ThinkChase, None, next
-    state WHITE_W3_1, true, 10, ThinkChase, None, next
-    state WHITE_W3_1, true, 3, None, None, next
-    state WHITE_W4_1, true, 8, ThinkChase, None, chase
+    state Spr::WHITE_W1_1, true, 10, ThinkChase, None, next
+    state Spr::WHITE_W1_1, true, 3, None, None, next
+    state Spr::WHITE_W2_1, true, 8, ThinkChase, None, next
+    state Spr::WHITE_W3_1, true, 10, ThinkChase, None, next
+    state Spr::WHITE_W3_1, true, 3, None, None, next
+    state Spr::WHITE_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state WHITE_DIE_1, false, 15, None, DeathScreamWhite, next
-    state WHITE_DIE_2, false, 15, None, None, next
-    state WHITE_DIE_3, false, 15, None, None, next
-    state WHITE_DIE_4, false, 15, None, ActionDie, next
+    state Spr::WHITE_DIE_1, false, 15, None, DeathScreamWhite, next
+    state Spr::WHITE_DIE_2, false, 15, None, None, next
+    state Spr::WHITE_DIE_3, false, 15, None, None, next
+    state Spr::WHITE_DIE_4, false, 15, None, ActionDie, next
 dead:
-    state WHITE_DEAD, false, 0, None, None, dead
+    state Spr::WHITE_DEAD, false, 0, None, None, dead
 shoot:
-    state WHITE_SHOOT1, false, 20, None, None, next
-    state WHITE_SHOOT2, false, 20, None, ActionShoot, next
-    state WHITE_SHOOT3, false, 20, None, None, chase
+    state Spr::WHITE_SHOOT1, false, 20, None, None, next
+    state Spr::WHITE_SHOOT2, false, 20, None, ActionShoot, next
+    state Spr::WHITE_SHOOT3, false, 20, None, None, chase
 }
 
 
@@ -154,39 +154,39 @@ spawn rotten {
 
 states rotten {
 stand:
-    state ROTTEN_S_1, true, 0, ThinkStand, None, stand
+    state Spr::ROTTEN_S_1, true, 0, ThinkStand, None, stand
 path:
-    state ROTTEN_W1_1, true, 20, ThinkPath, None, next
-    state ROTTEN_W1_1, true, 5, None, None, next
-    state ROTTEN_W2_1, true, 15, ThinkPath, None, next
-    state ROTTEN_W3_1, true, 20, ThinkPath, None, next
-    state ROTTEN_W3_1, true, 5, None, None, next
-    state ROTTEN_W4_1, true, 15, ThinkPath, None, path
+    state Spr::ROTTEN_W1_1, true, 20, ThinkPath, None, next
+    state Spr::ROTTEN_W1_1, true, 5, None, None, next
+    state Spr::ROTTEN_W2_1, true, 15, ThinkPath, None, next
+    state Spr::ROTTEN_W3_1, true, 20, ThinkPath, None, next
+    state Spr::ROTTEN_W3_1, true, 5, None, None, next
+    state Spr::ROTTEN_W4_1, true, 15, ThinkPath, None, path
 pain1:
-    state ROTTEN_PAIN_1, false, 10, None, None, chase
+    state Spr::ROTTEN_PAIN_1, false, 10, None, None, chase
 pain2:
-    state ROTTEN_PAIN_2, false, 10, None, None, chase
+    state Spr::ROTTEN_PAIN_2, false, 10, None, None, chase
 sight:
 chase:
-    state ROTTEN_W1_1, true, 10, ThinkChase, None, next
-    state ROTTEN_W1_1, true, 3, None, None, next
-    state ROTTEN_W2_1, true, 8, ThinkChase, None, next
-    state ROTTEN_W3_1, true, 10, ThinkChase, None, next
-    state ROTTEN_W3_1, true, 3, None, None, next
-    state ROTTEN_W4_1, true, 8, ThinkChase, None, chase
+    state Spr::ROTTEN_W1_1, true, 10, ThinkChase, None, next
+    state Spr::ROTTEN_W1_1, true, 3, None, None, next
+    state Spr::ROTTEN_W2_1, true, 8, ThinkChase, None, next
+    state Spr::ROTTEN_W3_1, true, 10, ThinkChase, None, next
+    state Spr::ROTTEN_W3_1, true, 3, None, None, next
+    state Spr::ROTTEN_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state ROTTEN_DIE_1, false, 15, None, DeathScreamRotten, next
-    state ROTTEN_DIE_2, false, 15, None, None, next
-    state ROTTEN_DIE_3, false, 15, None, None, next
-    state ROTTEN_DIE_4, false, 15, None, ActionDie, next
+    state Spr::ROTTEN_DIE_1, false, 15, None, DeathScreamRotten, next
+    state Spr::ROTTEN_DIE_2, false, 15, None, None, next
+    state Spr::ROTTEN_DIE_3, false, 15, None, None, next
+    state Spr::ROTTEN_DIE_4, false, 15, None, ActionDie, next
 dead:
-    state ROTTEN_DEAD, false, 0, None, None, dead
+    state Spr::ROTTEN_DEAD, false, 0, None, None, dead
 
 shoot:
-    state ROTTEN_SHOOT1, false, 20, None, ActionShoot, next
-    state ROTTEN_SHOOT2, false, 20, None, None, next
-    state ROTTEN_SHOOT3, false, 20, None, ActionShoot, next
-    state ROTTEN_SHOOT4, false, 20, None, None, chase
+    state Spr::ROTTEN_SHOOT1, false, 20, None, ActionShoot, next
+    state Spr::ROTTEN_SHOOT2, false, 20, None, None, next
+    state Spr::ROTTEN_SHOOT3, false, 20, None, ActionShoot, next
+    state Spr::ROTTEN_SHOOT4, false, 20, None, None, chase
 }
 
 
@@ -201,38 +201,38 @@ spawn furry {
 
 states furry {
 stand:
-    state FURRY_W1_1, true, 20, ThinkPath, None, stand
+    state Spr::FURRY_W1_1, true, 20, ThinkPath, None, stand
 path:
-    state FURRY_W1_1, true, 20, ThinkPath, None, next
-    state FURRY_W1_1, true, 5, None, None, next
-    state FURRY_W2_1, true, 15, ThinkPath, None, next
-    state FURRY_W3_1, true, 20, ThinkPath, None, next
-    state FURRY_W3_1, true, 5, None, None, next
-    state FURRY_W4_1, true, 15, ThinkPath, None, path
+    state Spr::FURRY_W1_1, true, 20, ThinkPath, None, next
+    state Spr::FURRY_W1_1, true, 5, None, None, next
+    state Spr::FURRY_W2_1, true, 15, ThinkPath, None, next
+    state Spr::FURRY_W3_1, true, 20, ThinkPath, None, next
+    state Spr::FURRY_W3_1, true, 5, None, None, next
+    state Spr::FURRY_W4_1, true, 15, ThinkPath, None, path
 pain1:
-    state FURRY_DIE_1, false, 10, None, None, chase
+    state Spr::FURRY_DIE_1, false, 10, None, None, chase
 pain2:
-    state FURRY_DIE_1, false, 10, None, None, chase
+    state Spr::FURRY_DIE_1, false, 10, None, None, chase
 chase:
 sight:
-    state FURRY_W1_1, true, 10, ThinkDogChase, None, next
-    state FURRY_W1_1, true, 3, None, None, next
-    state FURRY_W2_1, true, 8, ThinkDogChase, None, next
-    state FURRY_W3_1, true, 10, ThinkDogChase, None, next
-    state FURRY_W3_1, true, 3, None, None, next
-    state FURRY_W4_1, true, 8, ThinkDogChase, None, chase
+    state Spr::FURRY_W1_1, true, 10, ThinkDogChase, None, next
+    state Spr::FURRY_W1_1, true, 3, None, None, next
+    state Spr::FURRY_W2_1, true, 8, ThinkDogChase, None, next
+    state Spr::FURRY_W3_1, true, 10, ThinkDogChase, None, next
+    state Spr::FURRY_W3_1, true, 3, None, None, next
+    state Spr::FURRY_W4_1, true, 8, ThinkDogChase, None, chase
 die:
-    state FURRY_DIE_1, false, 15, None, DeathScreamFurry, next
-    state FURRY_DIE_2, false, 15, None, None, next
-    state FURRY_DIE_3, false, 15, None, ActionDie, next
+    state Spr::FURRY_DIE_1, false, 15, None, DeathScreamFurry, next
+    state Spr::FURRY_DIE_2, false, 15, None, None, next
+    state Spr::FURRY_DIE_3, false, 15, None, ActionDie, next
 dead:
-    state FURRY_DEAD, false, 0, None, None, dead
+    state Spr::FURRY_DEAD, false, 0, None, None, dead
 jump:
-    state FURRY_JUMP1, false, 10, None, None, next
-    state FURRY_JUMP2, false, 10, None, ActionBite, next
-    state FURRY_JUMP3, false, 10, None, None, next
-    state FURRY_JUMP1, false, 10, None, None, next
-    state FURRY_W1_1, false, 10, None, None, chase
+    state Spr::FURRY_JUMP1, false, 10, None, None, next
+    state Spr::FURRY_JUMP2, false, 10, None, ActionBite, next
+    state Spr::FURRY_JUMP3, false, 10, None, None, next
+    state Spr::FURRY_JUMP1, false, 10, None, None, next
+    state Spr::FURRY_W1_1, false, 10, None, None, chase
 }
 
 
@@ -242,36 +242,36 @@ spawn hans {
 
 states hans {
 stand:
-    state BOSS_W1, false, 0, ThinkStand, None, stand
+    state Spr::BOSS_W1, false, 0, ThinkStand, None, stand
 path:
-    state BOSS_W1, false, 20, ThinkPath, None, next
-    state BOSS_W1, false, 5, None, None, next
-    state BOSS_W2, false, 15, ThinkPath, None, next
-    state BOSS_W3, false, 20, ThinkPath, None, next
-    state BOSS_W3, false, 5, None, None, next
-    state BOSS_W4, false, 15, ThinkPath, None, path
+    state Spr::BOSS_W1, false, 20, ThinkPath, None, next
+    state Spr::BOSS_W1, false, 5, None, None, next
+    state Spr::BOSS_W2, false, 15, ThinkPath, None, next
+    state Spr::BOSS_W3, false, 20, ThinkPath, None, next
+    state Spr::BOSS_W3, false, 5, None, None, next
+    state Spr::BOSS_W4, false, 15, ThinkPath, None, path
 pain1:
-    state BOSS_DIE1, false, 10, None, None, chase
+    state Spr::BOSS_DIE1, false, 10, None, None, chase
 pain2:
-    state BOSS_DIE1, false, 10, None, None, chase
+    state Spr::BOSS_DIE1, false, 10, None, None, chase
 sight:
 chase:
-    state BOSS_W1, false, 10, ThinkChase, None, next
-    state BOSS_W1, false, 3, None, None, next
-    state BOSS_W2, false, 8, ThinkChase, None, next
-    state BOSS_W3, false, 10, ThinkChase, None, next
-    state BOSS_W3, false, 3, None, None, next
-    state BOSS_W4, false, 8, ThinkChase, None, chase
+    state Spr::BOSS_W1, false, 10, ThinkChase, None, next
+    state Spr::BOSS_W1, false, 3, None, None, next
+    state Spr::BOSS_W2, false, 8, ThinkChase, None, next
+    state Spr::BOSS_W3, false, 10, ThinkChase, None, next
+    state Spr::BOSS_W3, false, 3, None, None, next
+    state Spr::BOSS_W4, false, 8, ThinkChase, None, chase
 die:
-    state BOSS_DIE1, false, 15, None, None, next
-    state BOSS_DIE2, false, 15, None, ActionDie, next
-    state BOSS_DIE3, false, 15, None, None, dead
+    state Spr::BOSS_DIE1, false, 15, None, None, next
+    state Spr::BOSS_DIE2, false, 15, None, ActionDie, next
+    state Spr::BOSS_DIE3, false, 15, None, None, dead
 dead:
-    state BOSS_DEAD, false, 0, None, None, dead
+    state Spr::BOSS_DEAD, false, 0, None, None, dead
 shoot:
-    state BOSS_SHOOT1, false, 20, None, None, next
-    state BOSS_SHOOT2, false, 20, None, ActionShoot, next
-    state BOSS_SHOOT3, false, 20, None, None, chase
+    state Spr::BOSS_SHOOT1, false, 20, None, None, next
+    state Spr::BOSS_SHOOT2, false, 20, None, ActionShoot, next
+    state Spr::BOSS_SHOOT3, false, 20, None, None, chase
 }
 
 spawn good_dr {
@@ -280,35 +280,35 @@ spawn good_dr {
 
 states good_dr {
 stand:
-    state GOOD_DR_W1, false, 0, ThinkStand, None, stand
+    state Spr::GOOD_DR_W1, false, 0, ThinkStand, None, stand
 path:
-    state GOOD_DR_W1, false, 20, ThinkPath, None, next
-    state GOOD_DR_W1, false, 5, None, None, next
-    state GOOD_DR_W2, false, 15, ThinkPath, None, next
-    state GOOD_DR_W3, false, 20, ThinkPath, None, next
-    state GOOD_DR_W3, false, 5, None, None, next
-    state GOOD_DR_W4, false, 15, ThinkPath, None, path
+    state Spr::GOOD_DR_W1, false, 20, ThinkPath, None, next
+    state Spr::GOOD_DR_W1, false, 5, None, None, next
+    state Spr::GOOD_DR_W2, false, 15, ThinkPath, None, next
+    state Spr::GOOD_DR_W3, false, 20, ThinkPath, None, next
+    state Spr::GOOD_DR_W3, false, 5, None, None, next
+    state Spr::GOOD_DR_W4, false, 15, ThinkPath, None, path
 pain1:
-    state GOOD_DR_W1, false, 10, None, None, chase
+    state Spr::GOOD_DR_W1, false, 10, None, None, chase
 pain2:
-    state GOOD_DR_W1, false, 10, None, None, chase
+    state Spr::GOOD_DR_W1, false, 10, None, None, chase
 sight:
 chase:
-    state GOOD_DR_W1, false, 10, ThinkChase, None, next
-    state GOOD_DR_W1, false, 3, None, None, next
-    state GOOD_DR_W2, false, 8, ThinkChase, None, next
-    state GOOD_DR_W3, false, 10, ThinkChase, None, next
-    state GOOD_DR_W3, false, 3, None, None, next
-    state GOOD_DR_W4, false, 8, ThinkChase, None, chase
+    state Spr::GOOD_DR_W1, false, 10, ThinkChase, None, next
+    state Spr::GOOD_DR_W1, false, 3, None, None, next
+    state Spr::GOOD_DR_W2, false, 8, ThinkChase, None, next
+    state Spr::GOOD_DR_W3, false, 10, ThinkChase, None, next
+    state Spr::GOOD_DR_W3, false, 3, None, None, next
+    state Spr::GOOD_DR_W4, false, 8, ThinkChase, None, chase
 die:
-    state GOOD_DR_DIE1, false, 15, None, None, next
-    state GOOD_DR_DIE2, false, 15, None, ActionDie, next
-    state GOOD_DR_DIE3, false, 15, None, None, dead
+    state Spr::GOOD_DR_DIE1, false, 15, None, None, next
+    state Spr::GOOD_DR_DIE2, false, 15, None, ActionDie, next
+    state Spr::GOOD_DR_DIE3, false, 15, None, None, dead
 dead:
-    state GOOD_DR_DEAD, false, 0, None, None, dead
+    state Spr::GOOD_DR_DEAD, false, 0, None, None, dead
 shoot:
-    state GOOD_DR_SHOOT1, false, 20, None, ActionShoot, next
-    state GOOD_DR_SHOOT2, false, 20, None, None, chase
+    state Spr::GOOD_DR_SHOOT1, false, 20, None, ActionShoot, next
+    state Spr::GOOD_DR_SHOOT2, false, 20, None, None, chase
 }
 
 
@@ -318,42 +318,42 @@ spawn grofaz {
 
 states grofaz {
 stand:
-    state GROFAZ_W1, false, 0, ThinkStand, None, stand
+    state Spr::GROFAZ_W1, false, 0, ThinkStand, None, stand
 path:
-    state GROFAZ_W1, false, 20, ThinkPath, None, next
-    state GROFAZ_W1, false, 5, None, None, next
-    state GROFAZ_W2, false, 15, ThinkPath, None, next
-    state GROFAZ_W3, false, 20, ThinkPath, None, next
-    state GROFAZ_W3, false, 5, None, None, next
-    state GROFAZ_W4, false, 15, ThinkPath, None, path
+    state Spr::GROFAZ_W1, false, 20, ThinkPath, None, next
+    state Spr::GROFAZ_W1, false, 5, None, None, next
+    state Spr::GROFAZ_W2, false, 15, ThinkPath, None, next
+    state Spr::GROFAZ_W3, false, 20, ThinkPath, None, next
+    state Spr::GROFAZ_W3, false, 5, None, None, next
+    state Spr::GROFAZ_W4, false, 15, ThinkPath, None, path
 pain1:
-    state GROFAZ_W1, false, 10, None, None, chase
+    state Spr::GROFAZ_W1, false, 10, None, None, chase
 pain2:
-    state GROFAZ_W1, false, 10, None, None, chase
+    state Spr::GROFAZ_W1, false, 10, None, None, chase
 sight:
 chase:
-    state GROFAZ_W1, false, 10, ThinkChase, None, next
-    state GROFAZ_W1, false, 3, None, None, next
-    state GROFAZ_W2, false, 8, ThinkChase, None, next
-    state GROFAZ_W3, false, 10, ThinkChase, None, next
-    state GROFAZ_W3, false, 3, None, None, next
-    state GROFAZ_W4, false, 8, ThinkChase, None, chase
+    state Spr::GROFAZ_W1, false, 10, ThinkChase, None, next
+    state Spr::GROFAZ_W1, false, 3, None, None, next
+    state Spr::GROFAZ_W2, false, 8, ThinkChase, None, next
+    state Spr::GROFAZ_W3, false, 10, ThinkChase, None, next
+    state Spr::GROFAZ_W3, false, 3, None, None, next
+    state Spr::GROFAZ_W4, false, 8, ThinkChase, None, chase
 die:
-    state GROFAZ_W1, false, 0, None, DeathScreamGrofazTalk, next
-    state GROFAZ_W1, false, 90, None, None, next
-    state GROFAZ_DIE1, false, 15, None, DeathScreamGrofaz, next
-    state GROFAZ_DIE2, false, 15, None, None, next
-    state GROFAZ_DIE3, false, 15, None, None, next
-    state GROFAZ_DIE4, false, 15, None, None, next
-    state GROFAZ_DIE5, false, 15, None, None, next
-    state GROFAZ_DIE6, false, 15, None, ActionDie, next
-    state GROFAZ_DIE7, false, 15, None, None, next
+    state Spr::GROFAZ_W1, false, 0, None, DeathScreamGrofazTalk, next
+    state Spr::GROFAZ_W1, false, 90, None, None, next
+    state Spr::GROFAZ_DIE1, false, 15, None, DeathScreamGrofaz, next
+    state Spr::GROFAZ_DIE2, false, 15, None, None, next
+    state Spr::GROFAZ_DIE3, false, 15, None, None, next
+    state Spr::GROFAZ_DIE4, false, 15, None, None, next
+    state Spr::GROFAZ_DIE5, false, 15, None, None, next
+    state Spr::GROFAZ_DIE6, false, 15, None, ActionDie, next
+    state Spr::GROFAZ_DIE7, false, 15, None, None, next
 dead:
-    state GROFAZ_DEAD, false, 0, None, None, dead
+    state Spr::GROFAZ_DEAD, false, 0, None, None, dead
 shoot:
-    state GROFAZ_SHOOT1, false, 20, None, None, next
-    state GROFAZ_SHOOT2, false, 20, None, ActionShoot, next
-    state GROFAZ_SHOOT3, false, 20, None, None, chase
+    state Spr::GROFAZ_SHOOT1, false, 20, None, None, next
+    state Spr::GROFAZ_SHOOT2, false, 20, None, ActionShoot, next
+    state Spr::GROFAZ_SHOOT3, false, 20, None, None, chase
 }
 
 
@@ -363,38 +363,38 @@ spawn mecha {
 
 states mecha {
 stand:
-    state MECHA_W1, false, 0, ThinkStand, None, stand
+    state Spr::MECHA_W1, false, 0, ThinkStand, None, stand
 path:
-    state MECHA_W1, false, 20, ThinkPath, None, next
-    state MECHA_W1, false, 5, None, None, next
-    state MECHA_W2, false, 15, ThinkPath, None, next
-    state MECHA_W3, false, 20, ThinkPath, None, next
-    state MECHA_W3, false, 5, None, None, next
-    state MECHA_W4, false, 15, ThinkPath, None, path
+    state Spr::MECHA_W1, false, 20, ThinkPath, None, next
+    state Spr::MECHA_W1, false, 5, None, None, next
+    state Spr::MECHA_W2, false, 15, ThinkPath, None, next
+    state Spr::MECHA_W3, false, 20, ThinkPath, None, next
+    state Spr::MECHA_W3, false, 5, None, None, next
+    state Spr::MECHA_W4, false, 15, ThinkPath, None, path
 pain1:
-    state MECHA_DIE1, false, 10, None, None, chase
+    state Spr::MECHA_DIE1, false, 10, None, None, chase
 pain2:
-    state MECHA_DIE1, false, 10, None, None, chase
+    state Spr::MECHA_DIE1, false, 10, None, None, chase
 sight:
-    state MECHA_W1, false, 0, None, SightMecha, next
+    state Spr::MECHA_W1, false, 0, None, SightMecha, next
 chase:
-    state MECHA_W1, false, 10, ThinkChase, None, next
-    state MECHA_W1, false, 3, None, None, next
-    state MECHA_W2, false, 8, ThinkChase, None, next
-    state MECHA_W3, false, 10, ThinkChase, None, next
-    state MECHA_W3, false, 3, None, None, next
-    state MECHA_W4, false, 8, ThinkChase, None, chase
+    state Spr::MECHA_W1, false, 10, ThinkChase, None, next
+    state Spr::MECHA_W1, false, 3, None, None, next
+    state Spr::MECHA_W2, false, 8, ThinkChase, None, next
+    state Spr::MECHA_W3, false, 10, ThinkChase, None, next
+    state Spr::MECHA_W3, false, 3, None, None, next
+    state Spr::MECHA_W4, false, 8, ThinkChase, None, chase
 die:
-    state MECHA_DIE1, false, 15, None, DeathScreamMecha, next
-    state MECHA_DIE2, false, 15, None, None, next
-    state MECHA_DIE3, false, 15, None, ActionDie, next
-    state MECHA_DIE3, false, 0, None, None, next
+    state Spr::MECHA_DIE1, false, 15, None, DeathScreamMecha, next
+    state Spr::MECHA_DIE2, false, 15, None, None, next
+    state Spr::MECHA_DIE3, false, 15, None, ActionDie, next
+    state Spr::MECHA_DIE3, false, 0, None, None, next
 dead:
-    state MECHA_DEAD, false, 0, None, None, dead
+    state Spr::MECHA_DEAD, false, 0, None, None, dead
 shoot:
-    state MECHA_SHOOT1, false, 20, None, None, next
-    state MECHA_SHOOT2, false, 20, None, ActionShoot, next
-    state MECHA_SHOOT3, false, 20, None, None, chase
+    state Spr::MECHA_SHOOT1, false, 20, None, None, next
+    state Spr::MECHA_SHOOT2, false, 20, None, ActionShoot, next
+    state Spr::MECHA_SHOOT3, false, 20, None, None, chase
 } 
 
 spawn alp {
@@ -403,38 +403,38 @@ spawn alp {
 
 states alp {
 stand:
-    state ALP_W1, false, 0, ThinkStand, None, stand
+    state Spr::ALP_W1, false, 0, ThinkStand, None, stand
 path:
-    state ALP_W1, false, 20, ThinkPath, None, next
-    state ALP_W1, false, 5, None, None, next
-    state ALP_W2, false, 15, ThinkPath, None, next
-    state ALP_W3, false, 20, ThinkPath, None, next
-    state ALP_W3, false, 5, None, None, next
-    state ALP_W4, false, 15, ThinkPath, None, path
+    state Spr::ALP_W1, false, 20, ThinkPath, None, next
+    state Spr::ALP_W1, false, 5, None, None, next
+    state Spr::ALP_W2, false, 15, ThinkPath, None, next
+    state Spr::ALP_W3, false, 20, ThinkPath, None, next
+    state Spr::ALP_W3, false, 5, None, None, next
+    state Spr::ALP_W4, false, 15, ThinkPath, None, path
 pain1:
-    state ALP_DIE1, false, 10, None, None, chase
+    state Spr::ALP_DIE1, false, 10, None, None, chase
 pain2:
-    state ALP_DIE1, false, 10, None, None, chase
+    state Spr::ALP_DIE1, false, 10, None, None, chase
 sight:
-    state ALP_W1, false, 0, None, SightAlp, next
+    state Spr::ALP_W1, false, 0, None, SightAlp, next
 chase:
-    state ALP_W1, false, 10, ThinkChase, None, next
-    state ALP_W1, false, 3, None, None, next
-    state ALP_W2, false, 8, ThinkChase, None, next
-    state ALP_W3, false, 10, ThinkChase, None, next
-    state ALP_W3, false, 3, None, None, next
-    state ALP_W4, false, 8, ThinkChase, None, chase
+    state Spr::ALP_W1, false, 10, ThinkChase, None, next
+    state Spr::ALP_W1, false, 3, None, None, next
+    state Spr::ALP_W2, false, 8, ThinkChase, None, next
+    state Spr::ALP_W3, false, 10, ThinkChase, None, next
+    state Spr::ALP_W3, false, 3, None, None, next
+    state Spr::ALP_W4, false, 8, ThinkChase, None, chase
 die:
-    state ALP_DIE1, false, 15, None, DeathScreamAlp, next
-    state ALP_DIE2, false, 15, None, None, next
-    state ALP_DIE3, false, 15, None, None, next
-    state ALP_DIE4, false, 15, None, ActionDie, next
-    state ALP_DIE5, false, 15, None, None, next
+    state Spr::ALP_DIE1, false, 15, None, DeathScreamAlp, next
+    state Spr::ALP_DIE2, false, 15, None, None, next
+    state Spr::ALP_DIE3, false, 15, None, None, next
+    state Spr::ALP_DIE4, false, 15, None, ActionDie, next
+    state Spr::ALP_DIE5, false, 15, None, None, next
 dead:
-    state ALP_DEAD, false, 0, None, None, dead
+    state Spr::ALP_DEAD, false, 0, None, None, dead
 shoot:
-    state ALP_W1, false, 20, None, ActionShoot, next
-    state ALP_W1, false, 20, None, None, chase
+    state Spr::ALP_W1, false, 20, None, ActionShoot, next
+    state Spr::ALP_W1, false, 20, None, None, chase
 }
 
 
@@ -444,35 +444,35 @@ spawn hermann {
 
 states hermann {
 stand:
-    state HERMANN_W1, false, 0, ThinkStand, None, stand
+    state Spr::HERMANN_W1, false, 0, ThinkStand, None, stand
 path:
-    state HERMANN_W1, false, 20, ThinkPath, None, next
-    state HERMANN_W1, false, 5, None, None, next
-    state HERMANN_W2, false, 15, ThinkPath, None, next
-    state HERMANN_W3, false, 20, ThinkPath, None, next
-    state HERMANN_W3, false, 5, None, None, next
-    state HERMANN_W4, false, 15, ThinkPath, None, path
+    state Spr::HERMANN_W1, false, 20, ThinkPath, None, next
+    state Spr::HERMANN_W1, false, 5, None, None, next
+    state Spr::HERMANN_W2, false, 15, ThinkPath, None, next
+    state Spr::HERMANN_W3, false, 20, ThinkPath, None, next
+    state Spr::HERMANN_W3, false, 5, None, None, next
+    state Spr::HERMANN_W4, false, 15, ThinkPath, None, path
 pain1:
-    state HERMANN_W1, false, 10, None, None, chase
+    state Spr::HERMANN_W1, false, 10, None, None, chase
 pain2:
-    state HERMANN_W1, false, 10, None, None, chase
+    state Spr::HERMANN_W1, false, 10, None, None, chase
 sight:
 chase:
-    state HERMANN_W1, false, 10, ThinkChase, None, next
-    state HERMANN_W1, false, 3, None, None, next
-    state HERMANN_W2, false, 8, ThinkChase, None, next
-    state HERMANN_W3, false, 10, ThinkChase, None, next
-    state HERMANN_W3, false, 3, None, None, next
-    state HERMANN_W4, false, 8, ThinkChase, None, chase
+    state Spr::HERMANN_W1, false, 10, ThinkChase, None, next
+    state Spr::HERMANN_W1, false, 3, None, None, next
+    state Spr::HERMANN_W2, false, 8, ThinkChase, None, next
+    state Spr::HERMANN_W3, false, 10, ThinkChase, None, next
+    state Spr::HERMANN_W3, false, 3, None, None, next
+    state Spr::HERMANN_W4, false, 8, ThinkChase, None, chase
 die:
-    state HERMANN_DIE1, false, 15, None, None, next
-    state HERMANN_DIE2, false, 15, None, ActionDie, next
-    state HERMANN_DIE3, false, 15, None, None, dead
+    state Spr::HERMANN_DIE1, false, 15, None, None, next
+    state Spr::HERMANN_DIE2, false, 15, None, ActionDie, next
+    state Spr::HERMANN_DIE3, false, 15, None, None, dead
 dead:
-    state HERMANN_DEAD, false, 0, None, None, dead
+    state Spr::HERMANN_DEAD, false, 0, None, None, dead
 shoot:
-    state HERMANN_SHOOT1, false, 20, None, ActionShoot, next
-    state HERMANN_SHOOT2, false, 20, None, None, chase
+    state Spr::HERMANN_SHOOT1, false, 20, None, ActionShoot, next
+    state Spr::HERMANN_SHOOT2, false, 20, None, None, chase
 }
 
 spawn gretel {
@@ -481,35 +481,35 @@ spawn gretel {
 
 states gretel {
 stand:
-    state GRETEL_W1, false, 0, ThinkStand, None, stand
+    state Spr::GRETEL_W1, false, 0, ThinkStand, None, stand
 path:
-    state GRETEL_W1, false, 20, ThinkPath, None, next
-    state GRETEL_W1, false, 5, None, None, next
-    state GRETEL_W2, false, 15, ThinkPath, None, next
-    state GRETEL_W3, false, 20, ThinkPath, None, next
-    state GRETEL_W3, false, 5, None, None, next
-    state GRETEL_W4, false, 15, ThinkPath, None, path
+    state Spr::GRETEL_W1, false, 20, ThinkPath, None, next
+    state Spr::GRETEL_W1, false, 5, None, None, next
+    state Spr::GRETEL_W2, false, 15, ThinkPath, None, next
+    state Spr::GRETEL_W3, false, 20, ThinkPath, None, next
+    state Spr::GRETEL_W3, false, 5, None, None, next
+    state Spr::GRETEL_W4, false, 15, ThinkPath, None, path
 pain1:
-    state GRETEL_W1, false, 10, None, None, chase
+    state Spr::GRETEL_W1, false, 10, None, None, chase
 pain2:
-    state GRETEL_W1, false, 10, None, None, chase
+    state Spr::GRETEL_W1, false, 10, None, None, chase
 sight:
 chase:
-    state GRETEL_W1, false, 10, ThinkChase, None, next
-    state GRETEL_W1, false, 3, None, None, next
-    state GRETEL_W2, false, 8, ThinkChase, None, next
-    state GRETEL_W3, false, 10, ThinkChase, None, next
-    state GRETEL_W3, false, 3, None, None, next
-    state GRETEL_W4, false, 8, ThinkChase, None, chase
+    state Spr::GRETEL_W1, false, 10, ThinkChase, None, next
+    state Spr::GRETEL_W1, false, 3, None, None, next
+    state Spr::GRETEL_W2, false, 8, ThinkChase, None, next
+    state Spr::GRETEL_W3, false, 10, ThinkChase, None, next
+    state Spr::GRETEL_W3, false, 3, None, None, next
+    state Spr::GRETEL_W4, false, 8, ThinkChase, None, chase
 die:
-    state GRETEL_DIE1, false, 15, None, None, next
-    state GRETEL_DIE2, false, 15, None, ActionDie, next
-    state GRETEL_DIE3, false, 15, None, None, dead
+    state Spr::GRETEL_DIE1, false, 15, None, None, next
+    state Spr::GRETEL_DIE2, false, 15, None, ActionDie, next
+    state Spr::GRETEL_DIE3, false, 15, None, None, dead
 dead:
-    state GRETEL_DEAD, false, 0, None, None, dead
+    state Spr::GRETEL_DEAD, false, 0, None, None, dead
 shoot:
-    state GRETEL_SHOOT1, false, 20, None, ActionShoot, next
-    state GRETEL_SHOOT2, false, 20, None, None, chase
+    state Spr::GRETEL_SHOOT1, false, 20, None, ActionShoot, next
+    state Spr::GRETEL_SHOOT2, false, 20, None, None, chase
 }
 
 spawn fettgeischt {
@@ -518,37 +518,37 @@ spawn fettgeischt {
 
 states fettgeischt {
 stand:
-    state FETTGEISCHT_W1, false, 0, ThinkStand, None, stand
+    state Spr::FETTGEISCHT_W1, false, 0, ThinkStand, None, stand
 path:
-    state FETTGEISCHT_W1, false, 20, ThinkPath, None, next
-    state FETTGEISCHT_W1, false, 5, None, None, next
-    state FETTGEISCHT_W2, false, 15, ThinkPath, None, next
-    state FETTGEISCHT_W3, false, 20, ThinkPath, None, next
-    state FETTGEISCHT_W3, false, 5, None, None, next
-    state FETTGEISCHT_W4, false, 15, ThinkPath, None, path
+    state Spr::FETTGEISCHT_W1, false, 20, ThinkPath, None, next
+    state Spr::FETTGEISCHT_W1, false, 5, None, None, next
+    state Spr::FETTGEISCHT_W2, false, 15, ThinkPath, None, next
+    state Spr::FETTGEISCHT_W3, false, 20, ThinkPath, None, next
+    state Spr::FETTGEISCHT_W3, false, 5, None, None, next
+    state Spr::FETTGEISCHT_W4, false, 15, ThinkPath, None, path
 pain1:
-    state FETTGEISCHT_W1, false, 10, None, None, chase
+    state Spr::FETTGEISCHT_W1, false, 10, None, None, chase
 pain2:
-    state FETTGEISCHT_W1, false, 10, None, None, chase
+    state Spr::FETTGEISCHT_W1, false, 10, None, None, chase
 sight:
 chase:
-    state FETTGEISCHT_W1, false, 10, ThinkChase, None, next
-    state FETTGEISCHT_W1, false, 3, None, None, next
-    state FETTGEISCHT_W2, false, 8, ThinkChase, None, next
-    state FETTGEISCHT_W3, false, 10, ThinkChase, None, next
-    state FETTGEISCHT_W3, false, 3, None, None, next
-    state FETTGEISCHT_W4, false, 8, ThinkChase, None, chase
+    state Spr::FETTGEISCHT_W1, false, 10, ThinkChase, None, next
+    state Spr::FETTGEISCHT_W1, false, 3, None, None, next
+    state Spr::FETTGEISCHT_W2, false, 8, ThinkChase, None, next
+    state Spr::FETTGEISCHT_W3, false, 10, ThinkChase, None, next
+    state Spr::FETTGEISCHT_W3, false, 3, None, None, next
+    state Spr::FETTGEISCHT_W4, false, 8, ThinkChase, None, chase
 die:
-    state FETTGEISCHT_DIE1, false, 15, None, None, next
-    state FETTGEISCHT_DIE2, false, 15, None, ActionDie, next
-    state FETTGEISCHT_DIE3, false, 15, None, None, dead
+    state Spr::FETTGEISCHT_DIE1, false, 15, None, None, next
+    state Spr::FETTGEISCHT_DIE2, false, 15, None, ActionDie, next
+    state Spr::FETTGEISCHT_DIE3, false, 15, None, None, dead
 dead:
-    state FETTGEISCHT_DEAD, false, 0, None, None, dead
+    state Spr::FETTGEISCHT_DEAD, false, 0, None, None, dead
 shoot:
-    state FETTGEISCHT_SHOOT1, false, 20, None, None, next
-    state FETTGEISCHT_SHOOT2, false, 20, None, None, next
-    state FETTGEISCHT_SHOOT3, false, 20, None, ActionShoot, next
-    state FETTGEISCHT_SHOOT4, false, 20, None, None, chase
+    state Spr::FETTGEISCHT_SHOOT1, false, 20, None, None, next
+    state Spr::FETTGEISCHT_SHOOT2, false, 20, None, None, next
+    state Spr::FETTGEISCHT_SHOOT3, false, 20, None, ActionShoot, next
+    state Spr::FETTGEISCHT_SHOOT4, false, 20, None, None, chase
 }
 
 
@@ -556,62 +556,62 @@ shoot:
 states weapon_knife {
 lower:
 ready:
-    state SPR_KNIFEREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::SPR_KNIFEREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_KNIFEATK1, false, 3, None, ActionDie, next
-    state SPR_KNIFEATK2, false, 3, None, None, next
-    state SPR_KNIFEATK3, false, 10, None, None, next
-    state SPR_KNIFEATK4, false, 10, None, None, ready
+    state Spr::SPR_KNIFEATK1, false, 3, None, ActionDie, next
+    state Spr::SPR_KNIFEATK2, false, 3, None, None, next
+    state Spr::SPR_KNIFEATK3, false, 10, None, None, next
+    state Spr::SPR_KNIFEATK4, false, 10, None, None, ready
 }
 
 states weapon_gun {
 lower:
-    state SPR_PISTOLATK4, false, 10, None, None, next
+    state Spr::SPR_PISTOLATK4, false, 10, None, None, next
 ready:
-    state SPR_PISTOLREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::SPR_PISTOLREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_PISTOLATK1, false, 1, None, WeaponAttackCheckIdle, next
+    state Spr::SPR_PISTOLATK1, false, 1, None, WeaponAttackCheckIdle, next
 repeat:
-    state SPR_PISTOLATK2, false, 3, None, ActionShootPistol, next
-    state SPR_PISTOLATK3, false, 10, None, None, lower
+    state Spr::SPR_PISTOLATK2, false, 3, None, ActionShootPistol, next
+    state Spr::SPR_PISTOLATK3, false, 10, None, None, lower
 }
 
 states weapon_machinegun {
 lower:
-    state SPR_MACHINEGUNATK4, false, 3, None, None, ready
+    state Spr::SPR_MACHINEGUNATK4, false, 3, None, None, ready
 ready:
-    state SPR_MACHINEGUNREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::SPR_MACHINEGUNREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_MACHINEGUNATK1, false, 4, None, WeaponAttackCheckIdle, next
+    state Spr::SPR_MACHINEGUNATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
-    state SPR_MACHINEGUNATK2, false, 4, None, ActionShootMg, next
-    state SPR_MACHINEGUNATK3, false, 4, None, WeaponAttackCheckIdle, repeat
+    state Spr::SPR_MACHINEGUNATK2, false, 4, None, ActionShootMg, next
+    state Spr::SPR_MACHINEGUNATK3, false, 4, None, WeaponAttackCheckIdle, repeat
 }
 
 
 states weapon_chaingun {
 lower:
-    state SPR_CHAINATK4, false, 4, None, None, ready
+    state Spr::SPR_CHAINATK4, false, 4, None, None, ready
 ready:
-    state SPR_CHAINREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::SPR_CHAINREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state SPR_CHAINATK1, false, 4, None, WeaponAttackCheckIdle, next
+    state Spr::SPR_CHAINATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
-    state SPR_CHAINATK2, false, 4, None, ActionShootChain, next
-    state SPR_CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
+    state Spr::SPR_CHAINATK2, false, 4, None, ActionShootChain, next
+    state Spr::SPR_CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
 }
 
 states door {
 closed:
-    state DEMO, false, 0, CheckOpenDoor , None, closed
+    state Spr::DEMO, false, 0, CheckOpenDoor , None, closed
 opened: 
-    state DEMO, false, 300, CheckCloseDoor , None, blocked
+    state Spr::DEMO, false, 300, CheckCloseDoor , None, blocked
 close:
-    state DEMO, false, 64, DecOpen, None, closed
+    state Spr::DEMO, false, 64, DecOpen, None, closed
 open:
-    state DEMO, false, 64, IncOpen, None, opened
+    state Spr::DEMO, false, 64, IncOpen, None, opened
 blocked: 
-    state DEMO, false, 0, CheckDoorBlocked, None, blocked
+    state Spr::DEMO, false, 0, CheckDoorBlocked, None, blocked
 }
 function WeaponIdleCheckFire {
 // get fire flag
@@ -622,7 +622,7 @@ function WeaponIdleCheckFire {
         @attack gostate
         stop
     then
-// 'dynamically' look up ready state of currently selected weapon // i.e. this is how a weapon change is implemented
+// 'dynamically' look up ready state Spr::of currently selected weapon // i.e. this is how a weapon change is implemented
     WeaponOp::NEXT_STATE trap
     gostate
 }
@@ -630,7 +630,7 @@ function WeaponAttackCheckIdle {
     // get ammo depleted flag
     WeaponOp::DEPLETED trap
     if
-        // out of ammo. stay in this state (keep weapon raised)
+        // out of ammo. stay in this state Spr::(keep weapon raised)
         @attack gostate
         stop
     then
@@ -652,7 +652,7 @@ function ChaingunAttackCheckIdle {
     // get ammo depleted flag
     WeaponOp::DEPLETED trap
     if
-        // out of ammo. stay in this state (keep weapon raised)
+        // out of ammo. stay in this state Spr::(keep weapon raised)
         @attack gostate
         stop
     then
@@ -815,7 +815,7 @@ xnum WeaponOp
     UNUSED_3,
     SOUND
 }
-enum
+xnum Spr
 {
     SPR_NONE,
     DEMO,

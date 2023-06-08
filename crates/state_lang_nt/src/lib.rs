@@ -61,14 +61,16 @@ pub mod frontent {
                     for e in elements.iter() {
                         match e {
                             state_bc_y::StateElement::State {
-                                sprite,
+                                sprite: (sprite_enum, sprite_name),
                                 directional,
                                 timeout,
                                 think,
                                 action,
                                 next,
                             } => {
-                                let id = lexer.span_str(*sprite).into();
+                                let sprite_name = lexer.span_str(*sprite_name);
+                                let sprite_enum = lexer.span_str(*sprite_enum);
+                                let id = format!("{sprite_enum}::{sprite_name}");
                                 let think = lexer.span_str(*think).into();
                                 let action = lexer.span_str(*action).into();
                                 let next = lexer.span_str(*next).into();
