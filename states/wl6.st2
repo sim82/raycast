@@ -556,49 +556,49 @@ shoot:
 states weapon_knife {
 lower:
 ready:
-    state Spr::SPR_KNIFEREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::KNIFEREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state Spr::SPR_KNIFEATK1, false, 3, None, ActionDie, next
-    state Spr::SPR_KNIFEATK2, false, 3, None, None, next
-    state Spr::SPR_KNIFEATK3, false, 10, None, None, next
-    state Spr::SPR_KNIFEATK4, false, 10, None, None, ready
+    state Spr::KNIFEATK1, false, 3, None, ActionDie, next
+    state Spr::KNIFEATK2, false, 3, None, None, next
+    state Spr::KNIFEATK3, false, 10, None, None, next
+    state Spr::KNIFEATK4, false, 10, None, None, ready
 }
 
 states weapon_gun {
 lower:
-    state Spr::SPR_PISTOLATK4, false, 10, None, None, next
+    state Spr::PISTOLATK4, false, 10, None, None, next
 ready:
-    state Spr::SPR_PISTOLREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::PISTOLREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state Spr::SPR_PISTOLATK1, false, 1, None, WeaponAttackCheckIdle, next
+    state Spr::PISTOLATK1, false, 1, None, WeaponAttackCheckIdle, next
 repeat:
-    state Spr::SPR_PISTOLATK2, false, 3, None, ActionShootPistol, next
-    state Spr::SPR_PISTOLATK3, false, 10, None, None, lower
+    state Spr::PISTOLATK2, false, 3, None, ActionShootPistol, next
+    state Spr::PISTOLATK3, false, 10, None, None, lower
 }
 
 states weapon_machinegun {
 lower:
-    state Spr::SPR_MACHINEGUNATK4, false, 3, None, None, ready
+    state Spr::MACHINEGUNATK4, false, 3, None, None, ready
 ready:
-    state Spr::SPR_MACHINEGUNREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::MACHINEGUNREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state Spr::SPR_MACHINEGUNATK1, false, 4, None, WeaponAttackCheckIdle, next
+    state Spr::MACHINEGUNATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
-    state Spr::SPR_MACHINEGUNATK2, false, 4, None, ActionShootMg, next
-    state Spr::SPR_MACHINEGUNATK3, false, 4, None, WeaponAttackCheckIdle, repeat
+    state Spr::MACHINEGUNATK2, false, 4, None, ActionShootMg, next
+    state Spr::MACHINEGUNATK3, false, 4, None, WeaponAttackCheckIdle, repeat
 }
 
 
 states weapon_chaingun {
 lower:
-    state Spr::SPR_CHAINATK4, false, 4, None, None, ready
+    state Spr::CHAINATK4, false, 4, None, None, ready
 ready:
-    state Spr::SPR_CHAINREADY, false, 0, None, WeaponIdleCheckFire, ready
+    state Spr::CHAINREADY, false, 0, None, WeaponIdleCheckFire, ready
 attack:
-    state Spr::SPR_CHAINATK1, false, 4, None, WeaponAttackCheckIdle, next
+    state Spr::CHAINATK1, false, 4, None, WeaponAttackCheckIdle, next
 repeat:
-    state Spr::SPR_CHAINATK2, false, 4, None, ActionShootChain, next
-    state Spr::SPR_CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
+    state Spr::CHAINATK2, false, 4, None, ActionShootChain, next
+    state Spr::CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
 }
 
 states door {
@@ -817,7 +817,7 @@ enum WeaponOp
 }
 enum Spr
 {
-    SPR_NONE,
+    NONE,
     DEMO,
     DEATHCAM,
     STAT_0,STAT_1,STAT_2,STAT_3,
@@ -981,17 +981,17 @@ enum Spr
     SELF1_W1,SELF_W2,SELF_W3,SELF_W4,
     SELF_JUMP1,SELF_JUMP2,SELF_JUMP3,SELF_JUMP4,
    
-    SPR_KNIFEREADY,SPR_KNIFEATK1,SPR_KNIFEATK2,SPR_KNIFEATK3,
-    SPR_KNIFEATK4,
+    KNIFEREADY,KNIFEATK1,KNIFEATK2,KNIFEATK3,
+    KNIFEATK4,
    
-    SPR_PISTOLREADY,SPR_PISTOLATK1,SPR_PISTOLATK2,SPR_PISTOLATK3,
-    SPR_PISTOLATK4,
+    PISTOLREADY,PISTOLATK1,PISTOLATK2,PISTOLATK3,
+    PISTOLATK4,
    
-    SPR_MACHINEGUNREADY,SPR_MACHINEGUNATK1,SPR_MACHINEGUNATK2,SPR_MACHINEGUNATK3,
-    SPR_MACHINEGUNATK4,
+    MACHINEGUNREADY,MACHINEGUNATK1,MACHINEGUNATK2,MACHINEGUNATK3,
+    MACHINEGUNATK4,
    
-    SPR_CHAINREADY,SPR_CHAINATK1,SPR_CHAINATK2,SPR_CHAINATK3,
-    SPR_CHAINATK4
+    CHAINREADY,CHAINATK1,CHAINATK2,CHAINATK3,
+    CHAINATK4
 
 }
 enum Snd {
