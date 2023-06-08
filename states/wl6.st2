@@ -615,7 +615,7 @@ blocked:
 }
 function WeaponIdleCheckFire {
 // get fire flag
-    WEAPON_TRIGGER trap
+    WeaponOp::TRIGGER trap
 
     if
         // goto attack state
@@ -623,19 +623,19 @@ function WeaponIdleCheckFire {
         stop
     then
 // 'dynamically' look up ready state of currently selected weapon // i.e. this is how a weapon change is implemented
-    WEAPON_NEXT_STATE trap
+    WeaponOp::NEXT_STATE trap
     gostate
 }
 function WeaponAttackCheckIdle {
     // get ammo depleted flag
-    WEAPON_DEPLETED trap
+    WeaponOp::DEPLETED trap
     if
         // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    WEAPON_TRIGGER trap
+    WeaponOp::TRIGGER trap
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -646,18 +646,18 @@ function WeaponAttackCheckIdle {
 
 function ChaingunAttackCheckIdle {
     // BUG: need to check if ammo available before extra chaingun shot
-    Snd::SHOT_MG WEAPON_SOUND trap 
+    Snd::SHOT_MG WeaponOp::SOUND trap 
     ACTION_SHOOT call 
 
     // get ammo depleted flag
-    WEAPON_DEPLETED trap
+    WeaponOp::DEPLETED trap
     if
         // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    WEAPON_TRIGGER trap
+    WeaponOp::TRIGGER trap
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -711,15 +711,15 @@ function ActionDie {
     ACTION_DIE call
 }
 function ActionShootPistol {
-    Snd::SHOT_PISTOL WEAPON_SOUND trap
+    Snd::SHOT_PISTOL WeaponOp::SOUND trap
     ACTION_SHOOT call
 }
 function ActionShootMg {
-    Snd::SHOT_MG WEAPON_SOUND trap
+    Snd::SHOT_MG WeaponOp::SOUND trap
     ACTION_SHOOT call
 }
 function ActionShootChain {
-    Snd::SHOT_CHAIN WEAPON_SOUND trap
+    Snd::SHOT_CHAIN WeaponOp::SOUND trap
     ACTION_SHOOT call
 }
 function ActionShoot {
@@ -807,13 +807,13 @@ xnum DoorOp
     BLOCKED,
     SOUND 
 }
-enum 
+xnum WeaponOp 
 {
-    WEAPON_TRIGGER,
-    WEAPON_DEPLETED,
-    WEAPON_NEXT_STATE,
-    WEAPON3,
-    WEAPON_SOUND
+    TRIGGER,
+    DEPLETED,
+    NEXT_STATE,
+    UNUSED_3,
+    SOUND
 }
 enum
 {
