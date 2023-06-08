@@ -647,7 +647,7 @@ function WeaponAttackCheckIdle {
 function ChaingunAttackCheckIdle {
     // BUG: need to check if ammo available before extra chaingun shot
     Snd::SHOT_MG WeaponOp::SOUND trap 
-    ACTION_SHOOT call 
+    Func::ACTION_SHOOT call 
 
     // get ammo depleted flag
     WeaponOp::DEPLETED trap
@@ -696,37 +696,37 @@ function CheckDoorBlocked {
     then
 }
 function ThinkStand {
-    THINK_STAND call
+    Func::THINK_STAND call
 }
 function ThinkPath {
-    THINK_PATH call
+    Func::THINK_PATH call
 }
 function ThinkChase {
-    THINK_CHASE call
+    Func::THINK_CHASE call
 }
 function ThinkDogChase {
-    THINK_DOG_CHASE call
+    Func::THINK_DOG_CHASE call
 }
 function ActionDie {
-    ACTION_DIE call
+    Func::ACTION_DIE call
 }
 function ActionShootPistol {
     Snd::SHOT_PISTOL WeaponOp::SOUND trap
-    ACTION_SHOOT call
+    Func::ACTION_SHOOT call
 }
 function ActionShootMg {
     Snd::SHOT_MG WeaponOp::SOUND trap
-    ACTION_SHOOT call
+    Func::ACTION_SHOOT call
 }
 function ActionShootChain {
     Snd::SHOT_CHAIN WeaponOp::SOUND trap
-    ACTION_SHOOT call
+    Func::ACTION_SHOOT call
 }
 function ActionShoot {
-    ACTION_SHOOT call
+    Func::ACTION_SHOOT call
 }
 function ActionBite {
-    ACTION_BITE call
+    Func::ACTION_BITE call
 }
 function None {
     stop
@@ -784,7 +784,7 @@ function DeathScreamAlp {
 function SightAlp {
     [Snd::UTT_RAPUNZ] EnemyOp::RND_SOUND trap
 }
-enum
+xnum Func
 {
     FUNC_NONE,
     THINK_STAND,
