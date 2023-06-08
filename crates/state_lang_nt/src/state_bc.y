@@ -10,11 +10,8 @@ Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	'states' 'IDENTIFIER' '{' StatesBody '}' {
 		Ok(Toplevel::States{name: $2?.span(), elements: $4?})
 	}
-	| 'enum' '{' EnumBody '}' {
-		Ok(Toplevel::Enum($3?))
-	}
-	| 'xnum' 'IDENTIFIER' '{' EnumBody '}' {
-		Ok(Toplevel::Xnum{name: $2?.span(), elements: $4?})
+	| 'enum' 'IDENTIFIER' '{' EnumBody '}' {
+		Ok(Toplevel::Enum{name: $2?.span(), elements: $4?})
 	} 
 	| 'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
 		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
@@ -68,8 +65,7 @@ WordList -> Result<Vec<Word>, Box<dyn Error>>:
 	
 Word -> Result<Word, Box<dyn Error>>:
 	TypedIntExpr { Ok(Word::Push($1?)) }
-	| 'IDENTIFIER' { Ok(Word::PushEnum($1?.span()))}
-	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushXnum($1?.span(),$3?.span()))}
+	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushEnum($1?.span(),$3?.span()))}
 	| 'trap' { Ok(Word::Trap )}
 	| 'not' { Ok(Word::Not)}
 	| 'if' WordList 'then' { Ok(Word::If($2?))}
@@ -150,8 +146,7 @@ fn parse_int(s: &str) -> Result<i64, Box<dyn Error>> {
 pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
-	Enum(Vec<Span>),
-	Xnum{name: Span, elements: Vec<Span>},
+	Enum{name: Span, elements: Vec<Span>},
 	Function { name: Span, body: Vec<Word> },
 }
 
@@ -185,8 +180,7 @@ pub enum TypeName {
 pub enum Word {
 	Push(TypedInt),
 	PushStateLabel(Span),
-	PushEnum(Span), // FIXME: only u8 for now
-	PushXnum(Span,Span), // FIXME: only u8 for now
+	PushEnum(Span,Span), // FIXME: only u8 for now
 	Trap,
 	Not,
 	If(Vec<Word>),

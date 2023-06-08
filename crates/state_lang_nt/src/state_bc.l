@@ -3,7 +3,6 @@
 states "states"
 state "state"
 enum "enum"
-xnum "xnum"
 spawn "spawn"
 true "true"
 false "false"

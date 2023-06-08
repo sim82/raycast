@@ -784,7 +784,7 @@ function DeathScreamAlp {
 function SightAlp {
     [Snd::UTT_RAPUNZ] EnemyOp::RND_SOUND trap
 }
-xnum Func
+enum Func
 {
     FUNC_NONE,
     THINK_STAND,
@@ -795,11 +795,11 @@ xnum Func
     ACTION_SHOOT,
     ACTION_BITE
 }
-xnum EnemyOp 
+enum EnemyOp 
 {
     RND_SOUND
 }
-xnum DoorOp
+enum DoorOp
 {
     GET_F,
     SET_F,
@@ -807,7 +807,7 @@ xnum DoorOp
     BLOCKED,
     SOUND 
 }
-xnum WeaponOp 
+enum WeaponOp 
 {
     TRIGGER,
     DEPLETED,
@@ -815,7 +815,7 @@ xnum WeaponOp
     UNUSED_3,
     SOUND
 }
-xnum Spr
+enum Spr
 {
     SPR_NONE,
     DEMO,
@@ -994,7 +994,7 @@ xnum Spr
     SPR_CHAINATK4
 
 }
-xnum Snd {
+enum Snd {
     HALTSTOP,
     WOOF,
     DOOR_CLOSE,
