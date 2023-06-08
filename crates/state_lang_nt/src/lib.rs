@@ -152,10 +152,11 @@ pub mod frontent {
                     }
                 }
                 Toplevel::Xnum { name, elements } => {
-                    for (i, name_span) in elements.iter().enumerate() {
-                        let name = lexer.span_str(*name_span);
+                    let name = lexer.span_str(name);
+                    for (i, element_span) in elements.iter().enumerate() {
+                        let element = lexer.span_str(*element_span);
                         // println!("{i} {name}");
-                        enums.insert(name.into(), i);
+                        enums.insert(format!("{}::{}", name, element), i);
                     }
                 }
                 Toplevel::Function { name, body } => {
@@ -216,11 +217,13 @@ pub mod frontent {
                         .unwrap_or_else(|| panic!("could not find enum {name}"));
                     codegen.loadi_u8(*v as u8)
                 }
-                Word::PushXnum(_enum_name, name) => {
+                Word::PushXnum(enum_name, name) => {
+                    let enum_name = span_resolver.get_span(*enum_name);
                     let name = span_resolver.get_span(*name);
+                    let full_name = format!("{enum_name}::{name}");
                     let v = enums
-                        .get(name)
-                        .unwrap_or_else(|| panic!("could not find enum {name}"));
+                        .get(&full_name)
+                        .unwrap_or_else(|| panic!("could not find enum {full_name}"));
                     codegen.loadi_u8(*v as u8)
                 }
                 Word::Trap => codegen.trap(),
