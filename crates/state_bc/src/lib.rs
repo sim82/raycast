@@ -13,9 +13,6 @@ pub mod prelude {
     pub use crate::Result;
 }
 
-#[cfg(feature = "compiler")]
-pub mod compiler;
-
 pub mod ast;
 pub mod codegen;
 pub mod opcode;

@@ -1,17 +1,17 @@
 use crate::EnemySpawnInfo;
 
-#[derive(Debug)]
-pub enum ToplevelElement {
-    EnumDecl(EnumDecl),
-    StatesBlock(StatesBlock),
-    SpawnBlock(SpawnBlock),
-    FunctionBlock(FunctionBlock),
-}
+// #[derive(Debug)]
+// pub enum ToplevelElement {
+//     EnumDecl(EnumDecl),
+//     StatesBlock(StatesBlock),
+//     SpawnBlock(SpawnBlock),
+//     FunctionBlock(FunctionBlock),
+// }
 
-#[derive(Debug)]
-pub struct EnumDecl {
-    pub names: Vec<String>,
-}
+// #[derive(Debug)]
+// pub struct EnumDecl {
+//     pub names: Vec<String>,
+// }
 
 #[derive(Debug)]
 pub enum StatesBlockElement {
@@ -38,26 +38,26 @@ pub struct SpawnBlock {
     pub infos: Vec<EnemySpawnInfo>,
 }
 
-#[derive(Debug)]
-pub enum FunctionBlockElement {
-    Label(String),
-    // LoadI32 { addr: u8 },
-    LoadiI32 { value: i32 },
-    LoadiU8Enum { name: String },
-    LoadiU8 { value: u8 },
-    LoadStateLabel { label: String },
-    // StoreI32 { addr: u8 },
-    Trap,
-    Add,
-    Ceq,
-    Not,
-    Jrc { label: String },
-    FunctionCall,
-    GoState,
-    Stop,
-}
-#[derive(Debug)]
-pub struct FunctionBlock {
-    pub name: String,
-    pub elements: Vec<FunctionBlockElement>,
-}
+// #[derive(Debug)]
+// pub enum FunctionBlockElement {
+//     Label(String),
+//     // LoadI32 { addr: u8 },
+//     LoadiI32 { value: i32 },
+//     LoadiU8Enum { name: String },
+//     LoadiU8 { value: u8 },
+//     LoadStateLabel { label: String },
+//     // StoreI32 { addr: u8 },
+//     Trap,
+//     Add,
+//     Ceq,
+//     Not,
+//     Jrc { label: String },
+//     FunctionCall,
+//     GoState,
+//     Stop,
+// }
+// #[derive(Debug)]
+// pub struct FunctionBlock {
+//     pub name: String,
+//     pub elements: Vec<FunctionBlockElement>,
+// }
