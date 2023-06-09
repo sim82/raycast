@@ -1,3 +1,6 @@
+// ==========================================================================
+//  BROWN
+// ==========================================================================
 
 spawn brown {
     directional 108, stand, ammo
@@ -39,11 +42,35 @@ dead:
     state Spr::BROWN_DEAD, false, 0, None, None, dead
 shoot:
     state Spr::BROWN_SHOOT1, false, 20, None, None, next
-    state Spr::BROWN_SHOOT2, false, 20, None, ActionShoot, next
+    state Spr::BROWN_SHOOT2, false, 20, None, ActionShootBrown, next
     state Spr::BROWN_SHOOT3, false, 20, None, None, chase
 }
 
+// NOTE: the enemy play sound trap works different than doors/weapons
+// it supports a list of alternatives from which to choose randomly.
+function DeathScreamBrown {
+    [
+        Snd::ScreamChhha
+        Snd::ScreamHuugh
+        Snd::ScreamUwwwgh
+        Snd::ScreamAiiii
+        Snd::ScreamOohhh
+        Snd::ScreamAagh
+        Snd::ScreamAyyy
+    ] EnemyOp::Play trap
 
+}
+function SightBrown{
+    [Snd::Haltstop] EnemyOp::Play trap
+}
+function ActionShootBrown {
+    [Snd::ShotBrown] EnemyOp::Play trap
+    Func::ActionShoot call
+}
+
+// ==========================================================================
+//  BLUE 
+// ==========================================================================
 spawn blue {
     directional 126, stand, ammo
     directional 130, path, ammo
@@ -85,16 +112,30 @@ dead:
 
 shoot:
     state Spr::BLUE_SHOOT1, false, 20, None, None, next
-    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShootBlue, next
     state Spr::BLUE_SHOOT3, false, 10, None, None, next
-    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShootBlue, next
     state Spr::BLUE_SHOOT3, false, 10, None, None, next
-    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShootBlue, next
     state Spr::BLUE_SHOOT3, false, 10, None, None, next
-    state Spr::BLUE_SHOOT2, false, 10, None, ActionShoot, next
+    state Spr::BLUE_SHOOT2, false, 10, None, ActionShootBlue, next
     state Spr::BLUE_SHOOT3, false, 10, None, None, chase
 }
 
+function ActionShootBlue {
+    [Snd::ShotBlue] EnemyOp::Play trap
+    Func::ActionShoot call
+}
+
+function DeathScreamBlue {
+    [Snd::ScreamMeinleben] EnemyOp::Play trap
+}
+function SightBlue{
+    [Snd::SchuhzApfel] EnemyOp::Play trap
+}
+// ==========================================================================
+//  WHITE
+// ==========================================================================
 
 spawn white {
     directional 116, stand, ammo
@@ -141,7 +182,16 @@ shoot:
     state Spr::WHITE_SHOOT3, false, 20, None, None, chase
 }
 
+function DeathScreamWhite {
+    [Snd::ScreamNeinsowas] EnemyOp::Play trap
+}
+function SightWhite {
+    [Snd::Spion] EnemyOp::Play trap
+}
 
+// ==========================================================================
+//  ROTTEN
+// ==========================================================================
 spawn rotten {
     directional 216, stand, ammo
     directional 220, path, ammo
@@ -189,6 +239,13 @@ shoot:
     state Spr::ROTTEN_SHOOT4, false, 20, None, None, chase
 }
 
+function DeathScreamRotten {
+    [Snd::ScreamRottenAaah] EnemyOp::Play trap
+}
+
+// ==========================================================================
+//  FURRY
+// ==========================================================================
 
 spawn furry {
     directional 134, stand, none
@@ -235,7 +292,13 @@ jump:
     state Spr::FURRY_W1_1, false, 10, None, None, chase
 }
 
+function DeathScreamFurry {
+    [Snd::Yiff] EnemyOp::Play trap
+}
 
+// ==========================================================================
+//  HANS
+// ==========================================================================
 spawn hans {
     undirectional 214, stand, silver_key
 }
@@ -274,6 +337,9 @@ shoot:
     state Spr::BOSS_SHOOT3, false, 20, None, None, chase
 }
 
+// ==========================================================================
+//  THE GOOD DR.
+// ==========================================================================
 spawn good_dr {
     undirectional 196, stand, None
 }
@@ -312,6 +378,9 @@ shoot:
 }
 
 
+// ==========================================================================
+//  GROFAZ
+// ==========================================================================
 spawn grofaz {
     undirectional 224, chase, None
 }
@@ -397,6 +466,21 @@ shoot:
     state Spr::MECHA_SHOOT3, false, 20, None, None, chase
 } 
 
+function DeathScreamMecha {
+    [Snd::Scheiss] EnemyOp::Play trap
+}
+function SightMecha {
+    [Snd::Schweinhund] EnemyOp::Play trap
+}
+function DeathScreamGrofaz {
+    [Snd::Gibb] EnemyOp::Play trap
+}
+function DeathScreamGrofazTalk {
+    [Snd::Evaaufwiedersehn] EnemyOp::Play trap
+}
+// ==========================================================================
+//  ALP
+// ==========================================================================
 spawn alp {
     undirectional 160, stand, None
 }
@@ -437,7 +521,16 @@ shoot:
     state Spr::ALP_W1, false, 20, None, None, chase
 }
 
+function DeathScreamAlp {
+    [Snd::LaughAlp] EnemyOp::Play trap
+}
+function SightAlp {
+    [Snd::Rapunz] EnemyOp::Play trap
+}
 
+// ==========================================================================
+//  HERMANN
+// ==========================================================================
 spawn hermann {
     undirectional 215, stand, None
 }
@@ -479,6 +572,9 @@ spawn gretel {
     undirectional 197, stand, None
 }
 
+// ==========================================================================
+//  GRETEL
+// ==========================================================================
 states gretel {
 stand:
     state Spr::GRETEL_W1, false, 0, ThinkStand, None, stand
@@ -512,6 +608,9 @@ shoot:
     state Spr::GRETEL_SHOOT2, false, 20, None, None, chase
 }
 
+// ==========================================================================
+//  FETTGEISCHT
+// ==========================================================================
 spawn fettgeischt {
     undirectional 179, stand, None
 }
@@ -553,6 +652,9 @@ shoot:
 
 
 
+// ==========================================================================
+//  WEAPONS
+// ==========================================================================
 states weapon_knife {
 lower:
 ready:
@@ -601,18 +703,6 @@ repeat:
     state Spr::CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
 }
 
-states door {
-closed:
-    state Spr::DEMO, false, 0, CheckOpenDoor , None, closed
-opened: 
-    state Spr::DEMO, false, 300, CheckCloseDoor , None, blocked
-close:
-    state Spr::DEMO, false, 64, DecOpen, None, closed
-open:
-    state Spr::DEMO, false, 64, IncOpen, None, opened
-blocked: 
-    state Spr::DEMO, false, 0, CheckDoorBlocked, None, blocked
-}
 function WeaponIdleCheckFire {
 // get fire flag
     WeaponOp::Trigger trap
@@ -664,6 +754,35 @@ function ChaingunAttackCheckIdle {
     then
     // follow through to next (usually this means fire/repeat)
 }
+
+function ActionShootPistol {
+    Snd::ShotPistol WeaponOp::Play trap
+    Func::ActionShoot call
+}
+function ActionShootMg {
+    Snd::ShotMg WeaponOp::Play trap
+    Func::ActionShoot call
+}
+function ActionShootChain {
+    Snd::ShotChain WeaponOp::Play trap
+    Func::ActionShoot call
+}
+
+// ==========================================================================
+//  DOOR
+// ==========================================================================
+states door {
+closed:
+    state Spr::DEMO, false, 0, CheckOpenDoor , None, closed
+opened: 
+    state Spr::DEMO, false, 300, CheckCloseDoor , None, blocked
+close:
+    state Spr::DEMO, false, 64, DecOpen, None, closed
+open:
+    state Spr::DEMO, false, 64, IncOpen, None, opened
+blocked: 
+    state Spr::DEMO, false, 0, CheckDoorBlocked, None, blocked
+}
 function IncOpen {
     DoorOp::GetF trap
     // 1024 equals 1/64 in fp16 repr (i.e. open door in 64 steps)
@@ -695,6 +814,10 @@ function CheckDoorBlocked {
         @close gostate
     then
 }
+
+// ==========================================================================
+//  generic funcs
+// ==========================================================================
 function ThinkStand {
     Func::ThinkStand call
 }
@@ -710,18 +833,6 @@ function ThinkDogChase {
 function ActionDie {
     Func::ActionDie call
 }
-function ActionShootPistol {
-    Snd::ShotPistol WeaponOp::Play trap
-    Func::ActionShoot call
-}
-function ActionShootMg {
-    Snd::ShotMg WeaponOp::Play trap
-    Func::ActionShoot call
-}
-function ActionShootChain {
-    Snd::ShotChain WeaponOp::Play trap
-    Func::ActionShoot call
-}
 function ActionShoot {
     Func::ActionShoot call
 }
@@ -731,59 +842,10 @@ function ActionBite {
 function None {
     stop
 }
-// NOTE: the enemy play sound trap works different than doors/weapons
-// it supports a list of alternatives from which to choose randomly.
-function DeathScreamBrown {
-    [
-        Snd::ScreamChhha
-        Snd::ScreamHuugh
-        Snd::ScreamUwwwgh
-        Snd::ScreamAiiii
-        Snd::ScreamOohhh
-        Snd::ScreamAagh
-        Snd::ScreamAyyy
-    ] EnemyOp::Play trap
 
-}
-function SightBrown{
-    [Snd::Haltstop] EnemyOp::Play trap
-}
-function DeathScreamBlue {
-    [Snd::ScreamMeinleben] EnemyOp::Play trap
-}
-function SightBlue{
-    [Snd::SchuhzApfel] EnemyOp::Play trap
-}
-function DeathScreamWhite {
-    [Snd::ScreamNeinsowas] EnemyOp::Play trap
-}
-function SightWhite {
-    [Snd::Spion] EnemyOp::Play trap
-}
-function DeathScreamFurry {
-    [Snd::Yiff] EnemyOp::Play trap
-}
-function DeathScreamRotten {
-    [Snd::ScreamRottenAaah] EnemyOp::Play trap
-}
-function DeathScreamMecha {
-    [Snd::Scheiss] EnemyOp::Play trap
-}
-function SightMecha {
-    [Snd::Schweinhund] EnemyOp::Play trap
-}
-function DeathScreamGrofaz {
-    [Snd::Gibb] EnemyOp::Play trap
-}
-function DeathScreamGrofazTalk {
-    [Snd::Evaaufwiedersehn] EnemyOp::Play trap
-}
-function DeathScreamAlp {
-    [Snd::LaughAlp] EnemyOp::Play trap
-}
-function SightAlp {
-    [Snd::Rapunz] EnemyOp::Play trap
-}
+// ==========================================================================
+//  interface enums
+// ==========================================================================
 enum Func
 {
     FUNC_NONE,
@@ -815,6 +877,10 @@ enum WeaponOp
     Unused3,
     Play
 }
+
+// ==========================================================================
+//  sprite / sound enums
+// ==========================================================================
 enum Spr
 {
     NONE,
