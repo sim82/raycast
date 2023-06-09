@@ -1,8 +1,7 @@
 pub mod frontent {
     use std::{
         collections::BTreeMap,
-        io::{self, BufRead, Read, Write},
-        path::Path,
+        io::{Read, Write},
     };
 
     use crate::util::SpanResolver;
@@ -11,9 +10,10 @@ pub mod frontent {
 
     use super::util;
     use lrlex::lrlex_mod;
-    use lrpar::{lrpar_mod, Lexer, NonStreamingLexer};
+    use lrpar::{lrpar_mod, NonStreamingLexer};
     use state_bc::{
-        ast::{FunctionBlock, StatesBlock, StatesBlockElement},
+        ast::{StatesBlock, StatesBlockElement},
+        codegen,
         opcode::Codegen,
         Direction, EnemySpawnInfo, SpawnInfos,
     };
@@ -89,7 +89,7 @@ pub mod frontent {
                                 //     format!("{}::{}", name, lexer.span_str(*label_name));
                                 // full_label_name.pop(); // FIXME: get rid of the : in some other way...
                                 // println!("'{full_label_name}'");
-                                let mut label_name: String = lexer.span_str(*label_name).into();
+                                let label_name: String = lexer.span_str(*label_name).into();
                                 // label_name.pop();
                                 out_elements.push(StatesBlockElement::Label(label_name));
                             }
@@ -163,7 +163,7 @@ pub mod frontent {
         for (name, body) in function_blocks {
             let name: String = lexer.span_str(name).into();
 
-            let mut codegen = Codegen::default().with_annotation("source", &name);
+            let codegen = Codegen::default().with_annotation("source", &name);
             let codegen = emit_code(codegen, &body, &lexer, &enums);
             println!("'{name}'");
             functions.insert(name, codegen.stop());
@@ -184,7 +184,7 @@ pub mod frontent {
         }
         // std::fs::rename(from, to)
         let tmp_outname = format!("{}.tmp", outname);
-        state_bc::codegen::codegen(
+        codegen::codegen(
             &tmp_outname,
             &state_blocks,
             &enums,
@@ -245,7 +245,6 @@ pub mod util {
 
     pub fn remove_comments(input: &mut String) {
         let mut comments = Vec::new();
-        let mut in_comment = false;
         let mut potential_start = None;
         let mut start = None;
         for (i, c) in input.char_indices() {
@@ -290,14 +289,4 @@ fn test_remove_comments() {
     .into();
     util::remove_comments(&mut input);
     println!("{input}");
-}
-mod test {
-    enum Test {
-        A,
-        B,
-        C,
-    }
-    fn test() {
-        let a = Test::A;
-    }
 }
