@@ -56,48 +56,12 @@ pub mod frontent {
         for tle in toplevel_elements {
             match tle {
                 Toplevel::States { name, elements } => {
-                    let mut out_elements = Vec::new();
-                    let name = lexer.span_str(name).into();
-                    for e in elements.iter() {
-                        match e {
-                            state_bc_y::StateElement::State {
-                                sprite: (sprite_enum, sprite_name),
-                                directional,
-                                timeout,
-                                think,
-                                action,
-                                next,
-                            } => {
-                                let sprite_name = lexer.span_str(*sprite_name);
-                                let sprite_enum = lexer.span_str(*sprite_enum);
-                                let id = format!("{sprite_enum}::{sprite_name}");
-                                let think = lexer.span_str(*think).into();
-                                let action = lexer.span_str(*action).into();
-                                let next = lexer.span_str(*next).into();
-
-                                out_elements.push(StatesBlockElement::State {
-                                    id,
-                                    directional: *directional,
-                                    ticks: *timeout as i32,
-                                    think,
-                                    action,
-                                    next,
-                                })
-                            }
-                            state_bc_y::StateElement::Label(label_name) => {
-                                // let mut full_label_name =
-                                //     format!("{}::{}", name, lexer.span_str(*label_name));
-                                // full_label_name.pop(); // FIXME: get rid of the : in some other way...
-                                // println!("'{full_label_name}'");
-                                let label_name: String = lexer.span_str(*label_name).into();
-                                // label_name.pop();
-                                out_elements.push(StatesBlockElement::Label(label_name));
-                            }
-                        }
-                    }
                     state_blocks.push(StatesBlock {
-                        name,
-                        elements: out_elements,
+                        name: lexer.span_str(name).into(),
+                        elements: elements
+                            .iter()
+                            .map(|e| states_block_to_codegen(e, &lexer))
+                            .collect(),
                     });
                 }
                 Toplevel::Spawn {
@@ -164,7 +128,7 @@ pub mod frontent {
             let name: String = lexer.span_str(name).into();
 
             let codegen = Codegen::default().with_annotation("source", &name);
-            let codegen = emit_code(codegen, &body, &lexer, &enums);
+            let codegen = emit_codegen(codegen, &body, &lexer, &enums);
             println!("'{name}'");
             functions.insert(name, codegen.stop());
         }
@@ -194,7 +158,48 @@ pub mod frontent {
         std::fs::rename(tmp_outname, outname).unwrap();
     }
 
-    fn emit_code(
+    fn states_block_to_codegen(
+        e: &state_bc_y::StateElement,
+        lexer: &dyn SpanResolver,
+    ) -> StatesBlockElement {
+        match e {
+            state_bc_y::StateElement::State {
+                sprite: (sprite_enum, sprite_name),
+                directional,
+                timeout,
+                think,
+                action,
+                next,
+            } => {
+                let sprite_name = lexer.get_span(*sprite_name);
+                let sprite_enum = lexer.get_span(*sprite_enum);
+                let id = format!("{sprite_enum}::{sprite_name}");
+                let think = lexer.get_span(*think).into();
+                let action = lexer.get_span(*action).into();
+                let next = lexer.get_span(*next).into();
+
+                StatesBlockElement::State {
+                    id,
+                    directional: *directional,
+                    ticks: *timeout as i32,
+                    think,
+                    action,
+                    next,
+                }
+            }
+            state_bc_y::StateElement::Label(label_name) => {
+                // let mut full_label_name =
+                //     format!("{}::{}", name, lexer.span_str(*label_name));
+                // full_label_name.pop(); // FIXME: get rid of the : in some other way...
+                // println!("'{full_label_name}'");
+                let label_name: String = lexer.get_span(*label_name).into();
+                // label_name.pop();
+                StatesBlockElement::Label(label_name)
+            }
+        }
+    }
+
+    fn emit_codegen(
         mut codegen: Codegen,
         body: &[Word],
         span_resolver: &dyn SpanResolver,
@@ -218,7 +223,7 @@ pub mod frontent {
                 Word::Not => codegen.bin_not(),
                 Word::If(body) => {
                     let end_label = codegen.next_autolabel();
-                    emit_code(
+                    emit_codegen(
                         codegen.bin_not().jrc_label(&end_label),
                         body,
                         span_resolver,
@@ -231,7 +236,7 @@ pub mod frontent {
                 Word::Add => codegen.add(),
                 Word::Call => codegen.call(),
                 Word::WordList(body) => {
-                    emit_code(codegen, body, span_resolver, enums).loadi_u8(body.len() as u8)
+                    emit_codegen(codegen, body, span_resolver, enums).loadi_u8(body.len() as u8)
                 }
             }
         }
