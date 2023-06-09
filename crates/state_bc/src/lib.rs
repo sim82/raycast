@@ -16,6 +16,8 @@ pub mod prelude {
 #[cfg(feature = "compiler")]
 pub mod compiler;
 
+pub mod ast;
+pub mod codegen;
 pub mod opcode;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

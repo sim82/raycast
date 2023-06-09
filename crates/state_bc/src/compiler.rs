@@ -1,13 +1,13 @@
-use self::{
-    ast::ToplevelElement,
-    parser::{parse_toplevel, util::Span},
+use self::parser::{parse_toplevel, util::Span};
+use crate::{
+    ast::{self, ToplevelElement},
+    codegen,
+    opcode::Codegen,
+    SpawnInfos,
 };
-use crate::{opcode::Codegen, SpawnInfos};
 use nom::multi::many1;
 use std::{collections::BTreeMap, io::Write};
 
-pub mod ast;
-pub mod codegen;
 pub mod parser;
 
 pub fn compile(filename: &str, outname: &str) {

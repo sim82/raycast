@@ -9,7 +9,7 @@ edition = "2021"
 cfgrammar = "0.13.1"
 lrlex = "0.13.1"
 lrpar = "0.13.1"
-state_bc = { path = "../state_bc", features = ["compiler"] }
+state_bc = { path = "../state_bc" }
 
 [build-dependencies]
 cfgrammar = "0.13.1"

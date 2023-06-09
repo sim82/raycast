@@ -13,7 +13,7 @@ pub mod frontent {
     use lrlex::lrlex_mod;
     use lrpar::{lrpar_mod, Lexer, NonStreamingLexer};
     use state_bc::{
-        compiler::ast::{FunctionBlock, StatesBlock, StatesBlockElement},
+        ast::{FunctionBlock, StatesBlock, StatesBlockElement},
         opcode::Codegen,
         Direction, EnemySpawnInfo, SpawnInfos,
     };
@@ -184,7 +184,7 @@ pub mod frontent {
         }
         // std::fs::rename(from, to)
         let tmp_outname = format!("{}.tmp", outname);
-        state_bc::compiler::codegen::codegen(
+        state_bc::codegen::codegen(
             &tmp_outname,
             &state_blocks,
             &enums,
