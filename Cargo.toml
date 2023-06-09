@@ -3,6 +3,9 @@ name = "raycast"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+compile_states = ["state_lang_nt","state_bc/compiler"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [workspace.dependencies]
 anyhow = "1"
@@ -20,8 +23,8 @@ sdl2 = { workspace = true }
 state_bc = {path = "crates/state_bc"}
 
 [build-dependencies]
-state_bc = {path = "crates/state_bc", features = ["compiler"]}
-state_lang_nt = {path = "crates/state_lang_nt" }
+state_bc = {path = "crates/state_bc", optional = true } # , features = ["compiler"]}
+state_lang_nt = {path = "crates/state_lang_nt", optional = true }
 
 [profile.release]
 opt-level = 3     # Optimize for size
