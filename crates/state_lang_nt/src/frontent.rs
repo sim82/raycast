@@ -26,6 +26,28 @@ use state_bc::{
     Direction, EnemySpawnInfo, SpawnInfos,
 };
 
+struct ErrorReporter {
+    files: SimpleFiles<String, String>,
+    file_id: usize,
+}
+impl ErrorReporter {
+    pub fn new(filename: &str, input: &str) -> Self {
+        let mut files = SimpleFiles::new();
+        let file_id = files.add(filename.into(), input.into());
+        ErrorReporter { files, file_id }
+    }
+    fn report_error(&self, message: &str, label: &str, span: Span, note: String) {
+        let label = Label::primary(self.file_id, span.start()..span.end()).with_message(label);
+        let diagnostic = Diagnostic::error()
+            .with_message(message)
+            .with_labels(vec![label])
+            .with_notes(vec![note]);
+        let writer = StandardStream::stderr(ColorChoice::Always);
+        let config = codespan_reporting::term::Config::default();
+
+        term::emit(&mut writer.lock(), &config, &self.files, &diagnostic).unwrap();
+    }
+}
 // pub mod frontent {
 pub fn compile(path: &str, outname: &str) {
     let mut input = Vec::new();
@@ -35,8 +57,9 @@ pub fn compile(path: &str, outname: &str) {
     let mut input = String::from_utf8(input).unwrap();
     let lexerdef = parser::lexerdef();
     util::remove_comments(&mut input);
-    let mut files = SimpleFiles::new();
-    let file_id = files.add(path, input.clone());
+    // let mut files = SimpleFiles::new();
+    // let file_id = files.add(path, input.clone());
+    let error_reporter = ErrorReporter::new(path, &input);
     let lexer = lexerdef.lexer(&input);
 
     let (res, errs) = parser::parse(&lexer);
@@ -45,31 +68,22 @@ pub fn compile(path: &str, outname: &str) {
             lrpar::LexParseError::LexError(le) => {
                 // println!("{}", e.pp(&lexer, &parser::token_epp))
                 let s: Span = le.span();
-
-                let diagnostic = Diagnostic::error()
-                    .with_message("lex error")
-                    .with_labels(vec![
-                        Label::primary(file_id, s.start()..s.end()).with_message("here")
-                    ])
-                    .with_notes(vec![e.pp(&lexer, &parser::token_epp)]);
-                let writer = StandardStream::stderr(ColorChoice::Always);
-                let config = codespan_reporting::term::Config::default();
-
-                term::emit(&mut writer.lock(), &config, &files, &diagnostic).unwrap();
+                error_reporter.report_error(
+                    "lex error",
+                    "here",
+                    s,
+                    e.pp(&lexer, &parser::token_epp),
+                );
             }
             lrpar::LexParseError::ParseError(pe) => {
                 let s: Span = pe.lexeme().span();
 
-                let diagnostic = Diagnostic::error()
-                    .with_message("parse error")
-                    .with_labels(vec![
-                        Label::primary(file_id, s.start()..s.end()).with_message("here")
-                    ])
-                    .with_notes(vec![e.pp(&lexer, &parser::token_epp)]);
-                let writer = StandardStream::stderr(ColorChoice::Always);
-                let config = codespan_reporting::term::Config::default();
-
-                term::emit(&mut writer.lock(), &config, &files, &diagnostic).unwrap();
+                error_reporter.report_error(
+                    "parse error",
+                    "here",
+                    s,
+                    e.pp(&lexer, &parser::token_epp),
+                );
             }
         }
     }
@@ -165,7 +179,7 @@ pub fn compile(path: &str, outname: &str) {
         let name: String = lexer.span_str(name).into();
 
         let codegen = Codegen::default().with_annotation("source", &name);
-        let codegen = emit_codegen(codegen, &body, &lexer, &enums);
+        let codegen = emit_codegen(codegen, &body, &lexer, &enums, &error_reporter);
         println!("'{name}'");
         functions.insert(name, codegen.stop());
     }
@@ -238,6 +252,7 @@ fn emit_codegen(
     body: &[Word],
     span_resolver: &dyn SpanResolver,
     enums: &BTreeMap<String, usize>,
+    error_reporter: &ErrorReporter,
 ) -> Codegen {
     for word in body {
         codegen = match word {
@@ -245,13 +260,23 @@ fn emit_codegen(
             Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
             Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
             Word::PushEnum(enum_name, name) => {
-                let enum_name = span_resolver.get_span(*enum_name);
-                let name = span_resolver.get_span(*name);
-                let full_name = format!("{enum_name}::{name}");
-                let v = enums
-                    .get(&full_name)
-                    .unwrap_or_else(|| panic!("could not find enum {full_name}"));
-                codegen.loadi_u8(*v as u8)
+                let full_name = format!(
+                    "{}::{}",
+                    span_resolver.get_span(*enum_name),
+                    span_resolver.get_span(*name)
+                );
+                if let Some(v) = enums.get(&full_name) {
+                    codegen.loadi_u8(*v as u8)
+                } else {
+                    error_reporter.report_error(
+                        "unknown enum",
+                        "here",
+                        Span::new(enum_name.start(), name.end()),
+                        "todo: suggest similar name".into(),
+                    );
+                    panic!();
+                }
+                // .unwrap_or_else(|| panic!("could not find enum {full_name}"));
             }
             Word::Trap => codegen.trap(),
             Word::Not => codegen.bin_not(),
@@ -262,6 +287,7 @@ fn emit_codegen(
                     body,
                     span_resolver,
                     enums,
+                    error_reporter,
                 )
                 .label(&end_label)
             }
@@ -270,7 +296,8 @@ fn emit_codegen(
             Word::Add => codegen.add(),
             Word::Call => codegen.call(),
             Word::WordList(body) => {
-                emit_codegen(codegen, body, span_resolver, enums).loadi_u8(body.len() as u8)
+                emit_codegen(codegen, body, span_resolver, enums, error_reporter)
+                    .loadi_u8(body.len() as u8)
             }
         }
     }
