@@ -7,7 +7,16 @@ use crate::parser::{self, StateElement, Toplevel, TypedInt, Word};
 use crate::util::SpanResolver;
 
 use super::util;
-use lrpar::NonStreamingLexer;
+use cfgrammar::Span;
+use codespan_reporting::{
+    diagnostic::{Diagnostic, Label},
+    files::SimpleFiles,
+    term::{
+        self,
+        termcolor::{ColorChoice, StandardStream},
+    },
+};
+use lrpar::{LexError, Lexeme, NonStreamingLexer};
 // use lrlex::lrlex_mod;
 // use lrpar::{lrpar_mod, NonStreamingLexer};
 use state_bc::{
@@ -26,11 +35,43 @@ pub fn compile(path: &str, outname: &str) {
     let mut input = String::from_utf8(input).unwrap();
     let lexerdef = parser::lexerdef();
     util::remove_comments(&mut input);
+    let mut files = SimpleFiles::new();
+    let file_id = files.add(path, input.clone());
     let lexer = lexerdef.lexer(&input);
 
     let (res, errs) = parser::parse(&lexer);
     for e in &errs {
-        println!("{}", e.pp(&lexer, &parser::token_epp));
+        match e {
+            lrpar::LexParseError::LexError(le) => {
+                // println!("{}", e.pp(&lexer, &parser::token_epp))
+                let s: Span = le.span();
+
+                let diagnostic = Diagnostic::error()
+                    .with_message("lex error")
+                    .with_labels(vec![
+                        Label::primary(file_id, s.start()..s.end()).with_message("here")
+                    ])
+                    .with_notes(vec![e.pp(&lexer, &parser::token_epp)]);
+                let writer = StandardStream::stderr(ColorChoice::Always);
+                let config = codespan_reporting::term::Config::default();
+
+                term::emit(&mut writer.lock(), &config, &files, &diagnostic).unwrap();
+            }
+            lrpar::LexParseError::ParseError(pe) => {
+                let s: Span = pe.lexeme().span();
+
+                let diagnostic = Diagnostic::error()
+                    .with_message("parse error")
+                    .with_labels(vec![
+                        Label::primary(file_id, s.start()..s.end()).with_message("here")
+                    ])
+                    .with_notes(vec![e.pp(&lexer, &parser::token_epp)]);
+                let writer = StandardStream::stderr(ColorChoice::Always);
+                let config = codespan_reporting::term::Config::default();
+
+                term::emit(&mut writer.lock(), &config, &files, &diagnostic).unwrap();
+            }
+        }
     }
     if !errs.is_empty() {
         panic!("parse error. abort.");
