@@ -13,7 +13,6 @@ pub mod prelude {
     pub use crate::Result;
 }
 
-pub mod ast;
 pub mod codegen;
 pub mod opcode;
 

@@ -1,14 +1,38 @@
 use crate::{
     ms::{endian::WriteExt, Writable},
     opcode::Codegen,
-    SpawnInfos, StateBc,
+    EnemySpawnInfo, SpawnInfos, StateBc,
 };
 use std::{
     collections::{BTreeMap, HashMap},
     io::{Cursor, Seek, Write},
 };
 
-use super::ast::{StatesBlock, StatesBlockElement};
+#[derive(Debug)]
+pub enum StatesBlockElement {
+    Label(String),
+    State {
+        id: String,
+        directional: bool,
+        ticks: i32,
+        think: String,
+        action: String,
+        next: String,
+    },
+}
+
+#[derive(Debug)]
+pub struct StatesBlock {
+    pub name: String,
+    pub elements: Vec<StatesBlockElement>,
+}
+
+#[derive(Debug)]
+pub struct SpawnBlock {
+    pub name: String,
+    pub infos: Vec<EnemySpawnInfo>,
+}
+
 #[derive(Default)]
 pub struct BytecodeOutput {
     code: Vec<u8>,
