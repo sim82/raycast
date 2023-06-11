@@ -164,19 +164,19 @@ pub struct SpawnElement {
 	pub drop: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TypedInt {
 	U8(u8),
 	I32(i32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TypeName {
 	U8,
 	I32,
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum Word {
 	Push(TypedInt),
 	PushStateLabel(Span),

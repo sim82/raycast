@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     io::{Read, Write},
 };
 
@@ -26,26 +26,90 @@ use state_bc::{
     Direction, EnemySpawnInfo, SpawnInfos,
 };
 
+enum DiagnosticDesc {
+    ParseError {
+        label: String,
+        span: Span,
+        note: String,
+    },
+    LexError {
+        label: String,
+        span: Span,
+        note: String,
+    },
+    UndefinedReference {
+        label: String,
+        span: Span,
+        identifier: String,
+    },
+}
 struct ErrorReporter {
     files: SimpleFiles<String, String>,
     file_id: usize,
+    known_identifier: HashSet<String>,
 }
 impl ErrorReporter {
     pub fn new(filename: &str, input: &str) -> Self {
         let mut files = SimpleFiles::new();
         let file_id = files.add(filename.into(), input.into());
-        ErrorReporter { files, file_id }
+        ErrorReporter {
+            files,
+            file_id,
+            known_identifier: HashSet::new(),
+        }
     }
-    fn report_error(&self, message: &str, label: &str, span: Span, note: String) {
+    fn report_error(&self, message: &str, label: &str, span: Span, note: &str) {
         let label = Label::primary(self.file_id, span.start()..span.end()).with_message(label);
         let diagnostic = Diagnostic::error()
             .with_message(message)
             .with_labels(vec![label])
-            .with_notes(vec![note]);
+            .with_notes(vec![note.into()]);
         let writer = StandardStream::stderr(ColorChoice::Always);
         let config = codespan_reporting::term::Config::default();
 
         term::emit(&mut writer.lock(), &config, &self.files, &diagnostic).unwrap();
+    }
+    fn report_diagnostic(&self, diagnostic: &DiagnosticDesc) {
+        match diagnostic {
+            DiagnosticDesc::ParseError { label, span, note } => {
+                self.report_error("parse error", label, *span, note)
+            }
+            DiagnosticDesc::LexError { label, span, note } => {
+                self.report_error("lex error", label, *span, note)
+            }
+            DiagnosticDesc::UndefinedReference {
+                label,
+                span,
+                identifier,
+            } => self.report_error(
+                "undefined reference",
+                &format!("undefined: {identifier}"),
+                *span,
+                &self.suggest_identifier(identifier),
+            ),
+        }
+    }
+    fn suggest_identifier(&self, identifier: &str) -> String {
+        if let Some(m) = self.get_fuzzy_match(identifier) {
+            format!("did you mean '{m}'")
+        } else {
+            "no similar known identifier".into()
+        }
+    }
+    fn get_fuzzy_match(&self, s: &str) -> Option<String> {
+        let candidates: Vec<(&str, usize)> = self
+            .known_identifier
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.as_str(), i))
+            .collect();
+        fuzzy_match::fuzzy_match(s, candidates.clone()).map(|i| candidates[i].0.to_string())
+    }
+
+    fn add_identifiers<'a>(&mut self, keys: impl IntoIterator<Item = &'a str>) {
+        for identifier in keys.into_iter() {
+            self.known_identifier.insert(identifier.into());
+        }
     }
 }
 // pub mod frontent {
@@ -59,7 +123,7 @@ pub fn compile(path: &str, outname: &str) {
     util::remove_comments(&mut input);
     // let mut files = SimpleFiles::new();
     // let file_id = files.add(path, input.clone());
-    let error_reporter = ErrorReporter::new(path, &input);
+    let mut error_reporter = ErrorReporter::new(path, &input);
     let lexer = lexerdef.lexer(&input);
 
     let (res, errs) = parser::parse(&lexer);
@@ -68,22 +132,20 @@ pub fn compile(path: &str, outname: &str) {
             lrpar::LexParseError::LexError(le) => {
                 // println!("{}", e.pp(&lexer, &parser::token_epp))
                 let s: Span = le.span();
-                error_reporter.report_error(
-                    "lex error",
-                    "here",
-                    s,
-                    e.pp(&lexer, &parser::token_epp),
-                );
+                error_reporter.report_diagnostic(&DiagnosticDesc::LexError {
+                    label: "here".into(),
+                    span: s,
+                    note: e.pp(&lexer, &parser::token_epp),
+                });
             }
             lrpar::LexParseError::ParseError(pe) => {
                 let s: Span = pe.lexeme().span();
 
-                error_reporter.report_error(
-                    "parse error",
-                    "here",
-                    s,
-                    e.pp(&lexer, &parser::token_epp),
-                );
+                error_reporter.report_diagnostic(&DiagnosticDesc::ParseError {
+                    label: "here".into(),
+                    span: s,
+                    note: e.pp(&lexer, &parser::token_epp),
+                });
             }
         }
     }
@@ -103,7 +165,25 @@ pub fn compile(path: &str, outname: &str) {
     let mut state_blocks = Vec::new();
     let mut spawn_infos = Vec::new();
     let mut function_blocks = Vec::new();
-
+    // pass 1: extract function / enum declarations
+    for tle in &toplevel_elements {
+        match tle {
+            Toplevel::Enum { name, elements } => {
+                let name = lexer.span_str(*name);
+                for (i, element_span) in elements.iter().enumerate() {
+                    let element = lexer.span_str(*element_span);
+                    // println!("{i} {name}");
+                    enums.insert(format!("{}::{}", name, element), i);
+                }
+            }
+            Toplevel::Function { name, body } => {
+                function_blocks.push((*name, body.clone()));
+            }
+            _ => (),
+        }
+    }
+    error_reporter.add_identifiers(enums.keys().map(|e| e.as_str()));
+    // pass2: process states / spawn blocks
     for tle in toplevel_elements {
         match tle {
             Toplevel::States { name, elements } => {
@@ -161,17 +241,7 @@ pub fn compile(path: &str, outname: &str) {
                     }
                 }
             }
-            Toplevel::Enum { name, elements } => {
-                let name = lexer.span_str(name);
-                for (i, element_span) in elements.iter().enumerate() {
-                    let element = lexer.span_str(*element_span);
-                    // println!("{i} {name}");
-                    enums.insert(format!("{}::{}", name, element), i);
-                }
-            }
-            Toplevel::Function { name, body } => {
-                function_blocks.push((name, body));
-            }
+            _ => (),
         }
     }
     let mut functions = BTreeMap::new();
@@ -268,12 +338,11 @@ fn emit_codegen(
                 if let Some(v) = enums.get(&full_name) {
                     codegen.loadi_u8(*v as u8)
                 } else {
-                    error_reporter.report_error(
-                        "unknown enum",
-                        "here",
-                        Span::new(enum_name.start(), name.end()),
-                        "todo: suggest similar name".into(),
-                    );
+                    error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
+                        label: "here".into(),
+                        span: Span::new(enum_name.start(), name.end()),
+                        identifier: full_name.clone(),
+                    });
                     panic!();
                 }
                 // .unwrap_or_else(|| panic!("could not find enum {full_name}"));

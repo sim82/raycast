@@ -12,6 +12,7 @@ lrpar = "0.13.1"
 state_bc = { path = "../state_bc" }
 codespan-reporting = "0.11"
 unindent = "0.2"
+fuzzy_match="0.2"
 
 [build-dependencies]
 cfgrammar = "0.13.1"
