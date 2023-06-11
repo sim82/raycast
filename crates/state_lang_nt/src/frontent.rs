@@ -111,6 +111,15 @@ impl ErrorReporter {
             self.known_identifier.insert(identifier.into());
         }
     }
+    fn check_identifier(&self, identifier: &str, span: Span) {
+        if !self.known_identifier.contains(identifier) {
+            self.report_diagnostic(&DiagnosticDesc::UndefinedReference {
+                label: "".into(),
+                span,
+                identifier: identifier.into(),
+            })
+        }
+    }
 }
 // pub mod frontent {
 pub fn compile(path: &str, outname: &str) {
@@ -124,6 +133,7 @@ pub fn compile(path: &str, outname: &str) {
     // let mut files = SimpleFiles::new();
     // let file_id = files.add(path, input.clone());
     let mut error_reporter = ErrorReporter::new(path, &input);
+    error_reporter.add_identifiers(["None"]);
     let lexer = lexerdef.lexer(&input);
 
     let (res, errs) = parser::parse(&lexer);
@@ -183,6 +193,11 @@ pub fn compile(path: &str, outname: &str) {
         }
     }
     error_reporter.add_identifiers(enums.keys().map(|e| e.as_str()));
+    error_reporter.add_identifiers(
+        function_blocks
+            .iter()
+            .map(|(name, _)| lexer.get_span(*name).into()),
+    );
     // pass2: process states / spawn blocks
     for tle in toplevel_elements {
         match tle {
@@ -191,7 +206,7 @@ pub fn compile(path: &str, outname: &str) {
                     name: lexer.span_str(name).into(),
                     elements: elements
                         .iter()
-                        .map(|e| states_block_to_codegen(e, &lexer))
+                        .map(|e| states_block_to_codegen(e, &lexer, &error_reporter))
                         .collect(),
                 });
             }
@@ -279,7 +294,11 @@ pub fn compile(path: &str, outname: &str) {
     std::fs::rename(tmp_outname, outname).unwrap();
 }
 
-fn states_block_to_codegen(e: &StateElement, lexer: &dyn SpanResolver) -> StatesBlockElement {
+fn states_block_to_codegen(
+    e: &StateElement,
+    lexer: &dyn SpanResolver,
+    error_reporter: &ErrorReporter,
+) -> StatesBlockElement {
     match e {
         StateElement::State {
             sprite: (sprite_enum, sprite_name),
@@ -289,12 +308,23 @@ fn states_block_to_codegen(e: &StateElement, lexer: &dyn SpanResolver) -> States
             action,
             next,
         } => {
-            let sprite_name = lexer.get_span(*sprite_name);
-            let sprite_enum = lexer.get_span(*sprite_enum);
-            let id = format!("{sprite_enum}::{sprite_name}");
-            let think = lexer.get_span(*think).into();
-            let action = lexer.get_span(*action).into();
+            let id = format!(
+                "{}::{}",
+                lexer.get_span(*sprite_enum),
+                lexer.get_span(*sprite_name)
+            );
+            let think = {
+                let s = lexer.get_span(*think);
+                error_reporter.check_identifier(&s, *think);
+                s.into()
+            };
+            let action = {
+                let s = lexer.get_span(*action);
+                error_reporter.check_identifier(&s, *action);
+                s.into()
+            };
             let next = lexer.get_span(*next).into();
+            error_reporter.check_identifier(&id, Span::new(sprite_enum.start(), sprite_name.end()));
 
             StatesBlockElement::State {
                 id,
