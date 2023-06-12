@@ -3,7 +3,7 @@ use std::{
     io::{Read, Write},
 };
 
-use crate::parser::{self, StateElement, Toplevel, TypedInt, Word};
+use crate::parser::{self, FunctionRef, StateElement, Toplevel, TypedInt, Word};
 use crate::util::SpanResolver;
 
 use super::util;
@@ -313,15 +313,21 @@ fn states_block_to_codegen(
                 lexer.get_span(*sprite_enum),
                 lexer.get_span(*sprite_name)
             );
-            let think = {
-                let s = lexer.get_span(*think);
-                error_reporter.check_identifier(&s, *think);
-                s.into()
+            let think = match think {
+                FunctionRef::Name(name) => {
+                    let s = lexer.get_span(*name);
+                    error_reporter.check_identifier(&s, *name);
+                    s.into()
+                }
+                _ => todo!(),
             };
-            let action = {
-                let s = lexer.get_span(*action);
-                error_reporter.check_identifier(&s, *action);
-                s.into()
+            let action = match action {
+                FunctionRef::Name(name) => {
+                    let s = lexer.get_span(*name);
+                    error_reporter.check_identifier(&s, *name);
+                    s.into()
+                }
+                _ => todo!(),
             };
             let next = lexer.get_span(*next).into();
             error_reporter.check_identifier(&id, Span::new(sprite_enum.start(), sprite_name.end()));

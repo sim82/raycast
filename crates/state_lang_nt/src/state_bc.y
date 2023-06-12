@@ -28,8 +28,8 @@ StatesBody -> Result<Vec<StateElement>, Box<dyn Error>>:
 	;
 
 StateElement -> Result<StateElement,Box<dyn Error>>:
-	'state' 'IDENTIFIER' '::' 'IDENTIFIER' ',' Bool ',' Expr ',' 'IDENTIFIER' ',' 'IDENTIFIER' ',' 'IDENTIFIER' {
-		Ok(StateElement::State { sprite: ($2?.span(),$4?.span()), directional: $6?, timeout: $8?, think: $10?.span(), action: $12?.span(), next: $14?.span() })
+	'state' 'IDENTIFIER' '::' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
+		Ok(StateElement::State { sprite: ($2?.span(),$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
 	}
 	| 'IDENTIFIER' ':' {
 		Ok(StateElement::Label ( $1?.span() ))
@@ -57,6 +57,10 @@ SpawnElement -> Result<SpawnElement, Box<dyn Error>>:
 	}
 	;
 
+FunctionRef -> Result<FunctionRef, Box<dyn Error>>:
+	'IDENTIFIER' {Ok(FunctionRef::Name($1?.span()))}
+	| '{' WordList '}' {Ok(FunctionRef::Inline($2?))}
+	;
 
 WordList -> Result<Vec<Word>, Box<dyn Error>>:
 	Word { Ok(vec![$1?]) }
@@ -151,8 +155,14 @@ pub enum Toplevel {
 }
 
 #[derive(Debug)]
+pub enum FunctionRef {
+	Name(Span),
+	Inline(Vec<Word>)
+}
+
+#[derive(Debug)]
 pub enum StateElement {
-	State { sprite: (Span,Span), directional: bool, timeout: i64, think: Span, action: Span, next: Span},
+	State { sprite: (Span,Span), directional: bool, timeout: i64, think: FunctionRef, action: FunctionRef, next: Span},
 	Label(Span)
 }
 
