@@ -187,27 +187,86 @@ pub fn compile(path: &str, outname: &str) {
                 }
             }
             Toplevel::Function { name, body } => {
-                function_blocks.push((*name, body.clone()));
+                let name: String = lexer.span_str(*name).into();
+                function_blocks.push((name, body.clone()));
             }
             _ => (),
         }
     }
     error_reporter.add_identifiers(enums.keys().map(|e| e.as_str()));
-    error_reporter.add_identifiers(
-        function_blocks
-            .iter()
-            .map(|(name, _)| lexer.get_span(*name).into()),
-    );
+    error_reporter.add_identifiers(function_blocks.iter().map(|(name, _)| name.as_str()));
     // pass2: process states / spawn blocks
+    let mut inline_function_count = 0;
     for tle in toplevel_elements {
         match tle {
             Toplevel::States { name, elements } => {
+                let mut elements2 = Vec::new();
+                for e in &elements {
+                    let x = match e {
+                        StateElement::State {
+                            sprite: (sprite_enum, sprite_name),
+                            directional,
+                            timeout,
+                            think,
+                            action,
+                            next,
+                        } => {
+                            let id = format!(
+                                "{}::{}",
+                                lexer.get_span(*sprite_enum),
+                                lexer.get_span(*sprite_name)
+                            );
+                            let think = match think {
+                                FunctionRef::Name(name) => {
+                                    let s = lexer.get_span(*name);
+                                    error_reporter.check_identifier(&s, *name);
+                                    s.into()
+                                }
+                                FunctionRef::Inline(body) => {
+                                    let name = format!("InlineThink{}", inline_function_count);
+                                    inline_function_count += 1;
+                                    function_blocks.push((name.clone(), body.clone()));
+                                    name
+                                }
+                            };
+                            let action = match action {
+                                FunctionRef::Name(name) => {
+                                    let s = lexer.get_span(*name);
+                                    error_reporter.check_identifier(&s, *name);
+                                    s.into()
+                                }
+                                FunctionRef::Inline(body) => {
+                                    let name = format!("InlineAction{}", inline_function_count);
+                                    inline_function_count += 1;
+                                    function_blocks.push((name.clone(), body.clone()));
+                                    name
+                                }
+                            };
+                            let next = lexer.get_span(*next).into();
+                            error_reporter.check_identifier(
+                                &id,
+                                Span::new(sprite_enum.start(), sprite_name.end()),
+                            );
+
+                            StatesBlockElement::State {
+                                id,
+                                directional: *directional,
+                                ticks: *timeout as i32,
+                                think,
+                                action,
+                                next,
+                            }
+                        }
+                        StateElement::Label(label_name) => {
+                            let label_name: String = lexer.get_span(*label_name).into();
+                            StatesBlockElement::Label(label_name)
+                        }
+                    };
+                    elements2.push(x);
+                }
                 state_blocks.push(StatesBlock {
                     name: lexer.span_str(name).into(),
-                    elements: elements
-                        .iter()
-                        .map(|e| states_block_to_codegen(e, &lexer, &error_reporter))
-                        .collect(),
+                    elements: elements2,
                 });
             }
             Toplevel::Spawn {
@@ -261,8 +320,6 @@ pub fn compile(path: &str, outname: &str) {
     }
     let mut functions = BTreeMap::new();
     for (name, body) in function_blocks {
-        let name: String = lexer.span_str(name).into();
-
         let codegen = Codegen::default().with_annotation("source", &name);
         let codegen = emit_codegen(codegen, &body, &lexer, &enums, &error_reporter);
         println!("'{name}'");
@@ -292,65 +349,6 @@ pub fn compile(path: &str, outname: &str) {
         &SpawnInfos { spawn_infos },
     );
     std::fs::rename(tmp_outname, outname).unwrap();
-}
-
-fn states_block_to_codegen(
-    e: &StateElement,
-    lexer: &dyn SpanResolver,
-    error_reporter: &ErrorReporter,
-) -> StatesBlockElement {
-    match e {
-        StateElement::State {
-            sprite: (sprite_enum, sprite_name),
-            directional,
-            timeout,
-            think,
-            action,
-            next,
-        } => {
-            let id = format!(
-                "{}::{}",
-                lexer.get_span(*sprite_enum),
-                lexer.get_span(*sprite_name)
-            );
-            let think = match think {
-                FunctionRef::Name(name) => {
-                    let s = lexer.get_span(*name);
-                    error_reporter.check_identifier(&s, *name);
-                    s.into()
-                }
-                _ => todo!(),
-            };
-            let action = match action {
-                FunctionRef::Name(name) => {
-                    let s = lexer.get_span(*name);
-                    error_reporter.check_identifier(&s, *name);
-                    s.into()
-                }
-                _ => todo!(),
-            };
-            let next = lexer.get_span(*next).into();
-            error_reporter.check_identifier(&id, Span::new(sprite_enum.start(), sprite_name.end()));
-
-            StatesBlockElement::State {
-                id,
-                directional: *directional,
-                ticks: *timeout as i32,
-                think,
-                action,
-                next,
-            }
-        }
-        StateElement::Label(label_name) => {
-            // let mut full_label_name =
-            //     format!("{}::{}", name, lexer.span_str(*label_name));
-            // full_label_name.pop(); // FIXME: get rid of the : in some other way...
-            // println!("'{full_label_name}'");
-            let label_name: String = lexer.get_span(*label_name).into();
-            // label_name.pop();
-            StatesBlockElement::Label(label_name)
-        }
-    }
 }
 
 fn emit_codegen(

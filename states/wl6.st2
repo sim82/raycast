@@ -95,7 +95,8 @@ pain1:
 pain2:
     state Spr::BLUE_PAIN_2, false, 10, None, None, chase
 sight:
-    state Spr::BLUE_W1_1, true, 0, None, SightBlue, next
+    // state Spr::BLUE_W1_1, true, 0, None, SightBlue, next
+    state Spr::BLUE_W1_1, true, 0, None, {[Snd::SchuhzApfel] EnemyOp::Play trap}, next
 chase:
     state Spr::BLUE_W1_1, true, 10, ThinkChase, None, next
     state Spr::BLUE_W1_1, true, 3, None, None, next
@@ -104,7 +105,8 @@ chase:
     state Spr::BLUE_W3_1, true, 3, None, None, next
     state Spr::BLUE_W4_1, true, 8, ThinkChase, None, chase
 die:
-    state Spr::BLUE_DIE_1, false, 15, None, DeathScreamBlue, next
+    // state Spr::BLUE_DIE_1, false, 15, None, DeathScreamBlue, next
+    state Spr::BLUE_DIE_1, false, 15, None, {[Snd::ScreamMeinleben] EnemyOp::Play trap}, next
     state Spr::BLUE_DIE_2, false, 15, None, None, next
     state Spr::BLUE_DIE_3, false, 15, None, ActionDie, next
 dead:
