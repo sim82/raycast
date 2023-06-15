@@ -71,6 +71,7 @@ Word -> Result<Word, Box<dyn Error>>:
 	TypedIntExpr { Ok(Word::Push($1?)) }
 	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushEnum($1?.span(),$3?.span()))}
 	| 'trap' { Ok(Word::Trap )}
+	| 'do' { Ok(Word::Trap )}
 	| 'not' { Ok(Word::Not)}
 	| 'if' WordList 'then' { Ok(Word::If($2?))}
 	| 'STATE_LABEL' { Ok(Word::PushStateLabel($1?.span()))}
