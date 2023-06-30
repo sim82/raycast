@@ -186,8 +186,8 @@ pub fn compile(path: &str, outname: &str) {
                     enums.insert(format!("{}::{}", name, element), i);
                 }
             }
-            Toplevel::Function { name, body } => {
-                let name: String = lexer.span_str(*name).into();
+            Toplevel::Function { decl, body } => {
+                let name: String = lexer.span_str(decl.name).into();
                 function_blocks.push((name, body.clone()));
             }
             _ => (),

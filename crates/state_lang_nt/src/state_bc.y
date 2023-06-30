@@ -16,11 +16,19 @@ Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	| 'spawn' 'IDENTIFIER' '{' SpawnBody '}' {
 		Ok(Toplevel::Spawn{ name: $2?.span(), elements: $4? })
 	}
-	| 'function' 'IDENTIFIER' '{' WordList '}' {
-		Ok(Toplevel::Function{ name: $2?.span(), body: $4?  })
+	| FunctionDecl '{' WordList '}' {
+		Ok(Toplevel::Function{ decl: $1?, body: $3?  })
 	}
 	;
 
+FunctionDecl -> Result<FunctionDecl, Box<dyn Error>>:
+	'function' 'IDENTIFIER' {
+		Ok(FunctionDecl { name: $2?.span(), using: Vec::new()})
+	}
+	| 'function' 'IDENTIFIER' 'using' EnumBody {
+		Ok(FunctionDecl { name: $2?.span(), using: $4? })
+	} 
+	;
 
 StatesBody -> Result<Vec<StateElement>, Box<dyn Error>>:
 	StateElement { Ok(vec![$1?])}
@@ -152,7 +160,7 @@ pub enum Toplevel {
 	States{name: Span, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
 	Enum{name: Span, elements: Vec<Span>},
-	Function { name: Span, body: Vec<Word> },
+	Function { decl: FunctionDecl, body: Vec<Word> },
 }
 
 #[derive(Debug)]
@@ -200,4 +208,9 @@ pub enum Word {
 	Add,
 	Call,
 	WordList(Vec<Word>),
+}
+#[derive(Debug)]
+pub struct FunctionDecl {
+	pub name: Span,
+	pub using: Vec<Span>
 }

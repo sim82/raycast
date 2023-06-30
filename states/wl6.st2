@@ -124,7 +124,7 @@ shoot:
     state Spr::BLUE_SHOOT3, false, 10, None, None, chase
 }
 
-function ActionShootBlue {
+function ActionShootBlue using Snd, EnemyOp {
     [Snd::ShotBlue] EnemyOp::Play do
     Func::ActionShoot call
 }
