@@ -145,7 +145,12 @@ trait EnumResolver {
         name: Span,
         span_resolver: &dyn SpanResolver,
     ) -> Option<usize>;
-    fn resolve_unqual(&self, name: Span, span_resolver: &dyn SpanResolver) -> Option<usize>;
+    fn resolve_unqual(
+        &self,
+        name: Span,
+        span_resolver: &dyn SpanResolver,
+        error_reporter: &ErrorReporter,
+    ) -> Option<usize>;
 }
 struct EnumResolverFlat {
     enums: BTreeMap<String, usize>,
@@ -163,7 +168,12 @@ impl EnumResolver for EnumResolverFlat {
         self.enums.get(&full_name).cloned()
     }
 
-    fn resolve_unqual(&self, name: Span, span_resolver: &dyn SpanResolver) -> Option<usize> {
+    fn resolve_unqual(
+        &self,
+        name: Span,
+        span_resolver: &dyn SpanResolver,
+        error_reporter: &ErrorReporter,
+    ) -> Option<usize> {
         // flat resolver can never resolve an unqualified enum
         None
     }
@@ -185,9 +195,38 @@ impl EnumResolver for EnumResolverUsing {
         self.enums.get(&full_name).cloned()
     }
 
-    fn resolve_unqual(&self, name: Span, span_resolver: &dyn SpanResolver) -> Option<usize> {
-        println!("unqualified resolve not implemented");
-        None
+    fn resolve_unqual(
+        &self,
+        name_span: Span,
+        span_resolver: &dyn SpanResolver,
+        error_reporter: &ErrorReporter,
+    ) -> Option<usize> {
+        let name = span_resolver.get_span(name_span);
+        let mut resolved = None;
+        let mut resolved_name = None;
+        // let Some(uses) = &self.uses else { return None };
+        for enum_name in &self.uses {
+            let enum_name = span_resolver.get_span(*enum_name);
+            let full_name = format!("{enum_name}::{name}");
+            let cand = self.enums.get(&full_name);
+            if let (Some(match1_name), Some(match2)) = (&resolved_name, cand) {
+                // TODO: better error message
+                error_reporter.report_error(
+                    "ambiguous unqualified enum",
+                    &format!("{match1_name} vs {full_name}"),
+                    name_span,
+                    "meep",
+                );
+                return None;
+            }
+            if cand.is_some() {
+                // println!("resolved: {full_name}");
+                resolved = cand.cloned();
+                resolved_name = Some(full_name);
+            }
+        }
+        // println!("resolved: {resolved:?}");
+        resolved
     }
 }
 // pub mod frontent {
@@ -469,7 +508,8 @@ fn emit_codegen(
                 // .unwrap_or_else(|| panic!("could not find enum {full_name}"));
             }
             Word::PushEnumUnqual(name) => {
-                if let Some(v) = enum_resolver.resolve_unqual(*name, span_resolver) {
+                if let Some(v) = enum_resolver.resolve_unqual(*name, span_resolver, error_reporter)
+                {
                     codegen.loadi_u8(v as u8)
                 } else {
                     error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {

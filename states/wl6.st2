@@ -125,7 +125,7 @@ shoot:
 }
 
 function ActionShootBlue using Snd, EnemyOp {
-    [ShotBlue] EnemyOp::Play do
+    [ShotBlue] Play do
     Func::ActionShoot call
 }
 
