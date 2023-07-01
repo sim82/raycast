@@ -42,6 +42,12 @@ enum DiagnosticDesc {
         span: Span,
         identifier: String,
     },
+    // UndefinedReferenceQualified {
+    //     label: String,
+    //     span: Span,
+    //     identifier_ns: Span,
+    //     identifier: Span,
+    // },
 }
 struct ErrorReporter {
     files: SimpleFiles<String, String>,
@@ -87,6 +93,17 @@ impl ErrorReporter {
                 *span,
                 &self.suggest_identifier(identifier),
             ),
+            // DiagnosticDesc::UndefinedReferenceQualified {
+            //     label,
+            //     span,
+            //     identifier_ns,
+            //     identifier,
+            // } => self.report_error(
+            //     "undefined reference",
+            //     &format!("undefined: {identifier}"),
+            //     *span,
+            //     &self.suggest_identifier(identifier),
+            // ),
         }
     }
     fn suggest_identifier(&self, identifier: &str) -> String {
@@ -119,6 +136,58 @@ impl ErrorReporter {
                 identifier: identifier.into(),
             })
         }
+    }
+}
+trait EnumResolver {
+    fn resolve(
+        &self,
+        enum_name: Span,
+        name: Span,
+        span_resolver: &dyn SpanResolver,
+    ) -> Option<usize>;
+    fn resolve_unqual(&self, name: Span, span_resolver: &dyn SpanResolver) -> Option<usize>;
+}
+struct EnumResolverFlat {
+    enums: BTreeMap<String, usize>,
+}
+impl EnumResolver for EnumResolverFlat {
+    fn resolve(
+        &self,
+        enum_name: Span,
+        name: Span,
+        span_resolver: &dyn SpanResolver,
+    ) -> Option<usize> {
+        let enum_name = span_resolver.get_span(enum_name);
+        let name = span_resolver.get_span(name);
+        let full_name = format!("{enum_name}::{name}");
+        self.enums.get(&full_name).cloned()
+    }
+
+    fn resolve_unqual(&self, name: Span, span_resolver: &dyn SpanResolver) -> Option<usize> {
+        // flat resolver can never resolve an unqualified enum
+        None
+    }
+}
+struct EnumResolverUsing {
+    enums: BTreeMap<String, usize>,
+    uses: Vec<Span>,
+}
+impl EnumResolver for EnumResolverUsing {
+    fn resolve(
+        &self,
+        enum_name: Span,
+        name: Span,
+        span_resolver: &dyn SpanResolver,
+    ) -> Option<usize> {
+        let enum_name = span_resolver.get_span(enum_name);
+        let name = span_resolver.get_span(name);
+        let full_name = format!("{enum_name}::{name}");
+        self.enums.get(&full_name).cloned()
+    }
+
+    fn resolve_unqual(&self, name: Span, span_resolver: &dyn SpanResolver) -> Option<usize> {
+        println!("unqualified resolve not implemented");
+        None
     }
 }
 // pub mod frontent {
@@ -188,13 +257,13 @@ pub fn compile(path: &str, outname: &str) {
             }
             Toplevel::Function { decl, body } => {
                 let name: String = lexer.span_str(decl.name).into();
-                function_blocks.push((name, body.clone()));
+                function_blocks.push((name, Some(decl.clone()), body.clone()));
             }
             _ => (),
         }
     }
     error_reporter.add_identifiers(enums.keys().map(|e| e.as_str()));
-    error_reporter.add_identifiers(function_blocks.iter().map(|(name, _)| name.as_str()));
+    error_reporter.add_identifiers(function_blocks.iter().map(|(name, _, _)| name.as_str()));
     // pass2: process states / spawn blocks
     let mut inline_function_count = 0;
     for tle in toplevel_elements {
@@ -225,7 +294,7 @@ pub fn compile(path: &str, outname: &str) {
                                 FunctionRef::Inline(body) => {
                                     let name = format!("InlineThink{}", inline_function_count);
                                     inline_function_count += 1;
-                                    function_blocks.push((name.clone(), body.clone()));
+                                    function_blocks.push((name.clone(), None, body.clone()));
                                     name
                                 }
                             };
@@ -238,7 +307,7 @@ pub fn compile(path: &str, outname: &str) {
                                 FunctionRef::Inline(body) => {
                                     let name = format!("InlineAction{}", inline_function_count);
                                     inline_function_count += 1;
-                                    function_blocks.push((name.clone(), body.clone()));
+                                    function_blocks.push((name.clone(), None, body.clone()));
                                     name
                                 }
                             };
@@ -319,9 +388,19 @@ pub fn compile(path: &str, outname: &str) {
         }
     }
     let mut functions = BTreeMap::new();
-    for (name, body) in function_blocks {
+    for (name, decl, body) in function_blocks {
+        let enum_resolver = if let Some(using) = decl.map(|decl| decl.using.clone()) {
+            Box::new(EnumResolverUsing {
+                enums: enums.clone(),
+                uses: using,
+            }) as Box<dyn EnumResolver>
+        } else {
+            Box::new(EnumResolverFlat {
+                enums: enums.clone(),
+            })
+        };
         let codegen = Codegen::default().with_annotation("source", &name);
-        let codegen = emit_codegen(codegen, &body, &lexer, &enums, &error_reporter);
+        let codegen = emit_codegen(codegen, &body, &lexer, &*enum_resolver, &error_reporter);
         println!("'{name}'");
         functions.insert(name, codegen.stop());
     }
@@ -355,7 +434,8 @@ fn emit_codegen(
     mut codegen: Codegen,
     body: &[Word],
     span_resolver: &dyn SpanResolver,
-    enums: &BTreeMap<String, usize>,
+    // enums: &BTreeMap<String, usize>,
+    enum_resolver: &dyn EnumResolver,
     error_reporter: &ErrorReporter,
 ) -> Codegen {
     for word in body {
@@ -364,14 +444,21 @@ fn emit_codegen(
             Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
             Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
             Word::PushEnum(enum_name, name) => {
-                let full_name = format!(
-                    "{}::{}",
-                    span_resolver.get_span(*enum_name),
-                    span_resolver.get_span(*name)
-                );
-                if let Some(v) = enums.get(&full_name) {
-                    codegen.loadi_u8(*v as u8)
+                // let full_name = format!(
+                //     "{}::{}",
+                //     span_resolver.get_span(*enum_name),
+                //     span_resolver.get_span(*name)
+                // );
+                // if let Some(v) = enums.get(&full_name) {
+                if let Some(v) = enum_resolver.resolve(*enum_name, *name, span_resolver) {
+                    codegen.loadi_u8(v as u8)
                 } else {
+                    // FIXME: crappy
+                    let full_name = format!(
+                        "{}::{}",
+                        span_resolver.get_span(*enum_name),
+                        span_resolver.get_span(*name)
+                    );
                     error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
                         label: "here".into(),
                         span: Span::new(enum_name.start(), name.end()),
@@ -381,6 +468,18 @@ fn emit_codegen(
                 }
                 // .unwrap_or_else(|| panic!("could not find enum {full_name}"));
             }
+            Word::PushEnumUnqual(name) => {
+                if let Some(v) = enum_resolver.resolve_unqual(*name, span_resolver) {
+                    codegen.loadi_u8(v as u8)
+                } else {
+                    error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
+                        label: "here".into(),
+                        span: *name,
+                        identifier: span_resolver.get_span(*name).into(),
+                    });
+                    panic!();
+                }
+            }
             Word::Trap => codegen.trap(),
             Word::Not => codegen.bin_not(),
             Word::If(body) => {
@@ -389,7 +488,7 @@ fn emit_codegen(
                     codegen.bin_not().jrc_label(&end_label),
                     body,
                     span_resolver,
-                    enums,
+                    enum_resolver,
                     error_reporter,
                 )
                 .label(&end_label)
@@ -399,7 +498,7 @@ fn emit_codegen(
             Word::Add => codegen.add(),
             Word::Call => codegen.call(),
             Word::WordList(body) => {
-                emit_codegen(codegen, body, span_resolver, enums, error_reporter)
+                emit_codegen(codegen, body, span_resolver, enum_resolver, error_reporter)
                     .loadi_u8(body.len() as u8)
             }
         }

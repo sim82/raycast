@@ -78,6 +78,7 @@ WordList -> Result<Vec<Word>, Box<dyn Error>>:
 Word -> Result<Word, Box<dyn Error>>:
 	TypedIntExpr { Ok(Word::Push($1?)) }
 	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushEnum($1?.span(),$3?.span()))}
+	| 'IDENTIFIER' {Ok(Word::PushEnumUnqual($1?.span()))}
 	| 'trap' { Ok(Word::Trap )}
 	| 'do' { Ok(Word::Trap )}
 	| 'not' { Ok(Word::Not)}
@@ -200,6 +201,7 @@ pub enum Word {
 	Push(TypedInt),
 	PushStateLabel(Span),
 	PushEnum(Span,Span), // FIXME: only u8 for now
+	PushEnumUnqual(Span),
 	Trap,
 	Not,
 	If(Vec<Word>),
@@ -209,7 +211,7 @@ pub enum Word {
 	Call,
 	WordList(Vec<Word>),
 }
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct FunctionDecl {
 	pub name: Span,
 	pub using: Vec<Span>
