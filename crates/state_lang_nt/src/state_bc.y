@@ -25,7 +25,7 @@ FunctionDecl -> Result<FunctionDecl, Box<dyn Error>>:
 	'function' 'IDENTIFIER' {
 		Ok(FunctionDecl { name: $2?.span(), using: Vec::new()})
 	}
-	| 'function' 'IDENTIFIER' 'using' EnumBody {
+	| 'function' 'IDENTIFIER' 'uses' EnumBody {
 		Ok(FunctionDecl { name: $2?.span(), using: $4? })
 	} 
 	;

@@ -124,7 +124,7 @@ shoot:
     state Spr::BLUE_SHOOT3, false, 10, None, None, chase
 }
 
-function ActionShootBlue using Snd, EnemyOp {
+function ActionShootBlue uses Snd, EnemyOp {
     [ShotBlue] Play do
     Func::ActionShoot call
 }
@@ -705,9 +705,9 @@ repeat:
     state Spr::CHAINATK3, false, 4, None, ChaingunAttackCheckIdle, repeat
 }
 
-function WeaponIdleCheckFire {
+function WeaponIdleCheckFire uses WeaponOp {
 // get fire flag
-    WeaponOp::Trigger do
+    Trigger do
 
     if
         // goto attack state
@@ -715,19 +715,19 @@ function WeaponIdleCheckFire {
         stop
     then
 // 'dynamically' look up ready state Spr::of currently selected weapon // i.e. this is how a weapon change is implemented
-    WeaponOp::NextState do
+    NextState do
     gostate
 }
-function WeaponAttackCheckIdle {
+function WeaponAttackCheckIdle uses WeaponOp {
     // get ammo depleted flag
-    WeaponOp::Depleted do
+    Depleted do
     if
         // out of ammo. stay in this state (keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    WeaponOp::Trigger do
+    Trigger do
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -736,20 +736,20 @@ function WeaponAttackCheckIdle {
     // follow through to next (usually this mean fire/repeat)
 }
 
-function ChaingunAttackCheckIdle {
+function ChaingunAttackCheckIdle uses WeaponOp {
     // BUG: need to check if ammo available before extra chaingun shot
-    Snd::ShotMg WeaponOp::Play do 
+    Snd::ShotMg Play do 
     Func::ActionShoot call 
 
     // get ammo depleted flag
-    WeaponOp::Depleted do
+    Depleted do
     if
         // out of ammo. stay in this state Spr::(keep weapon raised)
         @attack gostate
         stop
     then
     // get fire flag
-    WeaponOp::Trigger do
+    Trigger do
     not if
         // if fire was released abort and goto lower state
         @lower gostate
@@ -785,34 +785,34 @@ open:
 blocked: 
     state Spr::DEMO, false, 0, CheckDoorBlocked, None, blocked
 }
-function IncOpen {
-    DoorOp::GetF do
+function IncOpen uses DoorOp {
+    GetF do
     // 1024 equals 1/64 in fp16 repr (i.e. open door in 64 steps)
     1024i32 add
-    DoorOp::SetF  do
+    SetF  do
 }
-function DecOpen {
-    DoorOp::GetF  do
+function DecOpen uses DoorOp {
+    GetF do
     -1024i32 add
-    DoorOp::SetF  do
+    SetF do
 }
-function CheckOpenDoor {
-    DoorOp::Trigger do
+function CheckOpenDoor uses DoorOp {
+    Trigger do
     if
-        Snd::DoorOpen DoorOp::Play do
+        Snd::DoorOpen Play do
         @open gostate
     then
 }
-function CheckCloseDoor {
-    DoorOp::Trigger do
+function CheckCloseDoor uses DoorOp {
+    Trigger do
     if
         @blocked gostate
     then
 }
-function CheckDoorBlocked {
-    DoorOp::Blocked do
+function CheckDoorBlocked uses DoorOp {
+    Blocked do
     not if 
-        Snd::DoorClose DoorOp::Play do
+        Snd::DoorClose Play do
         @close gostate
     then
 }
