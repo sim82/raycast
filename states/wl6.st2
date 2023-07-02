@@ -502,7 +502,7 @@ pain1:
 pain2:
     state Spr::ALP_DIE1, false, 10, None, None, chase
 sight:
-    state Spr::ALP_W1, false, 0, None, SightAlp, next
+    state Spr::ALP_W1, false, 0, None, { [Snd::Rapunz] EnemyOp::Play do }, next
 chase:
     state Spr::ALP_W1, false, 10, ThinkChase, None, next
     state Spr::ALP_W1, false, 3, None, None, next
@@ -511,7 +511,7 @@ chase:
     state Spr::ALP_W3, false, 3, None, None, next
     state Spr::ALP_W4, false, 8, ThinkChase, None, chase
 die:
-    state Spr::ALP_DIE1, false, 15, None, DeathScreamAlp, next
+    state Spr::ALP_DIE1, false, 15, None, { [Snd::LaughAlp] EnemyOp::Play do }, next
     state Spr::ALP_DIE2, false, 15, None, None, next
     state Spr::ALP_DIE3, false, 15, None, None, next
     state Spr::ALP_DIE4, false, 15, None, ActionDie, next
@@ -523,12 +523,6 @@ shoot:
     state Spr::ALP_W1, false, 20, None, None, chase
 }
 
-function DeathScreamAlp {
-    [Snd::LaughAlp] EnemyOp::Play do
-}
-function SightAlp {
-    [Snd::Rapunz] EnemyOp::Play do
-}
 
 // ==========================================================================
 //  HERMANN
