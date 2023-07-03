@@ -307,7 +307,7 @@ pub fn compile(path: &str, outname: &str) {
     let mut inline_function_count = 0;
     for tle in toplevel_elements {
         match tle {
-            Toplevel::States { name, elements } => {
+            Toplevel::States { decl, elements } => {
                 let mut elements2 = Vec::new();
                 for e in &elements {
                     let x = match e {
@@ -373,7 +373,7 @@ pub fn compile(path: &str, outname: &str) {
                     elements2.push(x);
                 }
                 state_blocks.push(StatesBlock {
-                    name: lexer.span_str(name).into(),
+                    name: lexer.span_str(decl.name).into(),
                     elements: elements2,
                 });
             }

@@ -7,9 +7,12 @@ File -> Result<Vec<Toplevel>, Box<dyn Error>>:
 	;
 
 Toplevel -> Result<Toplevel, Box<dyn Error>>: 
-	'states' 'IDENTIFIER' '{' StatesBody '}' {
-		Ok(Toplevel::States{name: $2?.span(), elements: $4?})
+	StatesDecl '{' StatesBody '}' {
+		Ok(Toplevel::States{decl: $1?, elements: $3?})
 	}
+	// 'states' 'IDENTIFIER' '{' StatesBody '}' {
+	// 	Ok(Toplevel::States{name: $2?.span(), elements: $4?})
+	// }
 	| 'enum' 'IDENTIFIER' '{' EnumBody '}' {
 		Ok(Toplevel::Enum{name: $2?.span(), elements: $4?})
 	} 
@@ -21,6 +24,14 @@ Toplevel -> Result<Toplevel, Box<dyn Error>>:
 	}
 	;
 
+StatesDecl -> Result<FunctionDecl, Box<dyn Error>>:
+	'states' 'IDENTIFIER' {
+		Ok(FunctionDecl { name: $2?.span(), using: Vec::new()})
+	}
+	| 'states' 'IDENTIFIER' 'uses' EnumBody {
+		Ok(FunctionDecl { name: $2?.span(), using: $4? })
+	} 
+	;
 FunctionDecl -> Result<FunctionDecl, Box<dyn Error>>:
 	'function' 'IDENTIFIER' {
 		Ok(FunctionDecl { name: $2?.span(), using: Vec::new()})
@@ -158,7 +169,7 @@ fn parse_int(s: &str) -> Result<i64, Box<dyn Error>> {
 
 #[derive(Debug)]
 pub enum Toplevel {
-	States{name: Span, elements: Vec<StateElement>},
+	States{ decl: FunctionDecl, elements: Vec<StateElement>},
 	Spawn{name: Span, elements: Vec<SpawnElement> },
 	Enum{name: Span, elements: Vec<Span>},
 	Function { decl: FunctionDecl, body: Vec<Word> },
