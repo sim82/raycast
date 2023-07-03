@@ -32,6 +32,7 @@ StatesDecl -> Result<FunctionDecl, Box<dyn Error>>:
 		Ok(FunctionDecl { name: $2?.span(), using: $4? })
 	} 
 	;
+
 FunctionDecl -> Result<FunctionDecl, Box<dyn Error>>:
 	'function' 'IDENTIFIER' {
 		Ok(FunctionDecl { name: $2?.span(), using: Vec::new()})

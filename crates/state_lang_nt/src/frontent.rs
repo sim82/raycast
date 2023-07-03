@@ -333,7 +333,11 @@ pub fn compile(path: &str, outname: &str) {
                                 FunctionRef::Inline(body) => {
                                     let name = format!("InlineThink{}", inline_function_count);
                                     inline_function_count += 1;
-                                    function_blocks.push((name.clone(), None, body.clone()));
+                                    function_blocks.push((
+                                        name.clone(),
+                                        Some(decl.clone()),
+                                        body.clone(),
+                                    ));
                                     name
                                 }
                             };
@@ -346,7 +350,11 @@ pub fn compile(path: &str, outname: &str) {
                                 FunctionRef::Inline(body) => {
                                     let name = format!("InlineAction{}", inline_function_count);
                                     inline_function_count += 1;
-                                    function_blocks.push((name.clone(), None, body.clone()));
+                                    function_blocks.push((
+                                        name.clone(),
+                                        Some(decl.clone()),
+                                        body.clone(),
+                                    ));
                                     name
                                 }
                             };

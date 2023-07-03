@@ -487,7 +487,7 @@ spawn alp {
     undirectional 160, stand, None
 }
 
-states alp {
+states alp uses EnemyOp, Snd {
 stand:
     state Spr::ALP_W1, false, 0, ThinkStand, None, stand
 path:
@@ -502,7 +502,7 @@ pain1:
 pain2:
     state Spr::ALP_DIE1, false, 10, None, None, chase
 sight:
-    state Spr::ALP_W1, false, 0, None, { [Snd::Rapunz] EnemyOp::Play do }, next
+    state Spr::ALP_W1, false, 0, None, { [Rapunz] Play do }, next
 chase:
     state Spr::ALP_W1, false, 10, ThinkChase, None, next
     state Spr::ALP_W1, false, 3, None, None, next
