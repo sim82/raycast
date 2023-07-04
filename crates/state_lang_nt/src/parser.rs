@@ -5,4 +5,6 @@ lrlex_mod!("state_bc.l");
 lrpar_mod!("state_bc.y");
 
 pub use state_bc_l::lexerdef;
-pub use state_bc_y::{parse, token_epp, FunctionRef, StateElement, Toplevel, TypedInt, Word};
+pub use state_bc_y::{
+    parse, token_epp, EnumRef, FunctionRef, StateElement, Toplevel, TypedInt, Word,
+};

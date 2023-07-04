@@ -32,7 +32,6 @@ StatesDecl -> Result<FunctionDecl, Box<dyn Error>>:
 		Ok(FunctionDecl { name: $2?.span(), using: $4? })
 	} 
 	;
-
 FunctionDecl -> Result<FunctionDecl, Box<dyn Error>>:
 	'function' 'IDENTIFIER' {
 		Ok(FunctionDecl { name: $2?.span(), using: Vec::new()})
@@ -51,6 +50,9 @@ StateElement -> Result<StateElement,Box<dyn Error>>:
 	'state' 'IDENTIFIER' '::' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
 		Ok(StateElement::State { sprite: ($2?.span(),$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
 	}
+	// 'state' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
+	// 	Ok(StateElement::State { sprite: (None,$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
+	// }
 	| 'IDENTIFIER' ':' {
 		Ok(StateElement::Label ( $1?.span() ))
 	}
@@ -89,8 +91,10 @@ WordList -> Result<Vec<Word>, Box<dyn Error>>:
 	
 Word -> Result<Word, Box<dyn Error>>:
 	TypedIntExpr { Ok(Word::Push($1?)) }
-	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushEnum($1?.span(),$3?.span()))}
-	| 'IDENTIFIER' {Ok(Word::PushEnumUnqual($1?.span()))}
+	// | 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushEnum($1?.span(),$3?.span()))}
+	// | 'IDENTIFIER' {Ok(Word::PushEnumUnqual($1?.span()))}
+	| 'IDENTIFIER' '::' 'IDENTIFIER' {Ok(Word::PushEnum(EnumRef::Qual($1?.span(),$3?.span())))}
+	| 'IDENTIFIER' {Ok(Word::PushEnum(EnumRef::Unqual($1?.span())))}
 	| 'trap' { Ok(Word::Trap )}
 	| 'do' { Ok(Word::Trap )}
 	| 'not' { Ok(Word::Not)}
@@ -182,6 +186,12 @@ pub enum FunctionRef {
 	Inline(Vec<Word>)
 }
 
+#[derive(Debug,Clone)]
+pub enum EnumRef {
+	Unqual(Span),
+	Qual(Span,Span)
+}
+
 #[derive(Debug)]
 pub enum StateElement {
 	State { sprite: (Span,Span), directional: bool, timeout: i64, think: FunctionRef, action: FunctionRef, next: Span},
@@ -212,8 +222,7 @@ pub enum TypeName {
 pub enum Word {
 	Push(TypedInt),
 	PushStateLabel(Span),
-	PushEnum(Span,Span), // FIXME: only u8 for now
-	PushEnumUnqual(Span),
+	PushEnum(EnumRef),
 	Trap,
 	Not,
 	If(Vec<Word>),

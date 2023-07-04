@@ -3,7 +3,7 @@ use std::{
     io::{Read, Write},
 };
 
-use crate::parser::{self, FunctionRef, StateElement, Toplevel, TypedInt, Word};
+use crate::parser::{self, EnumRef, FunctionRef, StateElement, Toplevel, TypedInt, Word};
 use crate::util::SpanResolver;
 
 use super::util;
@@ -490,7 +490,7 @@ fn emit_codegen(
             Word::Push(TypedInt::U8(v)) => codegen.loadi_u8(*v),
             Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
             Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
-            Word::PushEnum(enum_name, name) => {
+            Word::PushEnum(EnumRef::Qual(enum_name, name)) => {
                 // let full_name = format!(
                 //     "{}::{}",
                 //     span_resolver.get_span(*enum_name),
@@ -515,7 +515,7 @@ fn emit_codegen(
                 }
                 // .unwrap_or_else(|| panic!("could not find enum {full_name}"));
             }
-            Word::PushEnumUnqual(name) => {
+            Word::PushEnum(EnumRef::Unqual(name)) => {
                 if let Some(v) = enum_resolver.resolve_unqual(*name, span_resolver, error_reporter)
                 {
                     codegen.loadi_u8(v as u8)

@@ -91,6 +91,16 @@ pub fn codegen(
     let mut ip = 0;
     for state_block in state_blocks {
         let mut label_ptrs2 = HashMap::new();
+        // let enum_resolver = if let Some(using) = state_block.decl.map(|decl| decl.using.clone()) {
+        //     Box::new(EnumResolverUsing {
+        //         enums: enums.clone(),
+        //         uses: using,
+        //     }) as Box<dyn EnumResolver>
+        // } else {
+        //     Box::new(EnumResolverFlat {
+        //         enums: enums.clone(),
+        //     })
+        // };
         for element in &state_block.elements {
             match element {
                 StatesBlockElement::Label(name) => {
