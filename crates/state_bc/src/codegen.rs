@@ -8,11 +8,17 @@ use std::{
     io::{Cursor, Seek, Write},
 };
 
+#[derive(Debug, Clone)]
+pub enum EnumRef {
+    Unqual(String),
+    Qual(String, String),
+}
+
 #[derive(Debug)]
 pub enum StatesBlockElement {
     Label(String),
     State {
-        id: String,
+        sprite: EnumRef,
         directional: bool,
         ticks: i32,
         think: String,
@@ -108,7 +114,7 @@ pub fn codegen(
                     label_ptrs2.insert(name.clone(), ip);
                 }
                 StatesBlockElement::State {
-                    id: _,
+                    sprite: _,
                     directional: _,
                     ticks: _,
                     think: _,
@@ -132,7 +138,7 @@ pub fn codegen(
     for (state_block, label_ptrs2) in state_blocks.iter().zip(ps_label_ptrs) {
         for element in &state_block.elements {
             if let StatesBlockElement::State {
-                id,
+                sprite,
                 directional,
                 ticks,
                 think,
@@ -140,9 +146,13 @@ pub fn codegen(
                 next,
             } = element
             {
+                let full_name = match sprite {
+                    EnumRef::Unqual(_) => todo!(),
+                    EnumRef::Qual(enum_name, name) => format!("{enum_name}::{name}"),
+                };
                 let id = *enums
-                    .get(id)
-                    .unwrap_or_else(|| panic!("unknown identifier {id}"))
+                    .get(&full_name)
+                    .unwrap_or_else(|| panic!("unknown identifier {full_name}"))
                     as i32;
                 let next_ptr = if next == "next" {
                     ip + crate::STATE_BC_SIZE

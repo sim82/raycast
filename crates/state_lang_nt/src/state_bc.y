@@ -48,7 +48,7 @@ StatesBody -> Result<Vec<StateElement>, Box<dyn Error>>:
 
 StateElement -> Result<StateElement,Box<dyn Error>>:
 	'state' 'IDENTIFIER' '::' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
-		Ok(StateElement::State { sprite: ($2?.span(),$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
+		Ok(StateElement::State { sprite: EnumRef::Qual($2?.span(),$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
 	}
 	// 'state' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
 	// 	Ok(StateElement::State { sprite: (None,$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
@@ -194,7 +194,7 @@ pub enum EnumRef {
 
 #[derive(Debug)]
 pub enum StateElement {
-	State { sprite: (Span,Span), directional: bool, timeout: i64, think: FunctionRef, action: FunctionRef, next: Span},
+	State { sprite: EnumRef, directional: bool, timeout: i64, think: FunctionRef, action: FunctionRef, next: Span},
 	Label(Span)
 }
 

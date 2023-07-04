@@ -229,6 +229,19 @@ impl EnumResolver for EnumResolverUsing {
         resolved
     }
 }
+impl crate::parser::EnumRef {
+    pub fn to_codegen(&self, span_resolver: &dyn SpanResolver) -> state_bc::codegen::EnumRef {
+        match self {
+            EnumRef::Unqual(name) => {
+                state_bc::codegen::EnumRef::Unqual(span_resolver.get_span(*name).into())
+            }
+            EnumRef::Qual(enum_name, name) => state_bc::codegen::EnumRef::Qual(
+                span_resolver.get_span(*enum_name).into(),
+                span_resolver.get_span(*name).into(),
+            ),
+        }
+    }
+}
 // pub mod frontent {
 pub fn compile(path: &str, outname: &str) {
     let mut input = Vec::new();
@@ -312,18 +325,19 @@ pub fn compile(path: &str, outname: &str) {
                 for e in &elements {
                     let x = match e {
                         StateElement::State {
-                            sprite: (sprite_enum, sprite_name),
+                            sprite,
                             directional,
                             timeout,
                             think,
                             action,
                             next,
                         } => {
-                            let id = format!(
-                                "{}::{}",
-                                lexer.get_span(*sprite_enum),
-                                lexer.get_span(*sprite_name)
-                            );
+                            // let id = format!(
+                            //     "{}::{}",
+                            //     lexer.get_span(*sprite_enum),
+                            //     lexer.get_span(*sprite_name)
+                            // );
+                            let sprite = sprite.to_codegen(&lexer);
                             let think = match think {
                                 FunctionRef::Name(name) => {
                                     let s = lexer.get_span(*name);
@@ -359,13 +373,13 @@ pub fn compile(path: &str, outname: &str) {
                                 }
                             };
                             let next = lexer.get_span(*next).into();
-                            error_reporter.check_identifier(
-                                &id,
-                                Span::new(sprite_enum.start(), sprite_name.end()),
-                            );
+                            // error_reporter.check_identifier(
+                            //     &id,
+                            //     Span::new(sprite_enum.start(), sprite_name.end()),
+                            // );
 
                             StatesBlockElement::State {
-                                id,
+                                sprite,
                                 directional: *directional,
                                 ticks: *timeout as i32,
                                 think,
@@ -377,6 +391,7 @@ pub fn compile(path: &str, outname: &str) {
                             let label_name: String = lexer.get_span(*label_name).into();
                             StatesBlockElement::Label(label_name)
                         }
+                        _ => panic!(),
                     };
                     elements2.push(x);
                 }
