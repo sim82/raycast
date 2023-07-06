@@ -50,9 +50,9 @@ StateElement -> Result<StateElement,Box<dyn Error>>:
 	'state' 'IDENTIFIER' '::' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
 		Ok(StateElement::State { sprite: EnumRef::Qual($2?.span(),$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
 	}
-	// 'state' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
-	// 	Ok(StateElement::State { sprite: (None,$4?.span()), directional: $6?, timeout: $8?, think: $10?, action: $12?, next: $14?.span() })
-	// }
+	| 'state' 'IDENTIFIER' ',' Bool ',' Expr ',' FunctionRef ',' FunctionRef ',' 'IDENTIFIER' {
+		Ok(StateElement::State { sprite: EnumRef::Unqual($2?.span()), directional: $4?, timeout: $6?, think: $8?, action: $10?, next: $12?.span() })
+	}
 	| 'IDENTIFIER' ':' {
 		Ok(StateElement::Label ( $1?.span() ))
 	}

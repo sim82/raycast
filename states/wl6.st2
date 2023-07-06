@@ -487,9 +487,9 @@ spawn alp {
     undirectional 160, stand, None
 }
 
-states alp uses EnemyOp, Snd {
+states alp uses EnemyOp, Snd, Spr {
 stand:
-    state Spr::ALP_W1, false, 0, ThinkStand, None, stand
+    state ALP_W1, false, 0, ThinkStand, None, stand
 path:
     state Spr::ALP_W1, false, 20, ThinkPath, None, next
     state Spr::ALP_W1, false, 5, None, None, next

@@ -229,19 +229,19 @@ impl EnumResolver for EnumResolverUsing {
         resolved
     }
 }
-impl crate::parser::EnumRef {
-    pub fn to_codegen(&self, span_resolver: &dyn SpanResolver) -> state_bc::codegen::EnumRef {
-        match self {
-            EnumRef::Unqual(name) => {
-                state_bc::codegen::EnumRef::Unqual(span_resolver.get_span(*name).into())
-            }
-            EnumRef::Qual(enum_name, name) => state_bc::codegen::EnumRef::Qual(
-                span_resolver.get_span(*enum_name).into(),
-                span_resolver.get_span(*name).into(),
-            ),
-        }
-    }
-}
+// impl crate::parser::EnumRef {
+//     pub fn to_codegen(&self, span_resolver: &dyn SpanResolver) -> state_bc::codegen::EnumRef {
+//         match self {
+//             EnumRef::Unqual(name) => {
+//                 state_bc::codegen::EnumRef::Unqual(span_resolver.get_span(*name).into())
+//             }
+//             EnumRef::Qual(enum_name, name) => state_bc::codegen::EnumRef::Qual(
+//                 span_resolver.get_span(*enum_name).into(),
+//                 span_resolver.get_span(*name).into(),
+//             ),
+//         }
+//     }
+// }
 // pub mod frontent {
 pub fn compile(path: &str, outname: &str) {
     let mut input = Vec::new();
@@ -322,6 +322,10 @@ pub fn compile(path: &str, outname: &str) {
         match tle {
             Toplevel::States { decl, elements } => {
                 let mut elements2 = Vec::new();
+                let enum_resolver = Box::new(EnumResolverUsing {
+                    enums: enums.clone(),
+                    uses: decl.using.clone(),
+                }) as Box<dyn EnumResolver>;
                 for e in &elements {
                     let x = match e {
                         StateElement::State {
@@ -337,7 +341,47 @@ pub fn compile(path: &str, outname: &str) {
                             //     lexer.get_span(*sprite_enum),
                             //     lexer.get_span(*sprite_name)
                             // );
-                            let sprite = sprite.to_codegen(&lexer);
+                            // let sprite = sprite.to_codegen(&lexer);
+                            let sprite = match sprite {
+                                EnumRef::Qual(enum_name, name) => {
+                                    if let Some(v) =
+                                        enum_resolver.resolve(*enum_name, *name, &lexer)
+                                    {
+                                        v as i32
+                                    } else {
+                                        // FIXME: crappy
+                                        let full_name = format!(
+                                            "{}::{}",
+                                            lexer.get_span(*enum_name),
+                                            lexer.get_span(*name)
+                                        );
+                                        error_reporter.report_diagnostic(
+                                            &DiagnosticDesc::UndefinedReference {
+                                                label: "here".into(),
+                                                span: Span::new(enum_name.start(), name.end()),
+                                                identifier: full_name.clone(),
+                                            },
+                                        );
+                                        panic!();
+                                    }
+                                }
+                                EnumRef::Unqual(name) => {
+                                    if let Some(v) =
+                                        enum_resolver.resolve_unqual(*name, &lexer, &error_reporter)
+                                    {
+                                        v as i32
+                                    } else {
+                                        error_reporter.report_diagnostic(
+                                            &DiagnosticDesc::UndefinedReference {
+                                                label: "here".into(),
+                                                span: *name,
+                                                identifier: lexer.get_span(*name).into(),
+                                            },
+                                        );
+                                        panic!();
+                                    }
+                                }
+                            };
                             let think = match think {
                                 FunctionRef::Name(name) => {
                                     let s = lexer.get_span(*name);

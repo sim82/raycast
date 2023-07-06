@@ -8,17 +8,18 @@ use std::{
     io::{Cursor, Seek, Write},
 };
 
-#[derive(Debug, Clone)]
-pub enum EnumRef {
-    Unqual(String),
-    Qual(String, String),
-}
+// #[derive(Debug, Clone)]
+// pub enum EnumRef {
+//     Unqual(String),
+//     Qual(String, String),
+// }
 
 #[derive(Debug)]
 pub enum StatesBlockElement {
     Label(String),
     State {
-        sprite: EnumRef,
+        // sprite: EnumRef,
+        sprite: i32,
         directional: bool,
         ticks: i32,
         think: String,
@@ -146,14 +147,14 @@ pub fn codegen(
                 next,
             } = element
             {
-                let full_name = match sprite {
-                    EnumRef::Unqual(_) => todo!(),
-                    EnumRef::Qual(enum_name, name) => format!("{enum_name}::{name}"),
-                };
-                let id = *enums
-                    .get(&full_name)
-                    .unwrap_or_else(|| panic!("unknown identifier {full_name}"))
-                    as i32;
+                // let full_name = match sprite {
+                //     EnumRef::Unqual(_) => todo!(),
+                //     EnumRef::Qual(enum_name, name) => format!("{enum_name}::{name}"),
+                // };
+                // let id = *enums
+                //     .get(&full_name)
+                //     .unwrap_or_else(|| panic!("unknown identifier {full_name}"))
+                //     as i32;
                 let next_ptr = if next == "next" {
                     ip + crate::STATE_BC_SIZE
                 } else {
@@ -164,7 +165,7 @@ pub fn codegen(
                 };
                 let index = states.len();
                 states.push(StateBc {
-                    id,
+                    id: *sprite,
                     ticks: *ticks,
                     directional: *directional,
                     think_offs: 0,
