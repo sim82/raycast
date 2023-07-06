@@ -215,7 +215,7 @@ impl EnumResolver for EnumResolverUsing {
                     "ambiguous unqualified enum",
                     &format!("{match1_name} vs {full_name}"),
                     name_span,
-                    "meep",
+                    "later undefined reference errors may be caused by this",
                 );
                 return None;
             }
