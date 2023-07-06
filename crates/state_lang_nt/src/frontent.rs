@@ -243,41 +243,44 @@ impl EnumResolver for EnumResolverUsing {
 //     }
 // }
 // pub mod frontent {
-fn resolve_enum_ref(
-    r: &EnumRef,
-    enum_resolver: &dyn EnumResolver,
-    span_resolver: &dyn SpanResolver,
-    error_reporter: &ErrorReporter,
-) -> usize {
-    match r {
-        EnumRef::Qual(enum_name, name) => {
-            if let Some(v) = enum_resolver.resolve(*enum_name, *name, span_resolver) {
-                v
-            } else {
-                // FIXME: crappy
-                let full_name = format!(
-                    "{}::{}",
-                    span_resolver.get_span(*enum_name),
-                    span_resolver.get_span(*name)
-                );
-                error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
-                    label: "here".into(),
-                    span: Span::new(enum_name.start(), name.end()),
-                    identifier: full_name.clone(),
-                });
-                panic!();
+impl EnumRef {
+    fn resolve(
+        &self,
+        enum_resolver: &dyn EnumResolver,
+        span_resolver: &dyn SpanResolver,
+        error_reporter: &ErrorReporter,
+    ) -> usize {
+        match self {
+            EnumRef::Qual(enum_name, name) => {
+                if let Some(v) = enum_resolver.resolve(*enum_name, *name, span_resolver) {
+                    v
+                } else {
+                    // FIXME: crappy
+                    let full_name = format!(
+                        "{}::{}",
+                        span_resolver.get_span(*enum_name),
+                        span_resolver.get_span(*name)
+                    );
+                    error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
+                        label: "here".into(),
+                        span: Span::new(enum_name.start(), name.end()),
+                        identifier: full_name.clone(),
+                    });
+                    panic!();
+                }
             }
-        }
-        EnumRef::Unqual(name) => {
-            if let Some(v) = enum_resolver.resolve_unqual(*name, span_resolver, error_reporter) {
-                v
-            } else {
-                error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
-                    label: "here".into(),
-                    span: *name,
-                    identifier: span_resolver.get_span(*name).into(),
-                });
-                panic!();
+            EnumRef::Unqual(name) => {
+                if let Some(v) = enum_resolver.resolve_unqual(*name, span_resolver, error_reporter)
+                {
+                    v
+                } else {
+                    error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
+                        label: "here".into(),
+                        span: *name,
+                        identifier: span_resolver.get_span(*name).into(),
+                    });
+                    panic!();
+                }
             }
         }
     }
@@ -382,8 +385,7 @@ pub fn compile(path: &str, outname: &str) {
                             // );
                             // let sprite = sprite.to_codegen(&lexer);
                             let sprite =
-                                resolve_enum_ref(sprite, &*enum_resolver, &lexer, &error_reporter)
-                                    as i32;
+                                sprite.resolve(&*enum_resolver, &lexer, &error_reporter) as i32;
                             // let sprite = match sprite {
                             //     EnumRef::Qual(enum_name, name) => {
                             //         if let Some(v) =
@@ -590,12 +592,10 @@ fn emit_codegen(
             Word::Push(TypedInt::U8(v)) => codegen.loadi_u8(*v),
             Word::Push(TypedInt::I32(v)) => codegen.loadi_i32(*v),
             Word::PushStateLabel(label) => codegen.loadsl(&span_resolver.get_span(*label)[1..]), // FIXME: find better place to get rid of @
-            Word::PushEnum(enum_ref) => codegen.loadi_u8(resolve_enum_ref(
-                &enum_ref,
-                enum_resolver,
-                span_resolver,
-                error_reporter,
-            ) as u8),
+            Word::PushEnum(enum_ref) => {
+                codegen
+                    .loadi_u8(enum_ref.resolve(enum_resolver, span_resolver, error_reporter) as u8)
+            }
             // Word::PushEnum(EnumRef::Qual(enum_name, name)) => {
             //     // let full_name = format!(
             //     //     "{}::{}",
