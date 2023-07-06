@@ -84,7 +84,6 @@ impl BytecodeOutput {
 pub fn codegen(
     outname: &str,
     state_blocks: &[StatesBlock],
-    enums: &BTreeMap<String, usize>,
     functions: &BTreeMap<String, Codegen>,
     spawn_infos: &SpawnInfos,
 ) {

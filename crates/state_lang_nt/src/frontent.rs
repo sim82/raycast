@@ -84,7 +84,7 @@ impl ErrorReporter {
                 self.report_error("lex error", label, *span, note)
             }
             DiagnosticDesc::UndefinedReference {
-                label,
+                label: _,
                 span,
                 identifier,
             } => self.report_error(
@@ -529,7 +529,6 @@ pub fn compile(path: &str, outname: &str) {
     codegen::codegen(
         &tmp_outname,
         &state_blocks,
-        &enums,
         &functions,
         &SpawnInfos { spawn_infos },
     );
