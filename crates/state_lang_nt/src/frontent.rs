@@ -113,14 +113,17 @@ impl ErrorReporter {
             "no similar known identifier".into()
         }
     }
-    fn get_fuzzy_match(&self, s: &str) -> Option<String> {
-        let candidates: Vec<(&str, usize)> = self
-            .known_identifier
-            .iter()
-            .enumerate()
-            .map(|(i, s)| (s.as_str(), i))
-            .collect();
-        fuzzy_match::fuzzy_match(s, candidates.clone()).map(|i| candidates[i].0.to_string())
+    fn get_fuzzy_match(&self, s: &str) -> Option<&str> {
+        let mut best = None;
+        let mut best_score = usize::MAX;
+        for candidate in &self.known_identifier {
+            let score = levenshtein::levenshtein(s, candidate);
+            if score < best_score {
+                best = Some(candidate.as_str());
+                best_score = score;
+            }
+        }
+        best
     }
 
     fn add_identifiers<'a>(&mut self, keys: impl IntoIterator<Item = &'a str>) {
