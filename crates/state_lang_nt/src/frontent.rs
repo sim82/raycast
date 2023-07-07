@@ -38,7 +38,6 @@ enum DiagnosticDesc {
         note: String,
     },
     UndefinedReference {
-        label: String,
         span: Span,
         identifier: String,
     },
@@ -99,11 +98,7 @@ impl ErrorReporter {
             DiagnosticDesc::LexError { label, span, note } => {
                 self.report_error("lex error", label, *span, note)
             }
-            DiagnosticDesc::UndefinedReference {
-                label: _,
-                span,
-                identifier,
-            } => self.report_error(
+            DiagnosticDesc::UndefinedReference { span, identifier } => self.report_error(
                 "undefined reference",
                 &format!("undefined: {identifier}"),
                 *span,
@@ -150,7 +145,6 @@ impl ErrorReporter {
     fn check_identifier(&self, identifier: &str, span: Span) {
         if !self.known_identifier.contains(identifier) {
             self.report_diagnostic(&DiagnosticDesc::UndefinedReference {
-                label: "".into(),
                 span,
                 identifier: identifier.into(),
             })
@@ -189,9 +183,9 @@ impl EnumResolver for EnumResolverFlat {
 
     fn resolve_unqual(
         &self,
-        name: Span,
-        span_resolver: &dyn SpanResolver,
-        error_reporter: &ErrorReporter,
+        _name: Span,
+        _span_resolver: &dyn SpanResolver,
+        _error_reporter: &ErrorReporter,
     ) -> Option<usize> {
         // flat resolver can never resolve an unqualified enum
         None
@@ -281,7 +275,6 @@ impl EnumRef {
                         span_resolver.get_span(*name)
                     );
                     error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
-                        label: "here".into(),
                         span: Span::new(enum_name.start(), name.end()),
                         identifier: full_name.clone(),
                     });
@@ -294,7 +287,6 @@ impl EnumRef {
                     v
                 } else {
                     error_reporter.report_diagnostic(&DiagnosticDesc::UndefinedReference {
-                        label: "here".into(),
                         span: *name,
                         identifier: span_resolver.get_span(*name).into(),
                     });
@@ -498,7 +490,6 @@ pub fn compile(path: &str, outname: &str) {
                             let label_name: String = lexer.get_span(*label_name).into();
                             StatesBlockElement::Label(label_name)
                         }
-                        _ => panic!(),
                     };
                     elements2.push(x);
                 }

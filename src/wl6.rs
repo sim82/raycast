@@ -2,7 +2,7 @@ use crate::Texture;
 use state_bc::ms::endian::ReadExt;
 use std::{
     fs::File,
-    io::{Cursor, Read, Seek, SeekFrom, Write},
+    io::{Cursor, Read, Seek, SeekFrom},
     ops::{Range, RangeInclusive},
     path::Path,
 };
@@ -440,67 +440,77 @@ impl DigiSounds {
         Self { sounds }
     }
 }
+#[cfg(test)]
+pub mod test {
+    use std::{fs::File, io::Write};
 
-#[test]
-fn test_vswap() {
-    let mut vs = VswapFile::open("vswap.wl6");
+    use crate::wl6::{
+        carmack_decompress, map_decompress, rlew_decompress, ChunkProvider, MapsFile, VswapFile,
+    };
 
-    println!("chunks: {:?}", vs.chunks);
+    use super::{ChunkId, DigiSounds};
 
-    for i in 0..vs.num_sounds() {
-        let chunk = vs.read_chunk(ChunkId::Sound(i));
-        let mut f = File::create(format!("wl6/sound.{i:03}")).unwrap();
-        f.write_all(&chunk).unwrap();
+    #[test]
+    fn test_vswap() {
+        let mut vs = VswapFile::open("vswap.wl6");
+
+        println!("chunks: {:?}", vs.chunks);
+
+        for i in 0..vs.num_sounds() {
+            let chunk = vs.read_chunk(ChunkId::Sound(i));
+            let mut f = File::create(format!("wl6/sound.{i:03}")).unwrap();
+            f.write_all(&chunk).unwrap();
+        }
+        // for (offs, size) in offs.iter().zip(size.iter()) {
+        //     f.seek(std::io::SeekFrom::Start(*offs as u64)).unwrap();
+
+        //     let head = f.readu16().unwrap();
+        //     println!("head: {size} {:x}", head);
+        // }
     }
-    // for (offs, size) in offs.iter().zip(size.iter()) {
-    //     f.seek(std::io::SeekFrom::Start(*offs as u64)).unwrap();
-
-    //     let head = f.readu16().unwrap();
-    //     println!("head: {size} {:x}", head);
-    // }
-}
-#[test]
-fn test_digisound() {
-    let mut vs = VswapFile::open("vswap.wl6");
-    let map_chunk = ChunkId::Sound(vs.num_sounds() - 1);
-    let digisound = DigiSounds::new(&mut vs, map_chunk);
-    for i in 0..digisound.sounds.len() {
-        let mut f = File::create(format!("wl6/digi.{i:03}")).unwrap();
-        f.write_all(&digisound.sounds[i]).unwrap();
+    #[test]
+    fn test_digisound() {
+        let mut vs = VswapFile::open("vswap.wl6");
+        let map_chunk = ChunkId::Sound(vs.num_sounds() - 1);
+        let digisound = DigiSounds::new(&mut vs, map_chunk);
+        for i in 0..digisound.sounds.len() {
+            let mut f = File::create(format!("wl6/digi.{i:03}")).unwrap();
+            f.write_all(&digisound.sounds[i]).unwrap();
+        }
     }
-}
-#[test]
-fn test_maps() {
-    let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
+    #[test]
+    fn test_maps() {
+        let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
-    let (v0, _v1, _v2) = maps.get_map_plane_chunks(maps.get_map_id("Wolf1 Map2"));
+        let (v0, _v1, _v2) = maps.get_map_plane_chunks(maps.get_map_id("Wolf1 Map2"));
 
-    println!("{:?}", maps.header_offsets);
-    println!("{:?}", maps.map_headers);
+        println!("{:?}", maps.header_offsets);
+        println!("{:?}", maps.map_headers);
 
-    let x = carmack_decompress(&v0);
-    println!("size: {} -> {}", v0.len(), x.len());
-    println!("{:x?}", &x[0..8]);
+        let x = carmack_decompress(&v0);
+        println!("size: {} -> {}", v0.len(), x.len());
+        println!("{:x?}", &x[0..8]);
 
-    let y = rlew_decompress(&x, maps.rlwe_tag);
-    println!("size: {} -> {}", x.len(), y.len());
+        let y = rlew_decompress(&x, maps.rlwe_tag);
+        println!("size: {} -> {}", x.len(), y.len());
 
-    std::fs::write("test.bin", y).unwrap();
-    // println!("x: {:#x?} -> {:#x?}", v2, x);
-}
+        std::fs::write("test.bin", y).unwrap();
+        // println!("x: {:#x?} -> {:#x?}", v2, x);
+    }
 
-#[test]
-fn test_all_maps() {
-    let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
+    #[test]
+    fn test_all_maps() {
+        let mut maps = MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
-    for id in 0..maps.map_headers.len() {
-        let (v0, v1, v2) = maps.get_map_plane_chunks(id as i32);
+        for id in 0..maps.map_headers.len() {
+            let (v0, v1, v2) = maps.get_map_plane_chunks(id as i32);
 
-        let d0 = map_decompress(&v0, maps.rlwe_tag);
-        let d1 = map_decompress(&v1, maps.rlwe_tag);
-        let d2 = map_decompress(&v2, maps.rlwe_tag);
-        assert!(d0.len() == 8192);
-        assert!(d1.len() == 8192);
-        assert!(d2.len() == 8192);
+            let d0 = map_decompress(&v0, maps.rlwe_tag);
+            let d1 = map_decompress(&v1, maps.rlwe_tag);
+            let d2 = map_decompress(&v2, maps.rlwe_tag);
+            assert!(d0.len() == 8192);
+            assert!(d1.len() == 8192);
+            assert!(d2.len() == 8192);
+        }
     }
 }
