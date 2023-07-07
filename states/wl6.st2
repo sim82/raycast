@@ -249,7 +249,7 @@ spawn furry {
     directional 210, path, none
 }
 
-states furry uses Spr {
+states furry uses Spr, Snd, EnemyOp {
 stand:
     state FURRY_W1_1, true, 20, ThinkPath, None, stand
 path:
@@ -272,7 +272,7 @@ sight:
     state FURRY_W3_1, true, 3, None, None, next
     state FURRY_W4_1, true, 8, ThinkDogChase, None, chase
 die:
-    state FURRY_DIE_1, false, 15, None, DeathScreamFurry, next
+    state FURRY_DIE_1, false, 15, None, { [Yiff] Play do }, next
     state FURRY_DIE_2, false, 15, None, None, next
     state FURRY_DIE_3, false, 15, None, ActionDie, next
 dead:
@@ -285,9 +285,6 @@ jump:
     state FURRY_W1_1, false, 10, None, None, chase
 }
 
-function DeathScreamFurry {
-    [Snd::Yiff] EnemyOp::Play do
-}
 
 // ==========================================================================
 //  HANS

@@ -379,6 +379,7 @@ pub fn compile(path: &str, outname: &str) {
                     enums: enums.clone(),
                     uses: decl.using.clone(),
                 }) as Box<dyn EnumResolver>;
+                let states_name = lexer.get_span(decl.name);
                 for e in &elements {
                     let x = match e {
                         StateElement::State {
@@ -397,46 +398,6 @@ pub fn compile(path: &str, outname: &str) {
                             // let sprite = sprite.to_codegen(&lexer);
                             let sprite =
                                 sprite.resolve(&*enum_resolver, &lexer, &error_reporter) as i32;
-                            // let sprite = match sprite {
-                            //     EnumRef::Qual(enum_name, name) => {
-                            //         if let Some(v) =
-                            //             enum_resolver.resolve(*enum_name, *name, &lexer)
-                            //         {
-                            //             v as i32
-                            //         } else {
-                            //             // FIXME: crappy
-                            //             let full_name = format!(
-                            //                 "{}::{}",
-                            //                 lexer.get_span(*enum_name),
-                            //                 lexer.get_span(*name)
-                            //             );
-                            //             error_reporter.report_diagnostic(
-                            //                 &DiagnosticDesc::UndefinedReference {
-                            //                     label: "here".into(),
-                            //                     span: Span::new(enum_name.start(), name.end()),
-                            //                     identifier: full_name.clone(),
-                            //                 },
-                            //             );
-                            //             panic!();
-                            //         }
-                            //     }
-                            //     EnumRef::Unqual(name) => {
-                            //         if let Some(v) =
-                            //             enum_resolver.resolve_unqual(*name, &lexer, &error_reporter)
-                            //         {
-                            //             v as i32
-                            //         } else {
-                            //             error_reporter.report_diagnostic(
-                            //                 &DiagnosticDesc::UndefinedReference {
-                            //                     label: "here".into(),
-                            //                     span: *name,
-                            //                     identifier: lexer.get_span(*name).into(),
-                            //                 },
-                            //             );
-                            //             panic!();
-                            //         }
-                            //     }
-                            // };
                             let think = match think {
                                 FunctionRef::Name(name) => {
                                     let s = lexer.get_span(*name);
@@ -444,7 +405,11 @@ pub fn compile(path: &str, outname: &str) {
                                     s.into()
                                 }
                                 FunctionRef::Inline(body) => {
-                                    let name = format!("InlineThink{}", inline_function_count);
+                                    let line = lexer.line_col(*next).0 .0;
+                                    let name = format!(
+                                        "think_{}_{}_l{}",
+                                        states_name, inline_function_count, line
+                                    );
                                     inline_function_count += 1;
                                     function_blocks.push((
                                         name.clone(),
@@ -461,7 +426,11 @@ pub fn compile(path: &str, outname: &str) {
                                     s.into()
                                 }
                                 FunctionRef::Inline(body) => {
-                                    let name = format!("InlineAction{}", inline_function_count);
+                                    let line = lexer.line_col(*next).0 .0;
+                                    let name = format!(
+                                        "action_{}_{}_l{}",
+                                        states_name, inline_function_count, line
+                                    );
                                     inline_function_count += 1;
                                     function_blocks.push((
                                         name.clone(),
