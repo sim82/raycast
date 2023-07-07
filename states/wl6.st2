@@ -26,7 +26,7 @@ pain1:
 pain2:
     state BROWN_PAIN_2, false, 10, None, None, chase
 sight:
-    state BROWN_W1_1, true, 0, None, SightBrown, next
+    state BROWN_W1_1, true, 0, None, { [Snd::Haltstop] EnemyOp::Play do }, next
 chase:
     state BROWN_W1_1, true, 10, ThinkChase, None, next
     state BROWN_W1_1, true, 3, None, None, next
@@ -59,9 +59,6 @@ function DeathScreamBrown uses Snd {
         ScreamAyyy
     ] EnemyOp::Play do
 
-}
-function SightBrown{
-    [Snd::Haltstop] EnemyOp::Play do
 }
 function ActionShootBrown {
     [Snd::ShotBrown] EnemyOp::Play do
@@ -129,12 +126,6 @@ function ActionShootBlue {
     Func::ActionShoot call
 }
 
-function DeathScreamBlue {
-    [Snd::ScreamMeinleben] EnemyOp::Play do
-}
-function SightBlue{
-    [Snd::SchuhzApfel] EnemyOp::Play do
-}
 // ==========================================================================
 //  WHITE
 // ==========================================================================
@@ -387,7 +378,7 @@ spawn grofaz {
     undirectional 224, chase, None
 }
 
-states grofaz uses Spr {
+states grofaz uses Spr, Snd, EnemyOp {
 stand:
     state GROFAZ_W1, false, 0, ThinkStand, None, stand
 path:
@@ -410,9 +401,9 @@ chase:
     state GROFAZ_W3, false, 3, None, None, next
     state GROFAZ_W4, false, 8, ThinkChase, None, chase
 die:
-    state GROFAZ_W1, false, 0, None, DeathScreamGrofazTalk, next
+    state GROFAZ_W1, false, 0, None, { [Evaaufwiedersehn] Play do }, next
     state GROFAZ_W1, false, 90, None, None, next
-    state GROFAZ_DIE1, false, 15, None, DeathScreamGrofaz, next
+    state GROFAZ_DIE1, false, 15, None, { [Gibb] Play do }, next
     state GROFAZ_DIE2, false, 15, None, None, next
     state GROFAZ_DIE3, false, 15, None, None, next
     state GROFAZ_DIE4, false, 15, None, None, next
@@ -432,7 +423,7 @@ spawn mecha {
     undirectional 178, stand, grofaz
 }
 
-states mecha uses Spr {
+states mecha uses Spr, Snd, EnemyOp {
 stand:
     state MECHA_W1, false, 0, ThinkStand, None, stand
 path:
@@ -447,7 +438,7 @@ pain1:
 pain2:
     state MECHA_DIE1, false, 10, None, None, chase
 sight:
-    state MECHA_W1, false, 0, None, SightMecha, next
+    state MECHA_W1, false, 0, None, { [Schweinhund] Play do }, next
 chase:
     state MECHA_W1, false, 10, ThinkChase, None, next
     state MECHA_W1, false, 3, None, None, next
@@ -456,7 +447,7 @@ chase:
     state MECHA_W3, false, 3, None, None, next
     state MECHA_W4, false, 8, ThinkChase, None, chase
 die:
-    state MECHA_DIE1, false, 15, None, DeathScreamMecha, next
+    state MECHA_DIE1, false, 15, None, {[Scheiss] Play do}, next
     state MECHA_DIE2, false, 15, None, None, next
     state MECHA_DIE3, false, 15, None, ActionDie, next
     state MECHA_DIE3, false, 0, None, None, next
@@ -468,18 +459,6 @@ shoot:
     state MECHA_SHOOT3, false, 20, None, None, chase
 } 
 
-function DeathScreamMecha {
-    [Snd::Scheiss] EnemyOp::Play do
-}
-function SightMecha {
-    [Snd::Schweinhund] EnemyOp::Play do
-}
-function DeathScreamGrofaz {
-    [Snd::Gibb] EnemyOp::Play do
-}
-function DeathScreamGrofazTalk {
-    [Snd::Evaaufwiedersehn] EnemyOp::Play do
-}
 // ==========================================================================
 //  ALP
 // ==========================================================================
