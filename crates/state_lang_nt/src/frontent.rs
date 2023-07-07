@@ -65,8 +65,24 @@ impl ErrorReporter {
         }
     }
     fn report_error(&self, message: &str, label: &str, span: Span, note: &str) {
+        let diagnostic = Diagnostic::error();
+        self.report_internal(span, label, diagnostic, message, note);
+    }
+    fn report_warning(&self, message: &str, label: &str, span: Span, note: &str) {
+        let diagnostic = Diagnostic::warning();
+        self.report_internal(span, label, diagnostic, message, note);
+    }
+
+    fn report_internal(
+        &self,
+        span: Span,
+        label: &str,
+        diagnostic: Diagnostic<usize>,
+        message: &str,
+        note: &str,
+    ) {
         let label = Label::primary(self.file_id, span.start()..span.end()).with_message(label);
-        let diagnostic = Diagnostic::error()
+        let diagnostic = diagnostic
             .with_message(message)
             .with_labels(vec![label])
             .with_notes(vec![note.into()]);
@@ -212,9 +228,9 @@ impl EnumResolver for EnumResolverUsing {
             let enum_name = span_resolver.get_span(*enum_name);
             let full_name = format!("{enum_name}::{name}");
             let cand = self.enums.get(&full_name);
-            if let (Some(match1_name), Some(match2)) = (&resolved_name, cand) {
+            if let (Some(match1_name), true) = (&resolved_name, cand.is_some()) {
                 // TODO: better error message
-                error_reporter.report_error(
+                error_reporter.report_warning(
                     "ambiguous unqualified enum",
                     &format!("{match1_name} vs {full_name}"),
                     name_span,
