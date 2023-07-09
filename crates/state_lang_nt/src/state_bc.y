@@ -82,6 +82,7 @@ SpawnElement -> Result<SpawnElement, Box<dyn Error>>:
 FunctionRef -> Result<FunctionRef, Box<dyn Error>>:
 	'IDENTIFIER' {Ok(FunctionRef::Name($1?.span()))}
 	| '{' WordList '}' {Ok(FunctionRef::Inline($2?))}
+	| '{' '}' {Ok(FunctionRef::Inline(vec![]))}
 	;
 
 WordList -> Result<Vec<Word>, Box<dyn Error>>:
