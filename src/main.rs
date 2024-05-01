@@ -145,7 +145,7 @@ fn main() -> raycast::prelude::Result<()> {
     let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
     let mut voxel = Voxel::default();
     let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
-    let voxel_map = voxel_res.get_map(0).unwrap();
+    let voxel_map = voxel_res.get_map(7).unwrap();
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;

@@ -22,16 +22,58 @@ pub mod res {
             Ok(VoxelRes { path: px })
         }
         pub fn get_map(&self, index: usize) -> Result<MapFile> {
-            if index == 0 {
-                let mut path = self.path.clone();
-                path.push("C11W.DTA");
+            #[rustfmt::skip]
+            let map_names = [
+                ("C1W",  "D1"),
+                ("C2W",  "D2"),
+                ("C3",   "D3"),
+                ("C4",   "D4"),
+                ("C5W",  "D5"),
+                ("C6W",  "D6"),
+                ("C7W",  "D7"),
+                ("C8",   "D6"),
+                ("C9W",  "D9"),
+                ("C10W", "D10"),
+                ("C11W", "D11"),
+                ("C12W", "D11"),
+                ("C13",  "D13"),
+                ("C14",  "D14"),
+                ("C14W", "D14"),
+                ("C15",  "D15"),
+                ("C16W", "D16"),
+                ("C17W", "D17"),
+                ("C18W", "D18"),
+                ("C19W", "D19"),
+                ("C20W", "D20"),
+                ("C21",  "D21"),
+                ("C22W", "D22"),
+                ("C23W", "D21"),
+                ("C24W", "D24"),
+                ("C25W", "D25"),
+                ("C26W", "D18"),
+                ("C27W", "D15"),
+                ("C28W", "D25"),
+                ("C29W", "D16")
+            ];
+            let mut path = self.path.clone();
+            path.push(map_names[index % map_names.len()].0);
+            path.set_extension("DTA");
 
-                let mut height_path = self.path.clone();
-                height_path.push("D11.DTA");
-                MapFile::read(&path, &height_path)
-            } else {
-                todo!()
-            }
+            let mut height_path = self.path.clone();
+            height_path.push(map_names[index % map_names.len()].1);
+            height_path.set_extension("DTA");
+            println!("voxel map: {:?} {:?}", path, height_path);
+            MapFile::read(path, height_path)
+            // if index == 0 {
+            //     let mut path = self.path.clone();
+            //     path.push("C11W.DTA");
+
+            //     let mut height_path = self.path.clone();
+            //     height_path.push("D11.DTA");
+            //     MapFile::read(&path, &height_path)
+            // } else {
+            //     todo!()
+            // }
         }
     }
     pub struct MapFile {
@@ -63,7 +105,11 @@ pub mod res {
             println!("voxel map size: {}x{}", width_hm, height_hm);
             f.seek(SeekFrom::Start(0x80))?;
             let height_map = read_map(width_hm, height_hm, &mut f)?;
-            let height_map = scale2x(&height_map, width_hm, height_hm);
+            let height_map = if width_hm < 1024 {
+                scale2x(&height_map, width_hm, height_hm)
+            } else {
+                height_map
+            };
             // let height_palette = read_palette(&mut f)?; // not sure for what the palette in the file is useful. Generate a linear one for debug draw.
             // let height_palette = gen_height_palette();
             let height_palette = (0..255).map(|v| v << 16 | v << 8 | v).collect::<Vec<u32>>();
