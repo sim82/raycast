@@ -1,9 +1,8 @@
-use raycast::{mainloop, palette::PALETTE, prelude::*, wl6};
+use raycast::{mainloop, palette::PALETTE, prelude::*, voxel, wl6};
 use sdl2::{
-    audio::AudioSpecDesired,
     event::Event,
     keyboard::Scancode,
-    mixer::{InitFlag, AUDIO_U8, DEFAULT_CHANNELS},
+    mixer::{InitFlag, AUDIO_U8},
     mouse::MouseButton,
     pixels::PixelFormatEnum,
     EventPump,
@@ -144,6 +143,9 @@ fn main() -> raycast::prelude::Result<()> {
         .unwrap_or_else(|_| panic!("faild to get event pump"));
 
     let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
+    let mut voxel = Voxel::default();
+    let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
+    let voxel_map = voxel_res.get_map(0).unwrap();
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -175,6 +177,28 @@ fn main() -> raycast::prelude::Result<()> {
                         let offset = y * pitch + x * 3;
                         let s_offset = y * 320 + x;
                         let c32 = PALETTE[buffer[s_offset] as usize];
+                        tex_buffer[offset] = (c32 >> 16) as u8;
+                        tex_buffer[offset + 1] = (c32 >> 8) as u8;
+                        tex_buffer[offset + 2] = c32 as u8;
+                    }
+                }
+            })
+            .unwrap();
+        buffer.fill(255);
+        voxel.run(&input_state, &voxel_map, &mut buffer);
+
+        texture
+            .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
+                for y in 0..200 {
+                    for x in 0..320 {
+                        let offset = y * pitch + x * 3;
+                        let s_offset = y * 320 + x;
+
+                        let color_index = buffer[s_offset];
+                        if color_index == 255 {
+                            continue;
+                        }
+                        let c32 = voxel_map.palette[color_index as usize];
                         tex_buffer[offset] = (c32 >> 16) as u8;
                         tex_buffer[offset + 1] = (c32 >> 8) as u8;
                         tex_buffer[offset + 2] = c32 as u8;

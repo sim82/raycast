@@ -20,6 +20,7 @@ pub mod render;
 pub mod sprite;
 pub mod thing;
 pub mod thing_def;
+pub mod voxel;
 pub mod weapon;
 pub mod wl6;
 
@@ -60,6 +61,7 @@ pub mod prelude {
         state_bc::{Direction, EnemySpawnInfo, ExecCtx, Function, StateBc},
         thing::{Actor, Collectible, Item, Thing, Things},
         thing_def::{ThingDef, ThingDefs, ThingType},
+        voxel::Voxel,
         weapon::{Weapon, WeaponType},
         Resources, Result, HALF_HEIGHT, HEIGHT, IMG_WL6, MID, VIEW_HEIGHT, WIDTH,
     };
