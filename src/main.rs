@@ -63,6 +63,8 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
         input_state.strafe_left = keyboard_state.is_scancode_pressed(Scancode::A);
         input_state.strafe_right = keyboard_state.is_scancode_pressed(Scancode::D);
     }
+    input_state.up = keyboard_state.is_scancode_pressed(Scancode::R);
+    input_state.down = keyboard_state.is_scancode_pressed(Scancode::F);
     input_state.slow = keyboard_state.is_scancode_pressed(Scancode::LShift);
     input_state.open = keyboard_state.is_scancode_pressed(Scancode::Space);
     input_state.shoot = keyboard_state.is_scancode_pressed(Scancode::LCtrl);
@@ -153,38 +155,40 @@ fn main() -> raycast::prelude::Result<()> {
         let mut input_state = input_state_from_sdl_events(&mut events);
         input_state.misc_selection += last_misc_selection;
         last_misc_selection = input_state.misc_selection;
-        mainloop.use_mouse_move = mouse_grabbed;
-        mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
-        sound_chunks.update();
         if input_state.quit {
             break;
         }
-        if input_state.is_deconstruct() {
-            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps);
-        }
+        if false {
+            mainloop.use_mouse_move = mouse_grabbed;
+            mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
+            sound_chunks.update();
+            if input_state.is_deconstruct() {
+                mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps);
+            }
 
-        if input_state.toggle_mouse_grab || (input_state.shoot && initial_ungrabbed) {
-            mouse_grabbed = !mouse_grabbed;
-            canvas.window_mut().set_grab(mouse_grabbed);
-            sdl_context.mouse().set_relative_mouse_mode(mouse_grabbed);
-            initial_ungrabbed = false;
-        }
+            if input_state.toggle_mouse_grab || (input_state.shoot && initial_ungrabbed) {
+                mouse_grabbed = !mouse_grabbed;
+                canvas.window_mut().set_grab(mouse_grabbed);
+                sdl_context.mouse().set_relative_mouse_mode(mouse_grabbed);
+                initial_ungrabbed = false;
+            }
 
-        texture
-            .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
-                for y in 0..200 {
-                    for x in 0..320 {
-                        let offset = y * pitch + x * 3;
-                        let s_offset = y * 320 + x;
-                        let c32 = PALETTE[buffer[s_offset] as usize];
-                        tex_buffer[offset] = (c32 >> 16) as u8;
-                        tex_buffer[offset + 1] = (c32 >> 8) as u8;
-                        tex_buffer[offset + 2] = c32 as u8;
+            texture
+                .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
+                    for y in 0..200 {
+                        for x in 0..320 {
+                            let offset = y * pitch + x * 3;
+                            let s_offset = y * 320 + x;
+                            let c32 = PALETTE[buffer[s_offset] as usize];
+                            tex_buffer[offset] = (c32 >> 16) as u8;
+                            tex_buffer[offset + 1] = (c32 >> 8) as u8;
+                            tex_buffer[offset + 2] = c32 as u8;
+                        }
                     }
-                }
-            })
-            .unwrap();
-        buffer.fill(255);
+                })
+                .unwrap();
+        }
+        buffer.fill(0);
         voxel.run(&input_state, &voxel_map, &mut buffer);
 
         texture

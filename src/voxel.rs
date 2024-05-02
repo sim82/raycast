@@ -227,6 +227,12 @@ impl Voxel {
         self.x = self.x.clamp(0, 1024 - 200);
         self.y = self.y.clamp(0, 1024 - 200);
 
+        if input_events.up {
+            self.camera_height += 1;
+        }
+        if input_events.down {
+            self.camera_height -= 1;
+        }
         // for y in 0..200 {
         //     for x in 0..200 {
         //         buffer[x + y * 320] = map.height_map[x + self.x + (y + self.y) * 1024];

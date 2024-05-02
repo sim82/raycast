@@ -46,6 +46,8 @@ pub struct InputState {
     pub turn_right: bool,
     pub strafe_left: bool,
     pub strafe_right: bool,
+    pub up: bool,
+    pub down: bool,
     pub slow: bool,
     pub open: bool,
     pub shoot: bool,
