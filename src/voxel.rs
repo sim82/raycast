@@ -8,7 +8,7 @@ pub mod res {
     use crate::prelude::*;
     use std::{
         fs::File,
-        io::{Seek, SeekFrom},
+        io::{BufRead, BufReader, Seek, SeekFrom},
         path::{Path, PathBuf},
     };
 
@@ -87,7 +87,7 @@ pub mod res {
 
     impl MapFile {
         pub fn read<P: AsRef<Path>>(path: P, height_path: P) -> Result<MapFile> {
-            let mut f = File::open(path)?;
+            let mut f = BufReader::new(File::open(path)?);
 
             f.seek(SeekFrom::Start(8))?;
             let width = (f.readu16()? + 1) as usize;
@@ -97,7 +97,7 @@ pub mod res {
             let map = read_map(width, height, &mut f)?;
             let palette = read_palette(&mut f)?;
 
-            let mut f = File::open(height_path)?;
+            let mut f = BufReader::new(File::open(height_path)?);
 
             f.seek(SeekFrom::Start(8))?;
             let width_hm = (f.readu16()? + 1) as usize;
@@ -144,7 +144,7 @@ pub mod res {
         out
     }
 
-    fn read_palette(f: &mut File) -> Result<Vec<u32>, anyhow::Error> {
+    fn read_palette(f: &mut dyn BufRead) -> Result<Vec<u32>, anyhow::Error> {
         let _ = f.readu8()?;
         let mut palette = Vec::new();
         for c in 0..256 {
@@ -158,7 +158,7 @@ pub mod res {
         Ok(palette)
     }
 
-    fn read_map(width: usize, height: usize, f: &mut File) -> Result<Vec<u8>> {
+    fn read_map(width: usize, height: usize, f: &mut dyn BufRead) -> Result<Vec<u8>> {
         let mut data = vec![0; width * height];
         let mut line = 0;
         let mut pos = 0;
@@ -187,28 +187,46 @@ pub mod res {
 }
 
 pub struct Voxel {
+    level: i32,
     x: usize,
     y: usize,
     camera_angle: f32,
     camera_distance: u32,
     camera_height: i32,
     camera_horizon: i32,
+    pub map: res::MapFile,
     //
 }
-impl Default for Voxel {
-    fn default() -> Self {
-        Self {
-            x: 0,
-            y: 0,
-            camera_angle: 0.0,
-            camera_distance: 1600,
-            camera_height: 78,
-            camera_horizon: 100,
+// impl Default for Voxel {
+//     fn default() -> Self {
+//         Self {
+//             x: 0,
+//             y: 0,
+//             camera_angle: 0.0,
+//             camera_distance: 1600,
+//             camera_height: 78,
+//             camera_horizon: 100,
+//         }
+//     }
+// }
+
+impl Voxel {
+    pub fn spawn(spawn_info: SpawnInfo, res: &res::VoxelRes) -> Voxel {
+        match spawn_info {
+            SpawnInfo::StartLevel(index, _) => Self {
+                level: index as i32,
+                x: 0,
+                y: 0,
+                camera_angle: 0.0,
+                camera_distance: 1600,
+                camera_height: 78,
+                camera_horizon: 100,
+                map: res.get_map(index as usize).unwrap(),
+            },
+            SpawnInfo::LoadSavegame(_) => todo!(),
         }
     }
-}
-impl Voxel {
-    pub fn run(&mut self, input_events: &InputState, map: &res::MapFile, buffer: &mut [u8]) {
+    pub fn run(&mut self, input_events: &InputState, buffer: &mut [u8]) {
         // for i in 0..1024 {
         //     buffer[i] = (i % 256) as u8;
         // }
@@ -238,11 +256,11 @@ impl Voxel {
         //         buffer[x + y * 320] = map.height_map[x + self.x + (y + self.y) * 1024];
         //     }
         // }
-        self.render(input_events, map, buffer);
+        self.render(input_events, buffer);
     }
-    pub fn render(&mut self, input_events: &InputState, map: &res::MapFile, buffer: &mut [u8]) {
-        let mapwidthperiod = map.width as i32 - 1;
-        let mapheightperiod = map.height as i32 - 1;
+    pub fn render(&mut self, input_events: &InputState, buffer: &mut [u8]) {
+        let mapwidthperiod = self.map.width as i32 - 1;
+        let mapheightperiod = self.map.height as i32 - 1;
 
         let screenwidth = 320.;
         let sinang = self.camera_angle.sin();
@@ -276,16 +294,17 @@ impl Voxel {
             let invz = 1. / z * height_scale;
             // for(var i=0; i<screenwidth|0; i=i+1|0)
             for i in 0..320 {
-                let mapoffset = ((ply.floor() as i32 & mapwidthperiod) * map.width as i32)
+                let mapoffset = ((ply.floor() as i32 & mapwidthperiod) * self.map.width as i32)
                     + (plx.floor() as i32 & mapheightperiod);
-                let heightonscreen =
-                    ((self.camera_height as f32 - map.height_map[mapoffset as usize] as f32) * invz
-                        + self.camera_horizon as f32) as u32;
+                let heightonscreen = ((self.camera_height as f32
+                    - self.map.height_map[mapoffset as usize] as f32)
+                    * invz
+                    + self.camera_horizon as f32) as u32;
                 draw_veritcal_line(
                     i,
                     heightonscreen,
                     hiddeny[i],
-                    map.map[mapoffset as usize],
+                    self.map.map[mapoffset as usize],
                     buffer,
                 );
                 if heightonscreen < hiddeny[i] {
@@ -313,6 +332,15 @@ impl Voxel {
             //     z_inc = 160;
             // }
         }
+    }
+
+    pub fn deconstruct(&self, input_state: &InputState) -> SpawnInfo {
+        if input_state.next_level {
+            return SpawnInfo::StartLevel(self.level.wrapping_add(1), None);
+        } else if input_state.prev_level {
+            return SpawnInfo::StartLevel(self.level.saturating_sub(1), None);
+        }
+        todo!()
     }
 }
 

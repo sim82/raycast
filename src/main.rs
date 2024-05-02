@@ -7,6 +7,7 @@ use sdl2::{
     pixels::PixelFormatEnum,
     EventPump,
 };
+use state_bc::SpawnInfos;
 
 fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
     let mut input_state = InputState::default();
@@ -148,6 +149,7 @@ impl<'a> CanvasSink for sdl2::render::Texture<'a> {
         canvas.present();
     }
 }
+
 fn main() -> raycast::prelude::Result<()> {
     let mut buffer: Vec<u8> = vec![0; WIDTH * HEIGHT];
 
@@ -228,9 +230,9 @@ fn voxel_mainloop(
     sdl_context: sdl2::Sdl,
     mut texture: impl CanvasSink,
 ) {
-    let mut voxel = Voxel::default();
     let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
-    let voxel_map = voxel_res.get_map(7).unwrap();
+
+    let mut voxel = Voxel::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -242,8 +244,11 @@ fn voxel_mainloop(
             break;
         }
         buffer.fill(0);
-        voxel.run(&input_state, &voxel_map, &mut buffer);
+        voxel.run(&input_state, &mut buffer);
 
-        texture.display(&buffer, &voxel_map.palette, &mut canvas);
+        if input_state.is_deconstruct() {
+            voxel = Voxel::spawn(voxel.deconstruct(&input_state), &voxel_res);
+        }
+        texture.display(&buffer, &voxel.map.palette, &mut canvas);
     }
 }
