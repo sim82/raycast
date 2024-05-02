@@ -201,7 +201,7 @@ impl Default for Voxel {
             x: 0,
             y: 0,
             camera_angle: 0.0,
-            camera_distance: 800,
+            camera_distance: 1600,
             camera_height: 78,
             camera_horizon: 100,
         }
@@ -257,7 +257,10 @@ impl Voxel {
 
         // Draw from front to back
         // for(var z=1; z<camera.distance; z+=deltaz)
-        for zi in 1..self.camera_distance {
+        // for zi in 1..self.camera_distance {
+        let mut zi = 1;
+        let mut z_inc = 1;
+        while zi < self.camera_distance {
             let z: f32 = zi as f32;
             // 90 degree field of view
             let mut plx = -cosang * z - sinang * z;
@@ -292,6 +295,23 @@ impl Voxel {
                 ply += dy;
             }
             deltaz += 0.005;
+            zi += z_inc;
+            if zi >= 200 {
+                z_inc = 2;
+            }
+            if zi >= 400 {
+                z_inc = 4;
+            }
+            if zi >= 800 {
+                z_inc = 8;
+            }
+            // else if zi >= 200 {
+            //     z_inc = 40;
+            // } else if zi >= 400 {
+            //     z_inc = 80;
+            // } else if zi >= 800 {
+            //     z_inc = 160;
+            // }
         }
     }
 }
