@@ -23,12 +23,61 @@ impl Camera {
         }
     }
 }
+#[derive(Default)]
+pub struct Chopper {
+    forward: f32,
+
+    angle: f32,
+
+    vel_x: f32,
+    vel_y: f32,
+
+    vel_yaw: f32,
+}
+
+impl Chopper {
+    pub fn apply_input(&mut self, input: &InputState) {
+        if input.turn_right {
+            self.angle -= 0.1;
+        }
+        if input.turn_left {
+            self.angle += 0.1;
+        }
+        let forward_x = -self.angle.sin();
+        let forward_y = -self.angle.cos();
+        let vel_scale = 0.5;
+
+        self.vel_x *= 0.8;
+        self.vel_y *= 0.8;
+        if self.vel_x.abs() < 0.001 {
+            self.vel_x = 0.0;
+        }
+        if self.vel_y.abs() < 0.001 {
+            self.vel_y = 0.0;
+        }
+        if input.forward {
+            self.vel_x += forward_x * vel_scale;
+            self.vel_y += forward_y * vel_scale;
+        }
+        if input.backward {
+            self.vel_x -= forward_x * vel_scale;
+            self.vel_y -= forward_y * vel_scale;
+        }
+    }
+    pub fn apply_to_camera(&self, camera: &mut Camera) {
+        camera.x += self.vel_x * 0.166;
+        camera.y += self.vel_y * 0.166;
+        camera.angle = self.angle;
+    }
+}
+
 pub struct Voxel {
     level: i32,
     drawing_distance: u32,
     pub map: res::MapFile,
     camera: Camera,
     show_automap: bool,
+    chopper: Chopper,
 }
 
 impl Voxel {
@@ -44,30 +93,33 @@ impl Voxel {
                     camera,
                     map,
                     show_automap: false,
+                    chopper: Chopper::default(),
                 }
             }
             SpawnInfo::LoadSavegame(_) => todo!(),
         }
     }
     pub fn run(&mut self, input_events: &InputState, buffer: &mut [u8]) {
-        if input_events.strafe_right {
-            self.camera.x += 1.0;
-        }
-        if input_events.strafe_left {
-            self.camera.x -= 1.0;
-        }
-        if input_events.forward {
-            self.camera.y -= 1.0;
-        }
-        if input_events.backward {
-            self.camera.y += 1.0;
-        }
-        if input_events.up {
-            self.camera.height += 1.0;
-        }
-        if input_events.down {
-            self.camera.height -= 1.0;
-        }
+        // if input_events.strafe_right {
+        //     self.camera.x += 1.0;
+        // }
+        // if input_events.strafe_left {
+        //     self.camera.x -= 1.0;
+        // }
+        // if input_events.forward {
+        //     self.camera.y -= 1.0;
+        // }
+        // if input_events.backward {
+        //     self.camera.y += 1.0;
+        // }
+        // if input_events.up {
+        //     self.camera.height += 1.0;
+        // }
+        // if input_events.down {
+        //     self.camera.height -= 1.0;
+        // }
+        self.chopper.apply_input(input_events);
+        self.chopper.apply_to_camera(&mut self.camera);
         self.render(input_events, buffer);
         self.show_automap ^= input_events.toggle_automap;
         if self.show_automap {
