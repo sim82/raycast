@@ -231,6 +231,7 @@ fn voxel_mainloop(
     mut texture: impl CanvasSink,
 ) {
     let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
+    // let voxel_res = voxel::res::VoxelRes::from_dir("comanche").unwrap();
 
     let mut voxel = Voxel::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
     let mut mouse_grabbed = false;
