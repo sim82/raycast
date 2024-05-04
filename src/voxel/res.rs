@@ -4,6 +4,7 @@ use crate::prelude::*;
 use std::{
     fs::File,
     io::{BufRead, BufReader, Seek, SeekFrom},
+    iter::repeat,
     path::{Path, PathBuf},
 };
 
@@ -175,29 +176,21 @@ fn read_palette(f: &mut dyn BufRead) -> Result<Vec<u32>, anyhow::Error> {
 }
 
 fn read_map(width: usize, height: usize, f: &mut dyn BufRead) -> Result<Vec<u8>> {
-    let mut data = vec![0; width * height];
-    let mut line = 0;
-    let mut pos = 0;
+    let mut data = Vec::with_capacity(width * height);
     loop {
-        let x = f.readu8()?;
-        let (len, color) = if x > 0xc0 {
-            (x & 0x3f, f.readu8().context(format!("{} {}", pos, line))?)
+        // 'kind of' rle compression:
+        // If the highest two bits are set, use the lowest 6 bits as run length and
+        // read another byte for the color.
+        // otherwise use the color directly.
+        let color = f.readu8()?;
+        if color > 0b11000000 {
+            let run_length = color & 0b00111111;
+            let run_color = f.readu8()?;
+            data.extend(repeat(run_color).take(run_length.into()))
         } else {
-            (1, x)
-        };
-        // if len != 1 {
-        //     println!("run {} {}", len, color);
-        // }
-        // println!("run: {} {} @ {} {}", len, color, pos, line);
-        for _ in 0..len {
-            data[pos + line * width] = color;
-            pos += 1;
-            if pos >= width {
-                pos = 0;
-                line += 1;
-            }
+            data.push(color);
         }
-        if line >= height {
+        if data.len() == width * height {
             break;
         }
     }
