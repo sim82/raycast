@@ -10,6 +10,7 @@ pub struct Camera {
     angle: f32,
     height: f32,
     horizon: f32,
+    rot: f32,
 }
 impl Camera {
     pub fn spawn_at(map: &res::MapFile, x: f32, y: f32) -> Camera {
@@ -20,54 +21,95 @@ impl Camera {
             angle: 0.0,
             height: height as f32 + 25.0,
             horizon: 100.0,
+            rot: 0.0,
         }
     }
 }
 #[derive(Default)]
 pub struct Chopper {
-    forward: f32,
-
-    angle: f32,
-
     vel_x: f32,
     vel_y: f32,
 
-    vel_yaw: f32,
+    roll: f32,
+    pitch: f32,
+    yaw: f32,
 }
 
 impl Chopper {
+    // if input.forward {
+    //     self.vel_x += forward_x * vel_scale;
+    //     self.vel_y += forward_y * vel_scale;
+    // }
+    // if input.backward {
+    //     self.vel_x -= forward_x * vel_scale;
+    //     self.vel_y -= forward_y * vel_scale;
+    // }
+    const PITCH_VEL: f32 = 35.0;
+    const ROLL_VEL: f32 = 10.0;
+    const DT: f32 = 60.0 / 1000.0;
+    const MAX_PITCH: f32 = 30.0;
+    const MAX_ROLL: f32 = 30.0;
+    const ROLL_YAW_SCALE: f32 = 0.1;
+    const ROLL_DECAY: f32 = 0.7;
+    const PITCH_DECAY: f32 = 0.8;
+    const VEL_DECAY: f32 = 0.95;
+    const PITCH_VEL_SCALE: f32 = 0.5;
+    const ROLL_VEL_SCALE: f32 = 1.0;
+    const DIRECT_YAW_RATE: f32 = 0.2;
+
     pub fn apply_input(&mut self, input: &InputState) {
         if input.turn_right {
-            self.angle -= 0.1;
+            self.yaw -= Self::DIRECT_YAW_RATE * Self::DT;
         }
         if input.turn_left {
-            self.angle += 0.1;
+            self.yaw += Self::DIRECT_YAW_RATE * Self::DT;
         }
-        let forward_x = -self.angle.sin();
-        let forward_y = -self.angle.cos();
-        let vel_scale = 0.5;
+        self.pitch *= Self::PITCH_DECAY;
+        if input.forward {
+            self.pitch += Self::PITCH_VEL * Self::DT;
+        }
+        if input.backward {
+            self.pitch -= Self::PITCH_VEL * Self::DT;
+        }
 
-        self.vel_x *= 0.8;
-        self.vel_y *= 0.8;
+        self.roll *= Self::ROLL_DECAY;
+        if input.strafe_left {
+            self.roll += Self::ROLL_VEL * Self::DT;
+        }
+        if input.strafe_right {
+            self.roll -= Self::ROLL_VEL * Self::DT;
+        }
+
+        self.pitch = self.pitch.clamp(-Self::MAX_PITCH, Self::MAX_PITCH);
+        self.roll = self.roll.clamp(-Self::MAX_ROLL, Self::MAX_ROLL);
+        self.yaw += self.roll * Self::ROLL_YAW_SCALE * Self::DT;
+        let forward_x = -self.yaw.sin();
+        let forward_y = -self.yaw.cos();
+        let right_x = -self.yaw.cos();
+        let right_y = self.yaw.sin();
+
+        self.vel_x *= Self::VEL_DECAY;
+        self.vel_y *= Self::VEL_DECAY;
+        self.vel_x += forward_x * self.pitch * Self::PITCH_VEL_SCALE * Self::DT;
+        self.vel_y += forward_y * self.pitch * Self::PITCH_VEL_SCALE * Self::DT;
+        self.vel_x += right_x * self.roll * Self::ROLL_VEL_SCALE * Self::DT;
+        self.vel_y += right_y * self.roll * Self::ROLL_VEL_SCALE * Self::DT;
+
         if self.vel_x.abs() < 0.001 {
             self.vel_x = 0.0;
         }
         if self.vel_y.abs() < 0.001 {
             self.vel_y = 0.0;
         }
-        if input.forward {
-            self.vel_x += forward_x * vel_scale;
-            self.vel_y += forward_y * vel_scale;
-        }
-        if input.backward {
-            self.vel_x -= forward_x * vel_scale;
-            self.vel_y -= forward_y * vel_scale;
-        }
     }
     pub fn apply_to_camera(&self, camera: &mut Camera) {
         camera.x += self.vel_x * 0.166;
         camera.y += self.vel_y * 0.166;
-        camera.angle = self.angle;
+        camera.angle = self.yaw;
+
+        // ultra crappy linear approximation: directly offset horizon by pitch angle. Looks close enough for the early 90s
+        camera.horizon = 100.0 - self.pitch * 4.0;
+        camera.rot = self.roll * 10.0;
     }
 }
 
@@ -172,13 +214,16 @@ impl Voxel {
             let height_scale = 100.;
             let invz = 1. / z * height_scale;
             // for(var i=0; i<screenwidth|0; i=i+1|0)
+            let mut horizon_cur = self.camera.horizon - self.camera.rot;
+            let horizon_inc = (self.camera.rot * 2.0) / 320.0;
+
             for i in 0..320 {
                 let mapoffset = ((ply.floor() as i32 & mapwidthperiod) * self.map.width as i32)
                     + (plx.floor() as i32 & mapheightperiod);
                 let heightonscreen = ((self.camera.height as f32
                     - self.map.height_map[mapoffset as usize] as f32)
                     * invz
-                    + self.camera.horizon as f32) as u32;
+                    + horizon_cur) as u32;
                 draw_veritcal_line(
                     i,
                     heightonscreen,
@@ -191,6 +236,7 @@ impl Voxel {
                 };
                 plx += dx;
                 ply += dy;
+                horizon_cur += horizon_inc;
             }
             deltaz += 0.005;
             zi += z_inc;
