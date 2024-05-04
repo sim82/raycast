@@ -25,16 +25,32 @@ impl Camera {
         }
     }
 }
-#[derive(Default)]
+
 pub struct Chopper {
     vel_x: f32,
     vel_y: f32,
+    vel_z: f32,
 
     roll: f32,
     pitch: f32,
     yaw: f32,
+
+    target_altitude: f32,
 }
 
+impl Default for Chopper {
+    fn default() -> Self {
+        Chopper {
+            vel_x: 0.0,
+            vel_y: 0.0,
+            vel_z: 0.0,
+            roll: 0.0,
+            pitch: 0.0,
+            yaw: 0.0,
+            target_altitude: 30.0,
+        }
+    }
+}
 impl Chopper {
     // if input.forward {
     //     self.vel_x += forward_x * vel_scale;
@@ -102,9 +118,32 @@ impl Chopper {
             self.vel_y = 0.0;
         }
     }
+    pub fn apply_altitude(&mut self, camera: &Camera, map: &res::MapFile) {
+        // sample ground altitude
+
+        let probe_x = camera.x;
+        let probe_y = camera.y;
+        let xi = probe_x.round().rem_euclid(1024.0) as usize;
+        let yi = probe_y.round().rem_euclid(1024.0) as usize;
+
+        let ground = map.height_map[xi + yi * 1024] as f32;
+        let altitude_over_ground = camera.height - ground;
+
+        if altitude_over_ground > self.target_altitude + 5.0 {
+            self.vel_z = -1.0;
+        } else if altitude_over_ground < self.target_altitude - 5.0 {
+            self.vel_z = 1.0;
+        } else {
+            self.vel_z = 0.0;
+        }
+        println!("xy: {} {} {} {}", xi, yi, altitude_over_ground, self.vel_z);
+        // println!("alt delta: {}", camera.height - ground_altitude);
+        // self.target_altitude = ground_altitude + 20.0;
+    }
     pub fn apply_to_camera(&self, camera: &mut Camera) {
         camera.x += self.vel_x * 0.166;
         camera.y += self.vel_y * 0.166;
+        camera.height += self.vel_z * 0.166;
         camera.angle = self.yaw;
 
         // ultra crappy linear approximation: directly offset horizon by pitch angle. Looks close enough for the early 90s
@@ -161,6 +200,7 @@ impl Voxel {
         //     self.camera.height -= 1.0;
         // }
         self.chopper.apply_input(input_events);
+        self.chopper.apply_altitude(&self.camera, &self.map);
         self.chopper.apply_to_camera(&mut self.camera);
         self.render(input_events, buffer);
         self.show_automap ^= input_events.toggle_automap;
