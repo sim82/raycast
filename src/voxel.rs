@@ -121,8 +121,8 @@ impl Chopper {
     pub fn apply_altitude(&mut self, camera: &Camera, map: &res::MapFile) {
         // sample ground altitude
 
-        let probe_x = camera.x;
-        let probe_y = camera.y;
+        let probe_x = camera.x + self.vel_x;
+        let probe_y = camera.y + self.vel_y;
         let xi = probe_x.round().rem_euclid(1024.0) as usize;
         let yi = probe_y.round().rem_euclid(1024.0) as usize;
 
