@@ -47,7 +47,7 @@ impl Default for Chopper {
             roll: 0.0,
             pitch: 0.0,
             yaw: 0.0,
-            target_altitude: 30.0,
+            target_altitude: 15.0,
         }
     }
 }
@@ -140,7 +140,7 @@ impl Chopper {
         if delta > 5.0 {
             self.vel_z = -(1.0 + delta / 10.0);
         } else if delta < -5.0 {
-            self.vel_z = (1.0 - delta / 10.0);
+            self.vel_z = 1.0 - delta / 10.0;
         } else {
             self.vel_z = 0.0;
         }
@@ -266,8 +266,10 @@ impl Voxel {
             let horizon_inc = (self.camera.rot * 4.0) / 320.0;
 
             for i in 0..320 {
-                let mapoffset = ((ply.floor() as i32 & mapwidthperiod) * self.map.width as i32)
-                    + (plx.floor() as i32 & mapheightperiod);
+                let mapoffset = ((ply.floor().rem_euclid(self.map.height as f32) as usize)
+                    * self.map.width)
+                    + plx.floor().rem_euclid(self.map.width as f32) as usize;
+
                 let heightonscreen = ((self.camera.height as f32
                     - self.map.height_map[mapoffset as usize] as f32)
                     * invz
