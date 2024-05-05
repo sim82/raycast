@@ -52,14 +52,6 @@ impl Default for Chopper {
     }
 }
 impl Chopper {
-    // if input.forward {
-    //     self.vel_x += forward_x * vel_scale;
-    //     self.vel_y += forward_y * vel_scale;
-    // }
-    // if input.backward {
-    //     self.vel_x -= forward_x * vel_scale;
-    //     self.vel_y -= forward_y * vel_scale;
-    // }
     const DT: f32 = 60.0 / 1000.0;
 
     const INPUT_PITCH_RATE: f32 = 25.0;
@@ -145,8 +137,6 @@ impl Chopper {
             self.vel_z = 0.0;
         }
         println!("xy: {} {} {} {}", xi, yi, delta, self.vel_z);
-        // println!("alt delta: {}", camera.height - ground_altitude);
-        // self.target_altitude = ground_altitude + 20.0;
     }
     pub fn apply_to_camera(&self, camera: &mut Camera) {
         camera.x += self.vel_x * 0.166;
@@ -189,24 +179,6 @@ impl Voxel {
         }
     }
     pub fn run(&mut self, input_events: &InputState, buffer: &mut [u8]) {
-        // if input_events.strafe_right {
-        //     self.camera.x += 1.0;
-        // }
-        // if input_events.strafe_left {
-        //     self.camera.x -= 1.0;
-        // }
-        // if input_events.forward {
-        //     self.camera.y -= 1.0;
-        // }
-        // if input_events.backward {
-        //     self.camera.y += 1.0;
-        // }
-        // if input_events.up {
-        //     self.camera.height += 1.0;
-        // }
-        // if input_events.down {
-        //     self.camera.height -= 1.0;
-        // }
         self.chopper.apply_input(input_events);
         self.chopper.apply_altitude(&self.camera, &self.map);
         self.chopper.apply_to_camera(&mut self.camera);
@@ -228,23 +200,12 @@ impl Voxel {
         }
     }
     pub fn render(&mut self, _input_events: &InputState, buffer: &mut [u8]) {
-        let mapwidthperiod = self.map.width as i32 - 1;
-        let mapheightperiod = self.map.height as i32 - 1;
-
         let screenwidth = 320.;
         let sinang = self.camera.angle.sin();
         let cosang = self.camera.angle.cos();
 
         let mut hiddeny = [200u32; 320];
-        // var hiddeny = new Int32Array(screenwidth);
-        // for(var i=0; i<screendata.canvas.width|0; i=i+1|0)
-        // hiddeny[i] = screendata.canvas.height;
 
-        let mut deltaz = 1.;
-
-        // Draw from front to back
-        // for(var z=1; z<camera.distance; z+=deltaz)
-        // for zi in 1..self.camera_distance {
         let mut zi = 1;
         let mut z_inc = 1;
         while zi < self.drawing_distance {
@@ -261,7 +222,6 @@ impl Voxel {
             ply += self.camera.y;
             let height_scale = 100.;
             let invz = 1. / z * height_scale;
-            // for(var i=0; i<screenwidth|0; i=i+1|0)
             let mut horizon_cur = self.camera.horizon - self.camera.rot;
             let horizon_inc = (self.camera.rot * 4.0) / 320.0;
 
@@ -274,7 +234,7 @@ impl Voxel {
                     - self.map.height_map[mapoffset as usize] as f32)
                     * invz
                     + horizon_cur) as u32;
-                draw_veritcal_line(
+                draw_vertical_line(
                     i,
                     heightonscreen,
                     hiddeny[i],
@@ -288,7 +248,6 @@ impl Voxel {
                 ply += dy;
                 horizon_cur += horizon_inc;
             }
-            deltaz += 0.005;
             zi += z_inc;
             if zi >= 200 {
                 z_inc = 2;
@@ -312,7 +271,7 @@ impl Voxel {
     }
 }
 
-fn draw_veritcal_line(x: usize, ytop: u32, ybottom: u32, color: u8, buffer: &mut [u8]) {
+fn draw_vertical_line(x: usize, ytop: u32, ybottom: u32, color: u8, buffer: &mut [u8]) {
     assert!(x < 320);
     let ytop = ytop.max(0) as usize;
     let ybottom = ybottom as usize;
