@@ -60,56 +60,63 @@ impl Chopper {
     //     self.vel_x -= forward_x * vel_scale;
     //     self.vel_y -= forward_y * vel_scale;
     // }
-    const PITCH_VEL: f32 = 35.0;
-    const ROLL_VEL: f32 = 10.0;
     const DT: f32 = 60.0 / 1000.0;
-    const MAX_PITCH: f32 = 30.0;
-    const MAX_ROLL: f32 = 30.0;
-    const ROLL_YAW_SCALE: f32 = 0.1;
-    const ROLL_DECAY: f32 = 0.7;
-    const PITCH_DECAY: f32 = 0.8;
+
+    const INPUT_PITCH_RATE: f32 = 25.0;
+    const PITCH_DECAY: f32 = 0.9;
+    const MAX_PITCH: f32 = 20.0;
+
+    const INPUT_ROLL_RATE: f32 = 5.0;
+    const ROLL_DECAY: f32 = 0.9;
+    const MAX_ROLL: f32 = 20.0;
+
+    const ROLL_YAW_RATE: f32 = 0.1;
+
+    const PITCH_FORWARD_VEL_RATE: f32 = 0.3;
+    const ROLL_RIGHT_VEL_RATE: f32 = 1.0;
     const VEL_DECAY: f32 = 0.95;
-    const PITCH_VEL_SCALE: f32 = 0.5;
-    const ROLL_VEL_SCALE: f32 = 1.0;
-    const DIRECT_YAW_RATE: f32 = 0.2;
+
+    const INPUT_YAW_RATE: f32 = 0.2;
 
     pub fn apply_input(&mut self, input: &InputState) {
+        self.roll *= Self::ROLL_DECAY;
+        self.pitch *= Self::PITCH_DECAY;
+
+        self.vel_x *= Self::VEL_DECAY;
+        self.vel_y *= Self::VEL_DECAY;
+
         if input.turn_right {
-            self.yaw -= Self::DIRECT_YAW_RATE * Self::DT;
+            self.yaw -= Self::INPUT_YAW_RATE * Self::DT;
         }
         if input.turn_left {
-            self.yaw += Self::DIRECT_YAW_RATE * Self::DT;
+            self.yaw += Self::INPUT_YAW_RATE * Self::DT;
         }
-        self.pitch *= Self::PITCH_DECAY;
         if input.forward {
-            self.pitch += Self::PITCH_VEL * Self::DT;
+            self.pitch += Self::INPUT_PITCH_RATE * Self::DT;
         }
         if input.backward {
-            self.pitch -= Self::PITCH_VEL * Self::DT;
+            self.pitch -= Self::INPUT_PITCH_RATE * Self::DT;
         }
-
-        self.roll *= Self::ROLL_DECAY;
         if input.strafe_left {
-            self.roll += Self::ROLL_VEL * Self::DT;
+            self.roll += Self::INPUT_ROLL_RATE * Self::DT;
         }
         if input.strafe_right {
-            self.roll -= Self::ROLL_VEL * Self::DT;
+            self.roll -= Self::INPUT_ROLL_RATE * Self::DT;
         }
 
         self.pitch = self.pitch.clamp(-Self::MAX_PITCH, Self::MAX_PITCH);
         self.roll = self.roll.clamp(-Self::MAX_ROLL, Self::MAX_ROLL);
-        self.yaw += self.roll * Self::ROLL_YAW_SCALE * Self::DT;
+
+        self.yaw += self.roll * Self::ROLL_YAW_RATE * Self::DT;
         let forward_x = -self.yaw.sin();
         let forward_y = -self.yaw.cos();
         let right_x = -self.yaw.cos();
         let right_y = self.yaw.sin();
 
-        self.vel_x *= Self::VEL_DECAY;
-        self.vel_y *= Self::VEL_DECAY;
-        self.vel_x += forward_x * self.pitch * Self::PITCH_VEL_SCALE * Self::DT;
-        self.vel_y += forward_y * self.pitch * Self::PITCH_VEL_SCALE * Self::DT;
-        self.vel_x += right_x * self.roll * Self::ROLL_VEL_SCALE * Self::DT;
-        self.vel_y += right_y * self.roll * Self::ROLL_VEL_SCALE * Self::DT;
+        self.vel_x += forward_x * self.pitch * Self::PITCH_FORWARD_VEL_RATE * Self::DT;
+        self.vel_y += forward_y * self.pitch * Self::PITCH_FORWARD_VEL_RATE * Self::DT;
+        self.vel_x += right_x * self.roll * Self::ROLL_RIGHT_VEL_RATE * Self::DT;
+        self.vel_y += right_y * self.roll * Self::ROLL_RIGHT_VEL_RATE * Self::DT;
 
         if self.vel_x.abs() < 0.001 {
             self.vel_x = 0.0;
@@ -121,22 +128,23 @@ impl Chopper {
     pub fn apply_altitude(&mut self, camera: &Camera, map: &res::MapFile) {
         // sample ground altitude
 
-        let probe_x = camera.x + self.vel_x;
-        let probe_y = camera.y + self.vel_y;
+        let probe_x = camera.x + self.vel_x * 4.0;
+        let probe_y = camera.y + self.vel_y * 4.0;
         let xi = probe_x.round().rem_euclid(1024.0) as usize;
         let yi = probe_y.round().rem_euclid(1024.0) as usize;
 
         let ground = map.height_map[xi + yi * 1024] as f32;
         let altitude_over_ground = camera.height - ground;
+        let delta = altitude_over_ground - self.target_altitude;
 
-        if altitude_over_ground > self.target_altitude + 5.0 {
-            self.vel_z = -1.0;
-        } else if altitude_over_ground < self.target_altitude - 5.0 {
-            self.vel_z = 1.0;
+        if delta > 5.0 {
+            self.vel_z = -(1.0 + delta / 10.0);
+        } else if delta < -5.0 {
+            self.vel_z = (1.0 - delta / 10.0);
         } else {
             self.vel_z = 0.0;
         }
-        println!("xy: {} {} {} {}", xi, yi, altitude_over_ground, self.vel_z);
+        println!("xy: {} {} {} {}", xi, yi, delta, self.vel_z);
         // println!("alt delta: {}", camera.height - ground_altitude);
         // self.target_altitude = ground_altitude + 20.0;
     }
@@ -255,7 +263,7 @@ impl Voxel {
             let invz = 1. / z * height_scale;
             // for(var i=0; i<screenwidth|0; i=i+1|0)
             let mut horizon_cur = self.camera.horizon - self.camera.rot;
-            let horizon_inc = (self.camera.rot * 2.0) / 320.0;
+            let horizon_inc = (self.camera.rot * 4.0) / 320.0;
 
             for i in 0..320 {
                 let mapoffset = ((ply.floor() as i32 & mapwidthperiod) * self.map.width as i32)
