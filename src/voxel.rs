@@ -36,6 +36,8 @@ pub struct Chopper {
     yaw: f32,
 
     target_altitude: f32,
+
+    climb: f32,
 }
 
 impl Default for Chopper {
@@ -48,6 +50,7 @@ impl Default for Chopper {
             pitch: 0.0,
             yaw: 0.0,
             target_altitude: 15.0,
+            climb: 0.0,
         }
     }
 }
@@ -76,6 +79,7 @@ impl Chopper {
 
         self.vel_x *= Self::VEL_DECAY;
         self.vel_y *= Self::VEL_DECAY;
+        self.vel_z *= Self::VEL_DECAY;
 
         if input.turn_right {
             self.yaw -= Self::INPUT_YAW_RATE * Self::DT;
@@ -95,7 +99,14 @@ impl Chopper {
         if input.strafe_right {
             self.roll -= Self::INPUT_ROLL_RATE * Self::DT;
         }
-
+        self.climb = 0.0;
+        if input.up {
+            self.climb = 5.0 * Self::DT;
+        }
+        if input.down {
+            self.climb = -5.0 * Self::DT;
+        }
+        self.target_altitude = self.target_altitude.clamp(5.0, 100.0);
         self.pitch = self.pitch.clamp(-Self::MAX_PITCH, Self::MAX_PITCH);
         self.roll = self.roll.clamp(-Self::MAX_ROLL, Self::MAX_ROLL);
 
@@ -118,25 +129,33 @@ impl Chopper {
         }
     }
     pub fn apply_altitude(&mut self, camera: &Camera, map: &res::MapFile) {
-        // sample ground altitude
-
+        // sample ground altitude at current and forward position
+        let here_ground_height = get_ground_height(camera.x, camera.y, map);
         let probe_x = camera.x + self.vel_x * 4.0;
         let probe_y = camera.y + self.vel_y * 4.0;
-        let xi = probe_x.round().rem_euclid(1024.0) as usize;
-        let yi = probe_y.round().rem_euclid(1024.0) as usize;
+        let forward_ground_height = get_ground_height(probe_x, probe_y, map);
 
-        let ground = map.height_map[xi + yi * 1024] as f32;
+        // use maximum height
+        let ground = here_ground_height.max(forward_ground_height);
+
+        // caclulate deviation from target alititude and correction velocity
         let altitude_over_ground = camera.height - ground;
-        let delta = altitude_over_ground - self.target_altitude;
-
-        if delta > 5.0 {
-            self.vel_z = -(1.0 + delta / 10.0);
-        } else if delta < -5.0 {
-            self.vel_z = 1.0 - delta / 10.0;
+        let delta_hysteresis = if self.climb != 0.0 {
+            self.target_altitude += self.climb;
+            0.0
         } else {
-            self.vel_z = 0.0;
+            5.0
+        };
+        let delta = altitude_over_ground - self.target_altitude;
+        if delta > delta_hysteresis {
+            self.vel_z = -(1.0 + delta / 10.0);
+        } else if delta < -delta_hysteresis {
+            self.vel_z = 1.0 - delta / 10.0;
         }
-        println!("xy: {} {} {} {}", xi, yi, delta, self.vel_z);
+        // else {
+        //     self.vel_z = 0.0;
+        // }
+        // println!("xy: {} {} {} {}", xi, yi, delta, self.vel_z);
     }
     pub fn apply_to_camera(&self, camera: &mut Camera) {
         camera.x += self.vel_x * 0.166;
@@ -148,6 +167,14 @@ impl Chopper {
         camera.horizon = 100.0 - self.pitch * 4.0;
         camera.rot = self.roll * 10.0;
     }
+}
+
+fn get_ground_height(probe_x: f32, probe_y: f32, map: &res::MapFile) -> f32 {
+    let xi = probe_x.round().rem_euclid(1024.0) as usize;
+    let yi = probe_y.round().rem_euclid(1024.0) as usize;
+
+    let ground = map.height_map[xi + yi * 1024] as f32;
+    ground
 }
 
 pub struct Voxel {
