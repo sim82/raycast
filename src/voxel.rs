@@ -1,3 +1,5 @@
+use std::f32::consts::TAU;
+
 use crate::prelude::*;
 
 // inspired by https://github.com/s-macke/VoxelSpace/blob/master/VoxelSpace.html
@@ -106,7 +108,6 @@ impl Chopper {
         if input.down {
             self.climb = -5.0 * Self::DT;
         }
-        self.target_altitude = self.target_altitude.clamp(5.0, 100.0);
         self.pitch = self.pitch.clamp(-Self::MAX_PITCH, Self::MAX_PITCH);
         self.roll = self.roll.clamp(-Self::MAX_ROLL, Self::MAX_ROLL);
 
@@ -127,6 +128,9 @@ impl Chopper {
         if self.vel_y.abs() < 0.001 {
             self.vel_y = 0.0;
         }
+        sanitize_angle(&mut self.roll);
+        sanitize_angle(&mut self.pitch);
+        sanitize_angle(&mut self.yaw);
     }
     pub fn apply_altitude(&mut self, camera: &Camera, map: &res::MapFile) {
         // sample ground altitude at current and forward position
@@ -152,6 +156,9 @@ impl Chopper {
         } else if delta < -delta_hysteresis {
             self.vel_z = 1.0 - delta / 10.0;
         }
+        if camera.height > 100.0 {
+            self.vel_z = self.vel_z.min(0.0);
+        }
         // else {
         //     self.vel_z = 0.0;
         // }
@@ -169,6 +176,14 @@ impl Chopper {
     }
 }
 
+fn sanitize_angle(v: &mut f32) {
+    while *v < 0.0 {
+        *v += TAU;
+    }
+    while *v >= TAU {
+        *v -= TAU;
+    }
+}
 fn get_ground_height(probe_x: f32, probe_y: f32, map: &res::MapFile) -> f32 {
     let xi = probe_x.round().rem_euclid(1024.0) as usize;
     let yi = probe_y.round().rem_euclid(1024.0) as usize;
@@ -184,6 +199,7 @@ pub struct Voxel {
     camera: Camera,
     show_automap: bool,
     chopper: Chopper,
+    fp16: bool,
 }
 
 impl Voxel {
@@ -195,11 +211,12 @@ impl Voxel {
 
                 Self {
                     level: index as i32,
-                    drawing_distance: 1600,
+                    drawing_distance: 100, //600,
                     camera,
                     map,
                     show_automap: false,
                     chopper: Chopper::default(),
+                    fp16: false,
                 }
             }
             SpawnInfo::LoadSavegame(_) => todo!(),
@@ -209,7 +226,17 @@ impl Voxel {
         self.chopper.apply_input(input_events);
         self.chopper.apply_altitude(&self.camera, &self.map);
         self.chopper.apply_to_camera(&mut self.camera);
-        self.render(input_events, buffer);
+        if input_events.select_weapon == Some(1) {
+            self.fp16 = true;
+        }
+        if input_events.select_weapon == Some(2) {
+            self.fp16 = false;
+        }
+        if self.fp16 {
+            self.render_simple_fp16(input_events, buffer);
+        } else {
+            self.render_simple(input_events, buffer);
+        }
         self.show_automap ^= input_events.toggle_automap;
         if self.show_automap {
             for y in 0..200 {
@@ -233,7 +260,7 @@ impl Voxel {
 
         let mut hiddeny = [200u32; 320];
 
-        let mut zi = 1;
+        let mut zi = 29;
         let mut z_inc = 1;
         while zi < self.drawing_distance {
             let z: f32 = zi as f32;
@@ -288,6 +315,150 @@ impl Voxel {
         }
     }
 
+    pub fn render_simple(&mut self, _input_events: &InputState, buffer: &mut [u8]) {
+        let distance = 800;
+        let screen_width = 320;
+        let screen_widthf = 320.0;
+        let height = 50.0;
+        let scale_height = 120.0;
+        let horizon = 120.0;
+        let screen_height = 200;
+        for z in (1..distance).rev() {
+            let z = z as f32;
+
+            let mut plx = -z;
+            let ply = -z;
+            let prx = z;
+            // let pry = -z;
+            let dx = (prx - plx) / screen_widthf;
+            for i in 0..screen_width {
+                let mapoffset = ((ply.rem_euclid(self.map.height as f32) as usize)
+                    * self.map.width)
+                    + plx.rem_euclid(self.map.width as f32) as usize;
+
+                let height_on_screen =
+                    (height - self.map.height_map[mapoffset] as f32) / z * scale_height + horizon;
+
+                draw_vertical_line(
+                    i,
+                    height_on_screen as u32,
+                    screen_height,
+                    self.map.map[mapoffset as usize],
+                    buffer,
+                );
+                plx += dx;
+                // println!("plx: {}", plx);
+            }
+        }
+    }
+    pub fn render_simple_fp16(&mut self, _input_events: &InputState, buffer: &mut [u8]) {
+        let distance = 100;
+        let screen_width = 320;
+        let screen_widthf: Fp16 = 320.0.into();
+        let height: Fp16 = 50.0.into();
+        let scale_height: Fp16 = 120.0.into();
+        let horizon: Fp16 = 120.0.into();
+        let screen_height = 200;
+        for z in (1..distance).rev() {
+            let z: Fp16 = (z as f32).into();
+
+            let mut plx = -z;
+            let ply = -z;
+            let prx = z;
+            // let pry = -z;
+            let dx = (prx - plx) / screen_widthf;
+            for i in 0..screen_width {
+                // let mapoffset = ((ply.get_int().rem_euclid(self.map.height as i32) as usize)
+                //     * self.map.width)
+                //     + plx.get_int().rem_euclid(self.map.width as i32) as usize;
+                let mapoffset = ((ply.as_f32().rem_euclid(self.map.height as f32) as usize)
+                    * self.map.width)
+                    + plx.as_f32().rem_euclid(self.map.width as f32) as usize;
+
+                // let height_on_screen: f32 = (height - self.map.height_map[mapoffset] as f32)
+                //     / ((z.mul_low_prec(scale_height) + horizon).v as f32 / FP16_F);
+
+                let height_on_screen = (height.as_f32() - self.map.height_map[mapoffset] as f32)
+                    / z.as_f32()
+                    * scale_height.as_f32()
+                    + horizon.as_f32();
+
+                draw_vertical_line(
+                    i,
+                    height_on_screen as u32,
+                    screen_height,
+                    self.map.map[mapoffset as usize],
+                    buffer,
+                );
+                plx += dx;
+                // println!("plx: {:?}", plx);
+            }
+        }
+    }
+    // pub fn render_fp16(&mut self, _input_events: &InputState, buffer: &mut [u8]) {
+    //     let screenwidth: Fp16 = 320.into();
+    //     let sinang = fa_sin((self.camera.angle.to_degrees() * FA_SCALEF) as i32 % 3600);
+    //     let cosang = fa_cos((self.camera.angle.to_degrees() * FA_SCALEF) as i32 % 3600);
+
+    //     let mut hiddeny = [200i32; 320];
+
+    //     let mut zi = 29i32;
+    //     let mut z_inc = 1i32;
+    //     while zi < self.drawing_distance as i32 {
+    //         let z: Fp16 = zi.into();
+    //         // 90 degree field of view
+    //         let mut plx = -cosang * z - sinang * z;
+    //         let mut ply = sinang * z - cosang * z;
+    //         let prx = cosang * z - sinang * z;
+    //         let pry = -sinang * z - cosang * z;
+
+    //         let dx = (prx - plx) / screenwidth;
+    //         let dy = (pry - ply) / screenwidth;
+    //         plx += self.camera.x.into();
+    //         ply += self.camera.y.into();
+    //         let height_scale: Fp16 = 10.into();
+    //         let invz = FP16_ONE / z * height_scale;
+    //         println!("invz: {:?}", invz);
+    //         let mut horizon_cur = self.camera.horizon - self.camera.rot;
+    //         let horizon_inc = (self.camera.rot * 4.0) / 320.0;
+
+    //         for i in 0..320 {
+    //             let mapoffset = ((ply.get_int().rem_euclid(self.map.height as i32) as usize)
+    //                 * self.map.width)
+    //                 + plx.get_int().rem_euclid(self.map.width as i32) as usize;
+
+    //             let camera_height: Fp16 = self.camera.height.into();
+    //             let heightonscreen = ((camera_height
+    //                 - (self.map.height_map[mapoffset as usize] as f32).into())
+    //                 * invz
+    //                 + horizon_cur.into())
+    //             .get_int();
+    //             draw_vertical_line(
+    //                 i,
+    //                 heightonscreen as u32,
+    //                 hiddeny[i] as u32,
+    //                 self.map.map[mapoffset as usize],
+    //                 buffer,
+    //             );
+    //             if heightonscreen < hiddeny[i] {
+    //                 hiddeny[i] = heightonscreen
+    //             };
+    //             plx += dx;
+    //             ply += dy;
+    //             horizon_cur += horizon_inc;
+    //         }
+    //         zi += z_inc;
+    //         if zi >= 200 {
+    //             z_inc = 2;
+    //         }
+    //         if zi >= 400 {
+    //             z_inc = 4;
+    //         }
+    //         if zi >= 800 {
+    //             z_inc = 8;
+    //         }
+    //     }
+    // }
     pub fn deconstruct(&self, input_state: &InputState) -> SpawnInfo {
         if input_state.next_level {
             return SpawnInfo::StartLevel(self.level.wrapping_add(1), None);

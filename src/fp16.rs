@@ -4,7 +4,7 @@ use state_bc::ms::endian::{ReadExt, WriteExt};
 
 use crate::{ms, Result};
 
-#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Default, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Fp16 {
     pub v: i32,
 }
@@ -68,9 +68,13 @@ impl Fp16 {
     pub fn fract(&self) -> Fp16 {
         Self { v: self.v & 0xFFFF }
     }
-    // pub fn as_f32(&self) -> f32 {
-    //     (self.v as f32) / FP16_F
-    // }
+    pub fn as_f32(&self) -> f32 {
+        (self.v as f32) / FP16_F
+    }
+    pub fn mul_low_prec(&self, rhs: Self) -> Self {
+        let v = (self.v >> 16) * (rhs.v >> 16) << 16;
+        Self { v }
+    }
 }
 
 impl Add<Fp16> for Fp16 {
@@ -114,8 +118,20 @@ impl Mul<Fp16> for Fp16 {
         // assert!(self.v.abs() <= 0xFFFF || rhs.v.abs() <= 0xFFFF);
         // let sign =
         // let v = (((self.v as i64) * (rhs.v as i64)) >> FP16_SCALE) as i32;
-        let v = ((self.v >> 4) * (rhs.v >> 4)) >> 8;
+        let v = ((self.v >> 4) * (rhs.v >> 4)) >> 4;
         Self { v }
+
+        // match (self.v >> 4).checked_mul(rhs.v >> 4) {
+        //     Some(v) => Self { v: v >> 8 },
+        //     None => panic!(
+        //         "overflow on {:?} * {:?} -> {} * {} == {}",
+        //         self,
+        //         rhs,
+        //         self.v >> 4,
+        //         rhs.v >> 4,
+        //         (self.v >> 4) as i64 * (self.v >> 4) as i64
+        //     ),
+        // }
     }
 }
 
@@ -137,6 +153,11 @@ impl Mul<i32> for Fp16 {
 
     fn mul(self, rhs: i32) -> Self::Output {
         Self { v: self.v * rhs }
+    }
+}
+impl std::fmt::Debug for Fp16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}::{}", self.get_int(), self.get_fract())
     }
 }
 
@@ -184,6 +205,14 @@ fn test_fp16() {
 
     assert_eq!(v2.get_int(), -124);
     // assert_eq!(v2.get_fract(), ((1.0 - 0.456) * FP16_F) as u32 + 1);
+}
+#[test]
+fn test_low_prec() {
+    let v1: Fp16 = 123.456.into();
+    let v2: Fp16 = 234.567.into();
+    let v3 = v1.mul_low_prec(v2);
+    // let vr3 = v1.mul(v2);
+    println!("{:?} * {:?} = {:?}", v1, v2, v3);
 }
 #[test]
 fn test_vec2() {

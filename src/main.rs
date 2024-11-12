@@ -72,6 +72,8 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
     input_state.fast_forward_mode = keyboard_state.is_scancode_pressed(Scancode::F8);
     let mouse_state = events.mouse_state();
     input_state.shoot |= mouse_state.is_mouse_button_pressed(MouseButton::Left);
+
+    println!("event: {:?}", input_state);
     input_state
 }
 struct SdlSoundChunks {

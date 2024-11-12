@@ -25,7 +25,7 @@ pub enum SpawnInfo {
 pub trait AudioService {
     fn play_sound(&mut self, id: i32);
 }
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct InputState {
     // one-shot events
     pub quit: bool,
