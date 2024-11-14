@@ -42,13 +42,13 @@ pub enum MapTile {
     OffsetWall(i32, Direction, Fp16),
 }
 
-pub struct Map {
+pub struct MapDef {
     pub map: [[MapTile; MAP_SIZE]; MAP_SIZE],
 }
 
 pub const ROOM_ID_NONE: i32 = 0x6a;
 
-impl Default for Map {
+impl Default for MapDef {
     fn default() -> Self {
         let mut map = [[MapTile::Walkable(0, None); MAP_SIZE]; MAP_SIZE];
 
@@ -71,7 +71,7 @@ impl Default for Map {
 const BLOCKING_PROPS: [u16; 21] = [
     24, 25, 26, 28, 30, 31, 33, 34, 35, 36, 39, 40, 41, 45, 58, 59, 60, 62, 63, 68, 69,
 ];
-impl Map {
+impl MapDef {
     pub fn from_map_planes(plane: &[u16], prop_plane: &[u16]) -> Self {
         assert_eq!(plane.len(), 64 * 64);
         assert_eq!(prop_plane.len(), 64 * 64);

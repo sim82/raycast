@@ -117,7 +117,7 @@ fn main() -> raycast::prelude::Result<()> {
     let mut buffer: Vec<u8> = vec![0; WIDTH * HEIGHT];
 
     let resources = Resources::load_wl6("vswap.wl6");
-    let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
+    let mut maps_file = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -143,7 +143,7 @@ fn main() -> raycast::prelude::Result<()> {
         .event_pump()
         .unwrap_or_else(|_| panic!("faild to get event pump"));
 
-    let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
+    let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps_file);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -158,7 +158,7 @@ fn main() -> raycast::prelude::Result<()> {
             break;
         }
         if input_state.is_deconstruct() {
-            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps);
+            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps_file);
         }
 
         if input_state.toggle_mouse_grab || (input_state.shoot && initial_ungrabbed) {

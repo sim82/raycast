@@ -181,7 +181,7 @@ impl Things {
     pub fn update(
         &mut self,
         player: &mut Player,
-        map_dynamic: &mut MapDynamic,
+        map_dynamic: &mut Map,
         audio_service: &mut dyn AudioService,
     ) {
         // temporarily take out things during mutation

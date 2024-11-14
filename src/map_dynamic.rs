@@ -37,8 +37,8 @@ impl RoomGraph {
     }
 }
 
-pub struct MapDynamic {
-    pub map: Map,
+pub struct Map {
+    pub map: MapDef,
     pub room_graph: RoomGraph,
     pub door_states: Vec<Door>,
     pub pushwall_states: Vec<PushwallState>,
@@ -52,8 +52,8 @@ pub struct MapDynamic {
     pub notifications: HashSet<i32>,
 }
 
-impl MapDynamic {
-    pub fn wrap(mut map: Map) -> MapDynamic {
+impl Map {
+    pub fn wrap(mut map: MapDef) -> Map {
         let mut door_states = Vec::new();
         let mut pushwall_states = Vec::new();
 
@@ -72,7 +72,7 @@ impl MapDynamic {
                 }
             }
         }
-        MapDynamic {
+        Map {
             room_graph: RoomGraph::new(map.get_room_connectivity()),
             map,
             door_states,
@@ -83,7 +83,7 @@ impl MapDynamic {
         }
     }
 
-    pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: Map) -> Result<MapDynamic> {
+    pub fn read_and_wrap(r: &mut dyn std::io::Read, mut map: MapDef) -> Result<Map> {
         let door_states = Vec::read_from(r)?;
         let pushwall_states = Vec::read_from(r)?;
 
@@ -110,7 +110,7 @@ impl MapDynamic {
         assert_eq!(door_count, door_states.len());
         assert_eq!(pushwall_count, pushwall_states.len());
 
-        Ok(MapDynamic {
+        Ok(Map {
             room_graph: RoomGraph::new(map.get_room_connectivity()),
             map,
             door_states,
@@ -121,7 +121,7 @@ impl MapDynamic {
         })
     }
 
-    pub fn release(mut self) -> Map {
+    pub fn release(mut self) -> MapDef {
         for line in &mut self.map.map {
             for tile in line.iter_mut() {
                 if let MapTile::Door(_, _, state_index) = tile {
@@ -313,7 +313,7 @@ impl MapDynamic {
     }
 }
 
-impl ms::Writable for MapDynamic {
+impl ms::Writable for Map {
     fn write(&self, w: &mut dyn std::io::Write) -> Result<()> {
         self.door_states.write(w)?;
         self.pushwall_states.write(w)?;
