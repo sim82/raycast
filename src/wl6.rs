@@ -450,6 +450,7 @@ mod test {
         let mut vs = VswapFile::open("vswap.wl6");
 
         println!("chunks: {:?}", vs.chunks);
+        let _ = std::fs::create_dir("wl6");
 
         for i in 0..vs.num_sounds() {
             let chunk = vs.read_chunk(ChunkId::Sound(i));
@@ -468,6 +469,7 @@ mod test {
         let mut vs = VswapFile::open("vswap.wl6");
         let map_chunk = ChunkId::Sound(vs.num_sounds() - 1);
         let digisound = DigiSounds::new(&mut vs, map_chunk);
+        let _ = std::fs::create_dir("wl6");
         for i in 0..digisound.sounds.len() {
             let mut f = File::create(format!("wl6/digi.{i:03}")).unwrap();
             f.write_all(&digisound.sounds[i]).unwrap();
