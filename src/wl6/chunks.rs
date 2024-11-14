@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, SeekFrom},
     path::Path,
 };
 
@@ -37,14 +37,17 @@ impl ChunksFile {
     pub fn len(&self) -> i32 {
         self.offsets.len() as i32 - 1
     }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 #[test]
 fn test_vga() {
-    let cf = ChunksFile::open("wl6/vgahead.wl6", "wl6/vgagraph.wl6").unwrap();
+    let _cf = ChunksFile::open("vgahead.wl6", "vgagraph.wl6").unwrap();
 }
 #[test]
 fn test_audio() {
-    let mut cf = ChunksFile::open("wl6/audiohed.wl6", "wl6/audiot.wl6").unwrap();
+    let mut cf = ChunksFile::open("audiohed.wl6", "audiot.wl6").unwrap();
     let chunk = cf.read_chunk_raw(163).unwrap();
     println!("chunk: {chunk:?}");
 }

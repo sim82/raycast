@@ -176,7 +176,7 @@ fn main() -> raycast::prelude::Result<()> {
         .event_pump()
         .unwrap_or_else(|_| panic!("faild to get event pump"));
 
-    if false {
+    if !false {
         raycast_mainloop(events, buffer, canvas, sdl_context, texture);
     } else {
         voxel_mainloop(events, buffer, canvas, sdl_context, texture);
@@ -194,8 +194,8 @@ fn raycast_mainloop(
 ) {
     let resources = Resources::load_wl6("vswap.wl6");
     let mut sound_chunks = SdlSoundChunks::new(&resources);
-    let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
-    let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
+    let mut maps_file = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
+    let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps_file);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -210,7 +210,7 @@ fn raycast_mainloop(
         mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
         sound_chunks.update();
         if input_state.is_deconstruct() {
-            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps);
+            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps_file);
         }
 
         if input_state.toggle_mouse_grab || (input_state.shoot && initial_ungrabbed) {

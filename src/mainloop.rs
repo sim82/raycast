@@ -13,7 +13,7 @@ include!("out.img.enums");
 
 pub struct StaticMapData {
     pub level_id: i32,
-    pub map: Map,
+    pub map_def: MapDef,
     pub thing_defs: ThingDefs,
 }
 
@@ -69,7 +69,7 @@ impl InputState {
 
 pub struct Mainloop {
     // resources: Resources,
-    map_dynamic: MapDynamic,
+    map_dynamic: Map,
     things: Things,
     pub player: Player,
     level_id: i32,
@@ -82,7 +82,7 @@ pub struct Mainloop {
 
 impl Mainloop {
     pub fn spawn(spawn: SpawnInfo, maps: &mut MapsFile) -> Mainloop {
-        let map_dynamic;
+        let map;
         let level_id;
         let player;
         let things;
@@ -91,12 +91,12 @@ impl Mainloop {
             SpawnInfo::StartLevel(id, existing_static_map_data) => {
                 match existing_static_map_data {
                     Some(StaticMapData {
-                        map,
+                        map_def,
                         thing_defs,
                         level_id: y,
                     }) if id == y => {
                         println!("starting level. re-using static map data");
-                        map_dynamic = MapDynamic::wrap(map);
+                        map = Map::wrap(map_def);
                         things = Things::from_thing_defs(thing_defs);
                         level_id = y;
                     }
@@ -107,7 +107,7 @@ impl Mainloop {
                         );
                         let (plane0, plane1) = maps.get_map_planes(id);
 
-                        map_dynamic = MapDynamic::wrap(Map::from_map_planes(&plane0, &plane1));
+                        map = Map::wrap(MapDef::from_map_planes(&plane0, &plane1));
                         things = Things::from_thing_defs(ThingDefs::from_map_plane(&plane1));
                         level_id = id;
                     }
@@ -136,12 +136,12 @@ impl Mainloop {
                 player = Player::read_from(&mut f).expect("failed to load Player from savegame");
                 match existing_static_map_data {
                     Some(StaticMapData {
-                        map,
+                        map_def,
                         thing_defs,
                         level_id: y,
                     }) if level_id == y => {
                         println!("load savegame. re-using static map data");
-                        map_dynamic = MapDynamic::read_and_wrap(&mut f, map)
+                        map = Map::read_and_wrap(&mut f, map_def)
                             .expect("failed to load MapDynamic from savegame");
                         things = Things::read_from(&mut f, thing_defs)
                             .expect("failed to load Things from savegame");
@@ -153,11 +153,8 @@ impl Mainloop {
                         );
                         let (plane0, plane1) = maps.get_map_planes(level_id);
 
-                        map_dynamic = MapDynamic::read_and_wrap(
-                            &mut f,
-                            Map::from_map_planes(&plane0, &plane1),
-                        )
-                        .expect("failed to load MapDynamic from savegame");
+                        map = Map::read_and_wrap(&mut f, MapDef::from_map_planes(&plane0, &plane1))
+                            .expect("failed to load MapDynamic from savegame");
                         things = Things::read_from(&mut f, ThingDefs::from_map_plane(&plane1))
                             .expect("failed to load Things from savegame");
                     }
@@ -172,7 +169,7 @@ impl Mainloop {
         };
 
         Mainloop {
-            map_dynamic,
+            map_dynamic: map,
             things,
             player,
             level_id,
@@ -431,7 +428,7 @@ impl Mainloop {
                 self.level_id - 1,
                 Some(StaticMapData {
                     level_id: self.level_id,
-                    map: self.map_dynamic.release(),
+                    map_def: self.map_dynamic.release(),
                     thing_defs: self.things.release(),
                 }),
             )
@@ -440,14 +437,14 @@ impl Mainloop {
                 self.level_id + 1,
                 Some(StaticMapData {
                     level_id: self.level_id,
-                    map: self.map_dynamic.release(),
+                    map_def: self.map_dynamic.release(),
                     thing_defs: self.things.release(),
                 }),
             )
         } else if input_events.load {
             SpawnInfo::LoadSavegame(Some(StaticMapData {
                 level_id: self.level_id,
-                map: self.map_dynamic.release(),
+                map_def: self.map_dynamic.release(),
                 thing_defs: self.things.release(),
             }))
         } else {
@@ -460,7 +457,7 @@ impl Mainloop {
                 self.level_id,
                 Some(StaticMapData {
                     level_id: self.level_id,
-                    map: self.map_dynamic.release(),
+                    map_def: self.map_dynamic.release(),
                     thing_defs: self.things.release(),
                 }),
             )

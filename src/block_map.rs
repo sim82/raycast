@@ -104,7 +104,7 @@ impl ms::Writable for BlockMap {
                 if cell.is_empty() {
                     continue;
                 }
-                assert!(cell.len() <= std::u8::MAX as usize);
+                assert!(cell.len() <= u8::MAX as usize);
                 w.writeu8(line_i as u8)?;
                 w.writeu8(cell_i as u8)?;
                 w.writeu8(cell.len().try_into()?)?;

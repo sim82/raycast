@@ -16,7 +16,7 @@ lazy_static! {
 }
 
 pub fn sweep_raycast<D: Draw + ?Sized>(
-    map_dynamic: &MapDynamic,
+    map: &Map,
     screen: &mut D,
     zbuffer: &mut [Fp16; WIDTH],
     player: &Player,
@@ -25,7 +25,7 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
 ) {
     let (x, y) = player.int_pos();
 
-    if !map_dynamic.can_walk(x, y) {
+    if !map.can_walk(x, y) {
         return;
     }
     let (dx, dy) = player.frac_pos();
@@ -100,12 +100,12 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
         let hstep_y_half = FP16_HALF * hstep_y;
 
         // from_door tracks if the *last* tile we traced through was a door, to easily fix up textures on door sidewalls
-        let mut from_door = matches!(map_dynamic.lookup_tile(x, y), MapTile::Door(_, _, _));
+        let mut from_door = matches!(map.lookup_tile(x, y), MapTile::Door(_, _, _));
 
         'outer: loop {
             if (hstep_y > 0 && ny <= hy.into()) || (hstep_y < 0 && ny >= hy.into()) {
                 // when hstep_x is negative, hx needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                let lookup_tile = map_dynamic.lookup_tile(hx + hstep_x.min(0), ny.get_int());
+                let lookup_tile = map.lookup_tile(hx + hstep_x.min(0), ny.get_int());
 
                 match lookup_tile {
                     MapTile::Wall(tile) => {
@@ -150,7 +150,7 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                         }
                     }
                     MapTile::Door(PlaneOrientation::X, door_type, state_index) => {
-                        let door_state = &map_dynamic.door_states[state_index];
+                        let door_state = &map.door_states[state_index];
                         let door_hit = ny + tyh;
                         let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
@@ -174,7 +174,7 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                 ny += ty;
             } else {
                 // when hstep_y is negative, hy needs to be corrected by -1 (enter block from right / below). Inverse of the correction during hx initialization.
-                let lookup_tile = map_dynamic.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
+                let lookup_tile = map.lookup_tile(nx.get_int(), hy + hstep_y.min(0));
                 match lookup_tile {
                     MapTile::Wall(tile) => {
                         if from_door {
@@ -219,7 +219,7 @@ pub fn sweep_raycast<D: Draw + ?Sized>(
                         }
                     }
                     MapTile::Door(PlaneOrientation::Y, door_type, state_index) => {
-                        let door_state = &map_dynamic.door_states[state_index];
+                        let door_state = &map.door_states[state_index];
                         let door_hit = nx + txh;
                         let door_hit_f = door_hit.fract() - door_state.open_f;
                         if door_hit_f > FP16_ZERO
@@ -372,7 +372,7 @@ pub fn draw_sprite2<D: Draw + ?Sized>(
 
 #[test]
 fn raycast_test() {
-    let map_dynamic = MapDynamic::wrap(Map::default());
+    let map_dynamic = Map::wrap(MapDef::default());
     let resources = Resources::default();
     let mut screen = vec![0; WIDTH * HEIGHT];
     let mut zbuffer = [Fp16::default(); WIDTH];

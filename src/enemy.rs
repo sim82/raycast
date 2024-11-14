@@ -3,12 +3,7 @@ use anyhow::anyhow;
 use std::io::{Cursor, Read, Write};
 
 impl Enemy {
-    fn check_player_sight(
-        &mut self,
-        things: &Things,
-        map_dynamic: &mut MapDynamic,
-        _static_index: usize,
-    ) -> bool {
+    fn check_player_sight(&mut self, things: &Things, map: &mut Map, _static_index: usize) -> bool {
         let dx = things.player_x - self.x.get_int();
         let dy = things.player_y - self.y.get_int();
 
@@ -32,15 +27,15 @@ impl Enemy {
             self.y.get_int(),
             things.player_x,
             things.player_y,
-            |x, y| match map_dynamic.lookup_tile(x, y) {
+            |x, y| match map.lookup_tile(x, y) {
                 MapTile::Walkable(_, _) => true,
-                MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
+                MapTile::Door(_, _, door_id) => map.door_states[door_id].open_f > FP16_HALF,
                 _ => false,
             },
         )
     }
 
-    fn try_update_pathdir(&self, map_dynamic: &mut MapDynamic) -> Option<Direction> {
+    fn try_update_pathdir(&self, map: &mut Map) -> Option<Direction> {
         // check how to continue
         let xaligned = self.x.fract() == FP16_HALF;
         let yaligned = self.y.fract() == FP16_HALF;
@@ -50,7 +45,7 @@ impl Enemy {
             return None;
         }
         if let MapTile::Walkable(_, Some(path_direction)) =
-            map_dynamic.lookup_tile(self.x.get_int(), self.y.get_int())
+            map.lookup_tile(self.x.get_int(), self.y.get_int())
         {
             Some(path_direction)
         } else {
@@ -58,16 +53,12 @@ impl Enemy {
         }
     }
 
-    fn try_find_pathaction(
-        &self,
-        map_dynamic: &mut MapDynamic,
-        things: &Things,
-    ) -> Option<PathAction> {
+    fn try_find_pathaction(&self, map: &mut Map, things: &Things) -> Option<PathAction> {
         let (dx, dy) = self.direction.tile_offset();
         // check the block we are about to enter
         let enter_x = self.x.get_int() + dx;
         let enter_y = self.y.get_int() + dy;
-        match map_dynamic.lookup_tile(enter_x, enter_y) {
+        match map.lookup_tile(enter_x, enter_y) {
             MapTile::Door(_, _, door_id) if !self.direction.is_diagonal() => {
                 // println!("open door");
                 Some(PathAction::WaitForDoor { door_id })
@@ -92,7 +83,7 @@ impl Enemy {
                 // fixup path direction pointing diagonally into wall. The expectation seems to be that the actor continues going in the
                 // diagonal direction but 'slide' along walls (e.g. the dogs in E1M6)
                 if dx != 0 && dy != 0 {
-                    match map_dynamic.lookup_tile(enter_x, self.y.get_int()) {
+                    match map.lookup_tile(enter_x, self.y.get_int()) {
                         MapTile::Walkable(_, _)
                             if !things.blockmap.is_occupied(enter_x, self.y.get_int()) =>
                         {
@@ -104,7 +95,7 @@ impl Enemy {
                         }
                         _ => (), // fall through
                     }
-                    match map_dynamic.lookup_tile(self.x.get_int(), enter_y) {
+                    match map.lookup_tile(self.x.get_int(), enter_y) {
                         MapTile::Walkable(_, _)
                             if !things.blockmap.is_occupied(self.x.get_int(), enter_y) =>
                         {
@@ -128,14 +119,14 @@ impl Enemy {
     fn try_chase_pathaction(
         &self,
         direction: Direction,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
         things: &Things,
     ) -> Option<PathAction> {
         let (dx, dy) = direction.tile_offset();
         // check the block we are about to enter
         let enter_x = self.x.get_int() + dx;
         let enter_y = self.y.get_int() + dy;
-        match map_dynamic.lookup_tile(enter_x, enter_y) {
+        match map.lookup_tile(enter_x, enter_y) {
             MapTile::Door(_, _, door_id) if !direction.is_diagonal() => {
                 // println!("open door");
                 Some(PathAction::WaitForDoor { door_id })
@@ -146,8 +137,8 @@ impl Enemy {
                 let old_x = self.x.get_int();
                 let old_y = self.y.get_int();
                 let diagonal_blocked = direction.is_diagonal()
-                    && (!map_dynamic.can_walk(old_x, enter_y)
-                        || !map_dynamic.can_walk(enter_x, old_y)
+                    && (!map.can_walk(old_x, enter_y)
+                        || !map.can_walk(enter_x, old_y)
                         || things.blockmap.is_occupied(old_x, enter_y)
                         || things.blockmap.is_occupied(enter_x, old_y));
 
@@ -170,9 +161,9 @@ impl Enemy {
 
 // think implementations
 impl Enemy {
-    fn think_chase(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+    fn think_chase(&mut self, map: &mut Map, things: &Things, unique_id: usize) {
         let mut dodge = false;
-        if self.check_player_sight(things, map_dynamic, unique_id) {
+        if self.check_player_sight(things, map, unique_id) {
             let d = things
                 .player_x
                 .abs_diff(self.x.get_int())
@@ -194,9 +185,9 @@ impl Enemy {
 
         if self.path_action.is_none() {
             let cont = if dodge {
-                self.select_dodge_action(things, map_dynamic)
+                self.select_dodge_action(things, map)
             } else {
-                self.select_chase_action(things, map_dynamic)
+                self.select_chase_action(things, map)
             };
 
             if let Some((path_action, dir)) = cont {
@@ -204,34 +195,32 @@ impl Enemy {
                 self.direction = dir;
             }
         }
-        self.move_default(map_dynamic, unique_id, FP16_FRAC_64);
+        self.move_default(map, unique_id, FP16_FRAC_64);
     }
-    fn think_path(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
-        if self.notify || self.check_player_sight(things, map_dynamic, unique_id) {
+    fn think_path(&mut self, map: &mut Map, things: &Things, unique_id: usize) {
+        if self.notify || self.check_player_sight(things, map, unique_id) {
             self.set_state("sight");
             self.notify = true;
             return;
         }
 
         if self.path_action.is_none() {
-            self.direction = self
-                .try_update_pathdir(map_dynamic)
-                .unwrap_or(self.direction);
-            self.path_action = self.try_find_pathaction(map_dynamic, things);
+            self.direction = self.try_update_pathdir(map).unwrap_or(self.direction);
+            self.path_action = self.try_find_pathaction(map, things);
         }
-        self.move_default(map_dynamic, unique_id, FP16_FRAC_128);
+        self.move_default(map, unique_id, FP16_FRAC_128);
     }
 
-    fn think_stand(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
-        if self.notify || self.check_player_sight(things, map_dynamic, unique_id) {
+    fn think_stand(&mut self, map: &mut Map, things: &Things, unique_id: usize) {
+        if self.notify || self.check_player_sight(things, map, unique_id) {
             self.set_state("sight");
             self.notify = true;
         }
     }
-    fn think_dogchase(&mut self, map_dynamic: &mut MapDynamic, things: &Things, unique_id: usize) {
+    fn think_dogchase(&mut self, map: &mut Map, things: &Things, unique_id: usize) {
         if self.path_action.is_none() {
             // absurd fact: dogs never dogdge
-            if let Some((path_action, dir)) = self.select_chase_action(things, map_dynamic) {
+            if let Some((path_action, dir)) = self.select_chase_action(things, map) {
                 self.path_action = Some(path_action);
                 self.direction = dir;
             }
@@ -244,7 +233,7 @@ impl Enemy {
             self.set_state("jump");
         }
 
-        self.move_default(map_dynamic, unique_id, FP16_FRAC_64);
+        self.move_default(map, unique_id, FP16_FRAC_64);
     }
 }
 
@@ -253,10 +242,10 @@ impl Enemy {
     fn action_die(&mut self) {
         self.dead = true;
     }
-    fn action_bite(&mut self, _map_dynamic: &mut MapDynamic, _things: &Things, _unique_id: usize) {}
+    fn action_bite(&mut self, _map: &mut Map, _things: &Things, _unique_id: usize) {}
     fn action_shoot(
         &mut self,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
         _things: &Things,
         _unique_id: usize,
         player: &mut Player,
@@ -267,9 +256,9 @@ impl Enemy {
             (self.y * 4).get_int(),
             (player.x * 4).get_int(),
             (player.y * 4).get_int(),
-            |x, y| match map_dynamic.lookup_tile(x / 4, y / 4) {
+            |x, y| match map.lookup_tile(x / 4, y / 4) {
                 MapTile::Walkable(_, _) => true,
-                MapTile::Door(_, _, door_id) => map_dynamic.door_states[door_id].open_f > FP16_HALF,
+                MapTile::Door(_, _, door_id) => map.door_states[door_id].open_f > FP16_HALF,
                 _ => false,
             },
         ) {
@@ -292,7 +281,7 @@ impl Enemy {
     fn select_chase_action(
         &self,
         things: &Things,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
     ) -> Option<(PathAction, Direction)> {
         let dx = things.player_x - self.x.get_int();
         let dy = things.player_y - self.y.get_int();
@@ -329,7 +318,7 @@ impl Enemy {
 
         for dir in dirtry.iter().filter_map(|x| *x) {
             // println!("chase try: {dir:?}");
-            let path_action = self.try_chase_pathaction(dir, map_dynamic, things);
+            let path_action = self.try_chase_pathaction(dir, map, things);
             if let Some(path_action) = path_action {
                 return Some((path_action, dir));
             }
@@ -339,7 +328,7 @@ impl Enemy {
     fn select_dodge_action(
         &self,
         things: &Things,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
     ) -> Option<(PathAction, Direction)> {
         let dx = things.player_x - self.x.get_int();
         let dy = things.player_y - self.y.get_int();
@@ -378,7 +367,7 @@ impl Enemy {
         };
 
         for dir in dirtry.iter().filter_map(|x| *x) {
-            let path_action = self.try_chase_pathaction(dir, map_dynamic, things);
+            let path_action = self.try_chase_pathaction(dir, map, things);
             if let Some(path_action) = path_action {
                 return Some((path_action, dir));
             }
@@ -396,7 +385,7 @@ fn boost_shoot_chance(path_action: &PathAction) -> bool {
 
 // move implementations
 impl Enemy {
-    fn move_default(&mut self, map_dynamic: &mut MapDynamic, static_index: usize, speed: Fp16) {
+    fn move_default(&mut self, map: &mut Map, static_index: usize, speed: Fp16) {
         match &mut self.path_action {
             Some(PathAction::Move { dist, dx, dy }) if *dist > FP16_ZERO => {
                 if *dist == FP16_ONE {
@@ -429,7 +418,7 @@ impl Enemy {
                 // panic!("PathAction::Move with zero dist.");
             }
             Some(PathAction::WaitForDoor { door_id }) => {
-                if map_dynamic.try_open_and_block_door(*door_id, static_index as i32) {
+                if map.try_open_and_block_door(*door_id, static_index as i32) {
                     self.path_action = Some(PathAction::MoveThroughDoor {
                         dist: FP16_ONE,
                         door_id: *door_id,
@@ -446,7 +435,7 @@ impl Enemy {
                     self.y += speed * dy;
                 } else {
                     // unblock door and keep moving in same direction
-                    map_dynamic.unblock_door(*door_id, static_index as i32);
+                    map.unblock_door(*door_id, static_index as i32);
                     self.path_action = Some(PathAction::Move {
                         dist: FP16_ONE,
                         dx: self.direction.x_offs(),
@@ -579,26 +568,26 @@ impl Enemy {
     pub fn dispatch_call(
         &mut self,
         function: Function,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
         things: &Things,
         unique_id: usize,
         player: &mut Player,
     ) {
         match function {
             Function::None => (),
-            Function::ThinkStand => self.think_stand(map_dynamic, things, unique_id),
-            Function::ThinkPath => self.think_path(map_dynamic, things, unique_id),
-            Function::ThinkChase => self.think_chase(map_dynamic, things, unique_id),
-            Function::ThinkDogChase => self.think_dogchase(map_dynamic, things, unique_id),
+            Function::ThinkStand => self.think_stand(map, things, unique_id),
+            Function::ThinkPath => self.think_path(map, things, unique_id),
+            Function::ThinkChase => self.think_chase(map, things, unique_id),
+            Function::ThinkDogChase => self.think_dogchase(map, things, unique_id),
             Function::ActionDie => self.action_die(),
-            Function::ActionShoot => self.action_shoot(map_dynamic, things, unique_id, player),
-            Function::ActionBite => self.action_bite(map_dynamic, things, unique_id),
+            Function::ActionShoot => self.action_shoot(map, things, unique_id, player),
+            Function::ActionBite => self.action_bite(map, things, unique_id),
         }
     }
     fn exec_code(
         &mut self,
         code_offs: i32,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
         things: &Things,
         unique_id: usize,
         player: &mut Player,
@@ -611,20 +600,24 @@ impl Enemy {
             match state {
                 opcode::Event::Stop => break,
                 opcode::Event::Call(function) => {
-                    self.dispatch_call(function, map_dynamic, things, unique_id, player)
+                    self.dispatch_call(function, map, things, unique_id, player)
                 }
                 // opcode::Event::Load(_) => todo!(),
                 // opcode::Event::Store(_) => todo!(),
                 opcode::Event::Trap => match env.stack.pop() {
                     Some(opcode::Value::U8(0)) => {
-                        let Some(opcode::Value::U8(snd_num)) = env.stack.pop() else { panic!("failed to get sound num") };
+                        let Some(opcode::Value::U8(snd_num)) = env.stack.pop() else {
+                            panic!("failed to get sound num")
+                        };
 
                         if env.stack.len() < snd_num as usize {
                             panic!("stack underflow: not enough sound ids");
                         }
                         let new_len = env.stack.len() - snd_num as usize;
                         let sound_choice = (randu8() % snd_num) as usize;
-                        let opcode::Value::U8(snd_id) = env.stack[new_len + sound_choice] else { panic!( "expected U8 as sound id")};
+                        let opcode::Value::U8(snd_id) = env.stack[new_len + sound_choice] else {
+                            panic!("expected U8 as sound id")
+                        };
                         audio_service.play_sound(snd_id as i32);
                         env.stack.truncate(new_len);
 
@@ -642,7 +635,7 @@ impl Enemy {
     }
     pub fn update(
         &mut self,
-        map_dynamic: &mut MapDynamic,
+        map: &mut Map,
         things: &Things,
         unique_id: usize,
         player: &mut Player,
@@ -655,7 +648,7 @@ impl Enemy {
         if self.exec_ctx.state.ticks <= 0 {
             self.exec_code(
                 self.exec_ctx.state.action_offs,
-                map_dynamic,
+                map,
                 things,
                 unique_id,
                 player,
@@ -666,7 +659,7 @@ impl Enemy {
 
         self.exec_code(
             self.exec_ctx.state.think_offs,
-            map_dynamic,
+            map,
             things,
             unique_id,
             player,
