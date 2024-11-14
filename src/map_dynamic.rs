@@ -1,4 +1,4 @@
-use crate::{fp16::FP16_FRAC_64, map::ROOM_ID_NONE, ms::Loadable, prelude::*};
+use crate::{fp16::FP16_FRAC_64, map_def::ROOM_ID_NONE, ms::Loadable, prelude::*};
 use std::{
     collections::{HashMap, HashSet},
     io::Write,

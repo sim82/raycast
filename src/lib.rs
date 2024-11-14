@@ -13,7 +13,7 @@ pub mod font;
 pub mod fp16;
 pub mod hud;
 pub mod mainloop;
-pub mod map;
+pub mod map_def;
 pub mod map_dynamic;
 pub mod player;
 pub mod render;
@@ -48,7 +48,7 @@ pub mod prelude {
         },
         hud,
         mainloop::{AudioService, InputState, Mainloop, SpawnInfo},
-        map::{bresenham_trace, DoorType, MapDef, MapTile, PlaneOrientation, MAP_SIZE},
+        map_def::{bresenham_trace, DoorType, MapDef, MapTile, PlaneOrientation, MAP_SIZE},
         map_dynamic::{DoorAction, DoorState, Map, PushwallAction, PushwallState},
         ms,
         ms::endian::{ReadExt, WriteExt},
