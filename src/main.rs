@@ -1,9 +1,8 @@
 use raycast::{mainloop, palette::PALETTE, prelude::*, wl6};
 use sdl2::{
-    audio::AudioSpecDesired,
     event::Event,
     keyboard::Scancode,
-    mixer::{InitFlag, AUDIO_U8, DEFAULT_CHANNELS},
+    mixer::{InitFlag, AUDIO_U8},
     mouse::MouseButton,
     pixels::PixelFormatEnum,
     EventPump,

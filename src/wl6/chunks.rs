@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::{Read, Seek, SeekFrom, Write},
+    io::{Read, Seek, SeekFrom},
     path::Path,
 };
 
@@ -40,7 +40,7 @@ impl ChunksFile {
 }
 #[test]
 fn test_vga() {
-    let cf = ChunksFile::open("wl6/vgahead.wl6", "wl6/vgagraph.wl6").unwrap();
+    let _cf = ChunksFile::open("wl6/vgahead.wl6", "wl6/vgagraph.wl6").unwrap();
 }
 #[test]
 fn test_audio() {
