@@ -94,7 +94,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
     // let mut pixels_end = buf.len() as u64;
     let mut pixels = 0;
 
-    for (_i, col_offset) in offsets.iter().enumerate() {
+    for col_offset in offsets.iter() {
         // println!("col start {}", col_offset);
         cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
         // pixels_end = pixels_end.min(cursor.position());
@@ -309,8 +309,7 @@ impl MapsFile {
 }
 
 fn to_plane(d1: &[u8]) -> Vec<u16> {
-    let mut res = Vec::new();
-    res.reserve(d1.len() / 2);
+    let mut res = Vec::with_capacity(d1.len() / 2);
     let mut c = Cursor::new(d1);
     for _ in 0..(d1.len() / 2) {
         res.push(c.readu16().unwrap());

@@ -37,6 +37,9 @@ impl ChunksFile {
     pub fn len(&self) -> i32 {
         self.offsets.len() as i32 - 1
     }
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 #[test]
 fn test_vga() {
