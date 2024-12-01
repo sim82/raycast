@@ -439,9 +439,6 @@ impl DigiSounds {
         Self { sounds }
     }
 }
-#[cfg(test)]
-pub mod test {
-    use std::{fs::File, io::Write};
 
 #[cfg(test)]
 mod test {
