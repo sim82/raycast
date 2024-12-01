@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-compiler = ["nom", "nom_locate"]
+# compiler = ["nom", "nom_locate"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1"
 lazy_static = { workspace = true }
-nom = { workspace = true, optional = true }
-nom_locate = { workspace = true, optional = true }
+# nom = { workspace = true, optional = true }
+# nom_locate = { workspace = true, optional = true }
 
