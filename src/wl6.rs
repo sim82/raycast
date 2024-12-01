@@ -94,7 +94,7 @@ pub fn sprite_chunk_to_posts(buf: &[u8]) -> SpritePosts {
     // let mut pixels_end = buf.len() as u64;
     let mut pixels = 0;
 
-    for (_i, col_offset) in offsets.iter().enumerate() {
+    for col_offset in offsets.iter() {
         // println!("col start {}", col_offset);
         cursor.seek(SeekFrom::Start(*col_offset as u64)).unwrap();
         // pixels_end = pixels_end.min(cursor.position());
@@ -309,8 +309,7 @@ impl MapsFile {
 }
 
 fn to_plane(d1: &[u8]) -> Vec<u16> {
-    let mut res = Vec::new();
-    res.reserve(d1.len() / 2);
+    let mut res = Vec::with_capacity(d1.len() / 2);
     let mut c = Cursor::new(d1);
     for _ in 0..(d1.len() / 2) {
         res.push(c.readu16().unwrap());
@@ -444,17 +443,17 @@ impl DigiSounds {
 pub mod test {
     use std::{fs::File, io::Write};
 
-    use crate::wl6::{
-        carmack_decompress, map_decompress, rlew_decompress, ChunkProvider, MapsFile, VswapFile,
-    };
-
-    use super::{ChunkId, DigiSounds};
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::io::Write;
 
     #[test]
     fn test_vswap() {
         let mut vs = VswapFile::open("vswap.wl6");
 
         println!("chunks: {:?}", vs.chunks);
+        let _ = std::fs::create_dir("wl6");
 
         for i in 0..vs.num_sounds() {
             let chunk = vs.read_chunk(ChunkId::Sound(i));
@@ -473,6 +472,7 @@ pub mod test {
         let mut vs = VswapFile::open("vswap.wl6");
         let map_chunk = ChunkId::Sound(vs.num_sounds() - 1);
         let digisound = DigiSounds::new(&mut vs, map_chunk);
+        let _ = std::fs::create_dir("wl6");
         for i in 0..digisound.sounds.len() {
             let mut f = File::create(format!("wl6/digi.{i:03}")).unwrap();
             f.write_all(&digisound.sounds[i]).unwrap();

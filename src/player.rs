@@ -89,7 +89,7 @@ impl Player {
         &mut self,
         player_vel: &PlayerVel,
         dt: Fp16,
-        map_dynamic: &MapDynamic,
+        map_dynamic: &Map,
         collisions: bool,
     ) {
         self.rot += (dt * player_vel.rot).get_int();

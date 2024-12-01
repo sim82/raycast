@@ -1,4 +1,4 @@
-use raycast::{mainloop, palette::PALETTE, prelude::*, wl6};
+use raycast::{mainloop, palette::PALETTE, prelude::*, voxel, wl6};
 use sdl2::{
     event::Event,
     keyboard::Scancode,
@@ -7,6 +7,7 @@ use sdl2::{
     pixels::PixelFormatEnum,
     EventPump,
 };
+use state_bc::SpawnInfos;
 
 fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
     let mut input_state = InputState::default();
@@ -63,6 +64,8 @@ fn input_state_from_sdl_events(events: &mut EventPump) -> InputState {
         input_state.strafe_left = keyboard_state.is_scancode_pressed(Scancode::A);
         input_state.strafe_right = keyboard_state.is_scancode_pressed(Scancode::D);
     }
+    input_state.up = keyboard_state.is_scancode_pressed(Scancode::R);
+    input_state.down = keyboard_state.is_scancode_pressed(Scancode::F);
     input_state.slow = keyboard_state.is_scancode_pressed(Scancode::LShift);
     input_state.open = keyboard_state.is_scancode_pressed(Scancode::Space);
     input_state.shoot = keyboard_state.is_scancode_pressed(Scancode::LCtrl);
@@ -112,11 +115,43 @@ impl mainloop::AudioService for SdlSoundChunks {
         self.queue.push((latency, id));
     }
 }
+trait CanvasSink {
+    fn display(
+        &mut self,
+        buffer: &[u8],
+        palette: &[u32],
+        canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+    );
+}
+impl<'a> CanvasSink for sdl2::render::Texture<'a> {
+    fn display(
+        &mut self,
+        buffer: &[u8],
+        palette: &[u32],
+        canvas: &mut sdl2::render::Canvas<sdl2::video::Window>,
+    ) {
+        let _ = self
+            .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
+                for y in 0..200 {
+                    for x in 0..320 {
+                        let offset = y * pitch + x * 3;
+                        let s_offset = y * 320 + x;
+                        let c32 = palette[buffer[s_offset] as usize];
+                        tex_buffer[offset] = (c32 >> 16) as u8;
+                        tex_buffer[offset + 1] = (c32 >> 8) as u8;
+                        tex_buffer[offset + 2] = c32 as u8;
+                    }
+                }
+            })
+            .unwrap();
+        canvas.clear();
+        canvas.copy(&self, None, None).unwrap();
+        canvas.present();
+    }
+}
+
 fn main() -> raycast::prelude::Result<()> {
     let mut buffer: Vec<u8> = vec![0; WIDTH * HEIGHT];
-
-    let resources = Resources::load_wl6("vswap.wl6");
-    let mut maps = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
 
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -128,7 +163,6 @@ fn main() -> raycast::prelude::Result<()> {
     sdl2::mixer::open_audio(freq, format, channels, chunk_size).unwrap();
     let _mixer_context = sdl2::mixer::init(InitFlag::empty());
     sdl2::mixer::allocate_channels(16);
-    let mut sound_chunks = SdlSoundChunks::new(&resources);
     let window = video_subsystem
         .window("Raycastle3D", WIDTH as u32 * 4, HEIGHT as u32 * 4)
         .position_centered()
@@ -142,7 +176,26 @@ fn main() -> raycast::prelude::Result<()> {
         .event_pump()
         .unwrap_or_else(|_| panic!("faild to get event pump"));
 
-    let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps);
+    if !false {
+        raycast_mainloop(events, buffer, canvas, sdl_context, texture);
+    } else {
+        voxel_mainloop(events, buffer, canvas, sdl_context, texture);
+    }
+
+    Ok(())
+}
+
+fn raycast_mainloop(
+    mut events: EventPump,
+    mut buffer: Vec<u8>,
+    mut canvas: sdl2::render::Canvas<sdl2::video::Window>,
+    sdl_context: sdl2::Sdl,
+    mut texture: impl CanvasSink,
+) {
+    let resources = Resources::load_wl6("vswap.wl6");
+    let mut sound_chunks = SdlSoundChunks::new(&resources);
+    let mut maps_file = wl6::MapsFile::open("maphead.wl6", "gamemaps.wl6");
+    let mut mainloop = Mainloop::spawn(SpawnInfo::StartLevel(0, None), &mut maps_file);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -150,14 +203,14 @@ fn main() -> raycast::prelude::Result<()> {
         let mut input_state = input_state_from_sdl_events(&mut events);
         input_state.misc_selection += last_misc_selection;
         last_misc_selection = input_state.misc_selection;
-        mainloop.use_mouse_move = mouse_grabbed;
-        mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
-        sound_chunks.update();
         if input_state.quit {
             break;
         }
+        mainloop.use_mouse_move = mouse_grabbed;
+        mainloop.run(&input_state, &mut buffer, &resources, &mut sound_chunks);
+        sound_chunks.update();
         if input_state.is_deconstruct() {
-            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps);
+            mainloop = Mainloop::spawn(mainloop.deconstruct(&input_state), &mut maps_file);
         }
 
         if input_state.toggle_mouse_grab || (input_state.shoot && initial_ungrabbed) {
@@ -167,24 +220,36 @@ fn main() -> raycast::prelude::Result<()> {
             initial_ungrabbed = false;
         }
 
-        texture
-            .with_lock(None, |tex_buffer: &mut [u8], pitch: usize| {
-                for y in 0..200 {
-                    for x in 0..320 {
-                        let offset = y * pitch + x * 3;
-                        let s_offset = y * 320 + x;
-                        let c32 = PALETTE[buffer[s_offset] as usize];
-                        tex_buffer[offset] = (c32 >> 16) as u8;
-                        tex_buffer[offset + 1] = (c32 >> 8) as u8;
-                        tex_buffer[offset + 2] = c32 as u8;
-                    }
-                }
-            })
-            .unwrap();
-        canvas.clear();
-        canvas.copy(&texture, None, None).unwrap();
-        canvas.present();
+        texture.display(&buffer, &PALETTE, &mut canvas);
     }
+}
+fn voxel_mainloop(
+    mut events: EventPump,
+    mut buffer: Vec<u8>,
+    mut canvas: sdl2::render::Canvas<sdl2::video::Window>,
+    sdl_context: sdl2::Sdl,
+    mut texture: impl CanvasSink,
+) {
+    let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
+    // let voxel_res = voxel::res::VoxelRes::from_dir("comanche").unwrap();
 
-    Ok(())
+    let mut voxel = Voxel::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
+    let mut mouse_grabbed = false;
+    let mut initial_ungrabbed = true;
+    let mut last_misc_selection = 0;
+    loop {
+        let mut input_state = input_state_from_sdl_events(&mut events);
+        input_state.misc_selection += last_misc_selection;
+        last_misc_selection = input_state.misc_selection;
+        if input_state.quit {
+            break;
+        }
+        buffer.fill(0);
+        voxel.run(&input_state, &mut buffer);
+
+        if input_state.is_deconstruct() {
+            voxel = Voxel::spawn(voxel.deconstruct(&input_state), &voxel_res);
+        }
+        texture.display(&buffer, &voxel.map.palette, &mut canvas);
+    }
 }
