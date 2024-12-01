@@ -293,7 +293,7 @@ spawn hans {
     undirectional 214, stand, silver_key
 }
 
-states hans uses Spr {
+states hans uses Spr, Snd, EnemyOp {
 stand:
     state BOSS_W1, false, 0, ThinkStand, {}, stand
 path:
@@ -308,6 +308,7 @@ pain1:
 pain2:
     state BOSS_DIE1, false, 10, {}, {}, chase
 sight:
+    state BOSS_W1, false, 0, {}, {[Gutentag] Play do}, next
 chase:
     state BOSS_W1, false, 10, ThinkChase, {}, next
     state BOSS_W1, false, 3, {}, {}, next
@@ -316,17 +317,27 @@ chase:
     state BOSS_W3, false, 3, {}, {}, next
     state BOSS_W4, false, 8, ThinkChase, {}, chase
 die:
-    state BOSS_DIE1, false, 15, {}, {}, next
+    state BOSS_DIE1, false, 15, {}, {[Mutti] Play do}, next
     state BOSS_DIE2, false, 15, {}, ActionDie, next
     state BOSS_DIE3, false, 15, {}, {}, dead
 dead:
     state BOSS_DEAD, false, 0, {}, {}, dead
 shoot:
-    state BOSS_SHOOT1, false, 20, {}, {}, next
-    state BOSS_SHOOT2, false, 20, {}, ActionShoot, next
-    state BOSS_SHOOT3, false, 20, {}, {}, chase
+    state BOSS_SHOOT1, false, 30, {}, {}, next
+    state BOSS_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state BOSS_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state BOSS_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state BOSS_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state BOSS_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state BOSS_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state BOSS_SHOOT1, false, 10, {}, {}, chase
+
 }
 
+function ActionShootBoss uses Snd, EnemyOp, Func {
+    [ShotBoss] Play do
+    ActionShoot call
+}
 // ==========================================================================
 //  THE GOOD DR.
 // ==========================================================================
@@ -410,9 +421,12 @@ die:
 dead:
     state GROFAZ_DEAD, false, 0, {}, {}, dead
 shoot:
-    state GROFAZ_SHOOT1, false, 20, {}, {}, next
-    state GROFAZ_SHOOT2, false, 20, {}, ActionShoot, next
-    state GROFAZ_SHOOT3, false, 20, {}, {}, chase
+    state GROFAZ_SHOOT1, false, 30, {}, {}, next
+    state GROFAZ_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state GROFAZ_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state GROFAZ_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state GROFAZ_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state GROFAZ_SHOOT2, false, 10, {}, ActionShootBoss, chase
 }
 
 
@@ -451,9 +465,12 @@ die:
 dead:
     state MECHA_DEAD, false, 0, {}, {}, dead
 shoot:
-    state MECHA_SHOOT1, false, 20, {}, {}, next
-    state MECHA_SHOOT2, false, 20, {}, ActionShoot, next
-    state MECHA_SHOOT3, false, 20, {}, {}, chase
+    state MECHA_SHOOT1, false, 30, {}, {}, next
+    state MECHA_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state MECHA_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state MECHA_SHOOT2, false, 10, {}, ActionShootBoss, next
+    state MECHA_SHOOT3, false, 10, {}, ActionShootBoss, next
+    state MECHA_SHOOT2, false, 10, {}, ActionShootBoss, chase
 } 
 
 // ==========================================================================
