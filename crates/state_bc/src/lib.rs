@@ -24,6 +24,7 @@ pub enum Function {
     ThinkPath,
     ThinkChase,
     ThinkDogChase,
+    ThinkProjectile,
     ActionDie,
     ActionShoot,
     ActionBite,
@@ -36,6 +37,7 @@ impl Function {
             "ThinkPath" => Self::ThinkPath,
             "ThinkChase" => Self::ThinkChase,
             "ThinkDogChase" => Self::ThinkDogChase,
+            "ThinkProjectile" => Self::ThinkProjectile,
             "ActionDie" => Self::ActionDie,
             "ActionShoot" => Self::ActionShoot,
             "ActionBite" => Self::ActionBite,
@@ -55,9 +57,10 @@ impl TryFrom<u8> for Function {
             2 => Self::ThinkPath,
             3 => Self::ThinkChase,
             4 => Self::ThinkDogChase,
-            5 => Self::ActionDie,
-            6 => Self::ActionShoot,
-            7 => Self::ActionBite,
+            5 => Self::ThinkProjectile,
+            6 => Self::ActionDie,
+            7 => Self::ActionShoot,
+            8 => Self::ActionBite,
             x => return Err(anyhow!("unhandled Think discriminator {x}")),
         })
     }
@@ -72,9 +75,10 @@ impl From<Function> for u8 {
             Function::ThinkPath => 2,
             Function::ThinkChase => 3,
             Function::ThinkDogChase => 4,
-            Function::ActionDie => 5,
-            Function::ActionShoot => 6,
-            Function::ActionBite => 7,
+            Function::ThinkProjectile => 5,
+            Function::ActionDie => 6,
+            Function::ActionShoot => 7,
+            Function::ActionBite => 8,
         }
     }
 }
@@ -89,6 +93,7 @@ pub enum Direction {
     NorthWest,
     North,
     NorthEast,
+    Angle(i32),
 }
 
 impl ms::Loadable for Direction {
@@ -118,6 +123,10 @@ impl ms::Writable for Direction {
             Direction::NorthWest => w.writeu8(5)?,
             Direction::SouthWest => w.writeu8(6)?,
             Direction::SouthEast => w.writeu8(7)?,
+            Direction::Angle(a) => {
+                w.writeu8(8)?;
+                w.writei32(*a)?;
+            }
         }
 
         Ok(())
@@ -161,6 +170,7 @@ impl Direction {
             Direction::SouthWest => 5,
             Direction::West => 6,
             Direction::NorthWest => 7,
+            Direction::Angle(_) => 0,
         }
     }
 
@@ -174,6 +184,7 @@ impl Direction {
             Direction::South => (0, 1),
             Direction::SouthWest => (-1, 1),
             Direction::West => (-1, 0),
+            Direction::Angle(_) => (0, 0),
         }
     }
     pub fn x_offs(&self) -> i32 {
@@ -186,6 +197,7 @@ impl Direction {
             Direction::South => 0,
             Direction::SouthWest => -1,
             Direction::West => -1,
+            Direction::Angle(_) => 0,
         }
     }
     pub fn y_offs(&self) -> i32 {
@@ -198,6 +210,7 @@ impl Direction {
             Direction::South => 1,
             Direction::SouthWest => 1,
             Direction::West => 0,
+            Direction::Angle(_) => 0,
         }
     }
     pub fn opposite(&self) -> Direction {
@@ -210,6 +223,7 @@ impl Direction {
             Direction::NorthWest => Direction::SouthEast,
             Direction::North => Direction::South,
             Direction::NorthEast => Direction::SouthWest,
+            Direction::Angle(a) => Direction::Angle(*a),
         }
     }
 }

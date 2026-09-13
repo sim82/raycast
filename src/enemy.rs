@@ -16,6 +16,7 @@ impl Enemy {
             Direction::NorthWest => dx + dy < 0,
             Direction::North => dy < 0,
             Direction::NorthEast => dx - dy > 0,
+            Direction::Angle(_) => false,
         };
 
         if !in_front {
@@ -234,6 +235,9 @@ impl Enemy {
         }
 
         self.move_default(map, unique_id, FP16_FRAC_64);
+    }
+    fn think_projectile(&mut self, map: &mut Map, things: &Things, unique_id: usize) {
+        //
     }
 }
 
@@ -579,6 +583,7 @@ impl Enemy {
             Function::ThinkPath => self.think_path(map, things, unique_id),
             Function::ThinkChase => self.think_chase(map, things, unique_id),
             Function::ThinkDogChase => self.think_dogchase(map, things, unique_id),
+            Function::ThinkProjectile => self.think_projectile(map, things, unique_id),
             Function::ActionDie => self.action_die(),
             Function::ActionShoot => self.action_shoot(map, things, unique_id, player),
             Function::ActionBite => self.action_bite(map, things, unique_id),

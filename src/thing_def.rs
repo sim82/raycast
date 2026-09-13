@@ -34,6 +34,7 @@ pub fn direction_angle(d: &Direction) -> i32 {
         Direction::SouthWest => FA_FRAC_PI_2 + FA_FRAC_PI_4,
         Direction::West => FA_PI,
         Direction::NorthWest => FA_PI + FA_FRAC_PI_4,
+        Direction::Angle(a) => a * 10,
     }
 }
 

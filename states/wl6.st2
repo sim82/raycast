@@ -819,6 +819,9 @@ function ThinkChase {
 function ThinkDogChase {
     Func::ThinkDogChase call
 }
+function ThinkProjectile {
+    Func::ThinkProjectile call
+}
 function ActionDie {
     Func::ActionDie call
 }
@@ -839,6 +842,7 @@ enum Func
     ThinkPath,
     ThinkChase,
     ThinkDogChase,
+    ThinkProjectile,
     ActionDie,
     ActionShoot,
     ActionBite
