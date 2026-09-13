@@ -13,7 +13,7 @@ lazy_static = "1.4"
 # nom_locate = { version = "4" }
 # nom = {version = "7" }
 oorandom = "11"
-sdl2 = {version = "0.35.2", features = ["mixer"]}
+sdl2 = {version = "0.38", features = ["mixer"]}
 
 [dependencies]
 anyhow = { workspace = true }
@@ -28,10 +28,10 @@ state_lang_nt = {path = "crates/state_lang_nt", optional = true }
 
 [profile.release]
 opt-level = 3     # Optimize for size
-lto = true        # Enable link-time optimization
-codegen-units = 1 # Reduce number of codegen units to increase optimizations
+#lto = true        # Enable link-time optimization
+codegen-units = 4 # Reduce number of codegen units to increase optimizations
 #panic = "abort"     # Abort on panic
-# strip = true   
+# strip = true
 debug = true
 
 [profile.dev.package."*"]

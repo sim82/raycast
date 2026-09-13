@@ -8,6 +8,7 @@ textures.txt
 *.bin
 map.txt
 .cargo/
+.direnv/
 *.bc
 *.lb
 src/*.bak
