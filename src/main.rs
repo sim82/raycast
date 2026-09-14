@@ -176,7 +176,7 @@ fn main() -> raycast::prelude::Result<()> {
         .event_pump()
         .unwrap_or_else(|_| panic!("faild to get event pump"));
 
-    if !false {
+    if false {
         raycast_mainloop(events, buffer, canvas, sdl_context, texture);
     } else {
         voxel_mainloop(events, buffer, canvas, sdl_context, texture);
@@ -233,7 +233,7 @@ fn voxel_mainloop(
     let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
     // let voxel_res = voxel::res::VoxelRes::from_dir("comanche").unwrap();
 
-    let mut voxel = Voxel::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
+    let mut voxel = VoxelF32::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -248,7 +248,7 @@ fn voxel_mainloop(
         voxel.run(&input_state, &mut buffer);
 
         if input_state.is_deconstruct() {
-            voxel = Voxel::spawn(voxel.deconstruct(&input_state), &voxel_res);
+            voxel = VoxelF32::spawn(voxel.deconstruct(&input_state), &voxel_res);
         }
         texture.display(&buffer, &voxel.map.palette, &mut canvas);
     }

@@ -61,7 +61,7 @@ pub mod prelude {
         state_bc::{Direction, EnemySpawnInfo, ExecCtx, Function, StateBc},
         thing::{Actor, Collectible, Item, Thing, Things},
         thing_def::{ThingDef, ThingDefs, ThingType},
-        voxel::Voxel,
+        voxel::voxel_f32::VoxelF32,
         weapon::{Weapon, WeaponType},
         Resources, Result, HALF_HEIGHT, HEIGHT, IMG_WL6, MID, VIEW_HEIGHT, WIDTH,
     };
