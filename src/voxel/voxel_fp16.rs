@@ -64,29 +64,31 @@ impl VoxelFp16 {
         while zi < self.drawing_distance as i32 {
             let z: f32 = zi as f32;
             // 90 degree field of view
-            let mut plx_fp = Fp16::from_scaled(-cosang.v * zi - sinang.v * zi);
-            let mut ply_fp = Fp16::from_scaled(sinang.v * zi - cosang.v * zi);
-            let prx_fp = Fp16::from_scaled(cosang.v * zi - sinang.v * zi);
-            let pry_fp = Fp16::from_scaled(-sinang.v * zi - cosang.v * zi);
+            let mut plx = Fp16::from_scaled(-cosang.v * zi - sinang.v * zi);
+            let mut ply = Fp16::from_scaled(sinang.v * zi - cosang.v * zi);
+            let prx = Fp16::from_scaled(cosang.v * zi - sinang.v * zi);
+            let pry = Fp16::from_scaled(-sinang.v * zi - cosang.v * zi);
 
-            let dx = Fp16::from_scaled((prx_fp.v - plx_fp.v) / 320);
-            let dy = Fp16::from_scaled((pry_fp.v - ply_fp.v) / 320);
-            plx_fp += Fp16::from(self.camera.x);
-            ply_fp += Fp16::from(self.camera.y);
-            let height_scale = 100.;
-            let invz = 1. / z * height_scale;
-            let mut horizon_cur = self.camera.horizon - self.camera.rot;
-            let horizon_inc = (self.camera.rot * 4.0) / 320.0;
+            let dx = Fp16::from_scaled((prx.v - plx.v) / 320);
+            let dy = Fp16::from_scaled((pry.v - ply.v) / 320);
+            plx += Fp16::from(self.camera.x);
+            ply += Fp16::from(self.camera.y);
+            let height_scale_fp = Fp16::from(100);
+            let z_fp = Fp16::from(z);
+            let invz_fp = height_scale_fp / z_fp;
+            let mut horizon_cur = Fp16::from(self.camera.horizon - self.camera.rot);
+            let horizon_inc_fp = Fp16::from((self.camera.rot * 4.0) / 320.0);
 
             for i in 0..320 {
-                let x_wrapped = plx_fp.get_int().rem_euclid(self.map.width as i32) as usize;
-                let y_wrapped = ply_fp.get_int().rem_euclid(self.map.height as i32) as usize;
+                let x_wrapped = plx.get_int().rem_euclid(self.map.width as i32) as usize;
+                let y_wrapped = ply.get_int().rem_euclid(self.map.height as i32) as usize;
                 let mapoffset = y_wrapped * self.map.width + x_wrapped;
 
-                let heightonscreen = ((self.camera.height as f32
-                    - self.map.height_map[mapoffset as usize] as f32)
-                    * invz
-                    + horizon_cur) as u32;
+                let height_diff =
+                    self.camera.height as i32 - self.map.height_map[mapoffset as usize] as i32;
+                let heightonscreen =
+                    (Fp16::from_scaled(height_diff * invz_fp.v) + horizon_cur).get_int() as u32;
+
                 draw_vertical_line(
                     i,
                     heightonscreen,
@@ -97,9 +99,9 @@ impl VoxelFp16 {
                 if heightonscreen < hiddeny[i] {
                     hiddeny[i] = heightonscreen
                 };
-                plx_fp += dx;
-                ply_fp += dy;
-                horizon_cur += horizon_inc;
+                plx += dx;
+                ply += dy;
+                horizon_cur += horizon_inc_fp;
             }
             zi += z_inc;
             if zi >= 200 {
