@@ -1,4 +1,10 @@
-use raycast::{mainloop, palette::PALETTE, prelude::*, voxel, wl6};
+use raycast::{
+    mainloop,
+    palette::PALETTE,
+    prelude::*,
+    voxel::{self, voxel_fp16::VoxelFp16},
+    wl6,
+};
 use sdl2::{
     event::Event,
     keyboard::Scancode,
@@ -233,7 +239,7 @@ fn voxel_mainloop(
     let voxel_res = voxel::res::VoxelRes::from_dir("comanche2").unwrap();
     // let voxel_res = voxel::res::VoxelRes::from_dir("comanche").unwrap();
 
-    let mut voxel = VoxelF32::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
+    let mut voxel = VoxelFp16::spawn(SpawnInfo::StartLevel(0, None), &voxel_res);
     let mut mouse_grabbed = false;
     let mut initial_ungrabbed = true;
     let mut last_misc_selection = 0;
@@ -248,7 +254,7 @@ fn voxel_mainloop(
         voxel.run(&input_state, &mut buffer);
 
         if input_state.is_deconstruct() {
-            voxel = VoxelF32::spawn(voxel.deconstruct(&input_state), &voxel_res);
+            voxel = VoxelFp16::spawn(voxel.deconstruct(&input_state), &voxel_res);
         }
         texture.display(&buffer, &voxel.map.palette, &mut canvas);
     }

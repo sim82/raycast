@@ -8,6 +8,7 @@ pub mod prelude;
 pub mod res;
 
 pub mod voxel_f32;
+pub mod voxel_fp16;
 
 pub fn draw_vertical_line(x: usize, ytop: u32, ybottom: u32, color: u8, buffer: &mut [u8]) {
     assert!(x < 320);

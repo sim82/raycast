@@ -1,4 +1,5 @@
 pub use crate::{
+    prelude::Fp16,
     prelude::{InputState, SpawnInfo},
     voxel::{
         camera::Camera,
