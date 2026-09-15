@@ -1,3 +1,5 @@
+use crate::fa;
+use crate::fp16::FP16_SCALE;
 use crate::voxel::prelude::*;
 pub struct VoxelFp16 {
     level: i32,
@@ -50,25 +52,27 @@ impl VoxelFp16 {
     }
     pub fn render(&mut self, _input_events: &InputState, buffer: &mut [u8]) {
         let screenwidth = 320.;
-        let sinang = self.camera.angle.sin();
-        let cosang = self.camera.angle.cos();
+        let angle_fa =
+            ((self.camera.angle * fa::PIS_IN_180 * fa::FA_SCALEF) as i32).rem_euclid(fa::FA_TAU);
+        let sinang = fa::fa_sin(angle_fa);
+        let cosang = fa::fa_cos(angle_fa);
 
         let mut hiddeny = [200u32; 320];
 
-        let mut zi = 1;
+        let mut zi = 1i32;
         let mut z_inc = 1;
-        while zi < self.drawing_distance {
+        while zi < self.drawing_distance as i32 {
             let z: f32 = zi as f32;
             // 90 degree field of view
-            let mut plx = -cosang * z - sinang * z;
-            let mut ply = sinang * z - cosang * z;
-            let prx = cosang * z - sinang * z;
-            let pry = -sinang * z - cosang * z;
+            let mut plx_fp = Fp16::from_scaled(-cosang.v * zi - sinang.v * zi);
+            let mut ply_fp = Fp16::from_scaled(sinang.v * zi - cosang.v * zi);
+            let prx_fp = Fp16::from_scaled(cosang.v * zi - sinang.v * zi);
+            let pry_fp = Fp16::from_scaled(-sinang.v * zi - cosang.v * zi);
 
-            let dx: Fp16 = ((prx - plx) / screenwidth).into();
-            let dy: Fp16 = ((pry - ply) / screenwidth).into();
-            let mut plx_fp: Fp16 = (plx + self.camera.x).into();
-            let mut ply_fp: Fp16 = (ply + self.camera.y).into();
+            let dx = Fp16::from_scaled((prx_fp.v - plx_fp.v) / 320);
+            let dy = Fp16::from_scaled((pry_fp.v - ply_fp.v) / 320);
+            plx_fp += Fp16::from(self.camera.x);
+            ply_fp += Fp16::from(self.camera.y);
             let height_scale = 100.;
             let invz = 1. / z * height_scale;
             let mut horizon_cur = self.camera.horizon - self.camera.rot;

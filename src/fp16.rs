@@ -58,6 +58,12 @@ impl ms::Loadable for Fp16 {
 }
 
 impl Fp16 {
+    /// Creates a Fp16 from an integer that's already scaled by FP16_SCALE (2^16).
+    /// Use this when you've already done the scaling manually.
+    pub fn from_scaled(v: i32) -> Self {
+        Self { v }
+    }
+
     pub fn get_int(&self) -> i32 {
         self.v >> FP16_SCALE
     }
