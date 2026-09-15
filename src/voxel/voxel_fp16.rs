@@ -84,10 +84,12 @@ impl VoxelFp16 {
                 let y_wrapped = ply.get_int().rem_euclid(self.map.height as i32) as usize;
                 let mapoffset = y_wrapped * self.map.width + x_wrapped;
 
-                let height_diff =
-                    self.camera.height as i32 - self.map.height_map[mapoffset as usize] as i32;
-                let heightonscreen =
-                    (Fp16::from_scaled(height_diff * invz_fp.v) + horizon_cur).get_int() as u32;
+                let height_diff_fp =
+                    Fp16::from(self.camera.height - self.map.height_map[mapoffset as usize] as f32);
+                // Custom multiplication: (a >> 8) * (b >> 8) with no final shift
+                let height_invz_product =
+                    Fp16::from_scaled((height_diff_fp.v >> 8) * (invz_fp.v >> 8));
+                let heightonscreen = (height_invz_product + horizon_cur).get_int() as u32;
 
                 draw_vertical_line(
                     i,
